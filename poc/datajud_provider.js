@@ -56,26 +56,35 @@ class DataJudProvider {
 
     const durationMs = Date.now() - startTime;
     
+    let rawText = null;
+    let parsedPayload = null;
+    
+    try {
+      rawText = await response.text();
+      if (rawText) {
+        parsedPayload = JSON.parse(rawText);
+      }
+    } catch (e) {
+      // Falha no parse JSON, mas rawText é preservado se foi lido com sucesso
+    }
+
     if (response.status === 429) {
-      return { state: 'rate_limited', errorCode: '429', rawText: null, parsedPayload: null, durationMs };
+      return { state: 'rate_limited', errorCode: '429', rawText, parsedPayload, durationMs, httpStatus: 429 };
     }
     
     if (!response.ok) {
-      return { state: 'source_unavailable', errorCode: response.status.toString(), errorMessage: response.statusText, rawText: null, parsedPayload: null, durationMs };
+      return { state: 'source_unavailable', errorCode: response.status.toString(), errorMessage: response.statusText, rawText, parsedPayload, durationMs, httpStatus: response.status };
     }
 
-    let rawText = null;
-    let data = null;
-    try {
-      rawText = await response.text();
-      data = JSON.parse(rawText);
-    } catch (e) {
-      return { state: 'failed', errorMessage: 'Falha ao ler/parsear JSON da resposta', rawText, parsedPayload: null, durationMs };
+    if (!parsedPayload) {
+      return { state: 'failed', errorMessage: 'Resposta não contém JSON válido', rawText, parsedPayload: null, durationMs, httpStatus: response.status };
     }
 
-    if (!data.hits || !data.hits.hits || data.hits.hits.length === 0) {
-      return { state: 'process_not_found', rawText, parsedPayload: data, durationMs };
+    if (!parsedPayload.hits || !parsedPayload.hits.hits || parsedPayload.hits.hits.length === 0) {
+      return { state: 'process_not_found', rawText, parsedPayload, durationMs, httpStatus: response.status };
     }
+
+    const data = parsedPayload;
 
     const _source = data.hits.hits[0]._source;
     

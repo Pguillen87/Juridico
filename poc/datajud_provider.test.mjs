@@ -66,18 +66,34 @@ describe('DataJudProvider - testes locais', () => {
     expect(result.state).toBe('process_not_found');
   });
 
-  it('mapeia HTTP 429 para rate_limited', async () => {
-    globalThis.fetch = async () => ({ ok: false, status: 429, statusText: 'Too Many Requests' });
+  it('mapeia HTTP 429 para rate_limited e preserva body JSON', async () => {
+    const errorBody = '{"error": "Too Many Requests"}';
+    globalThis.fetch = async () => ({ ok: false, status: 429, statusText: 'Too Many Requests', text: async () => errorBody });
     const result = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
     expect(result.state).toBe('rate_limited');
+    expect(result.rawText).toBe(errorBody);
+    expect(result.parsedPayload).toEqual({ error: "Too Many Requests" });
+    expect(result.httpStatus).toBe(429);
   });
 
-  it('mapeia HTTP 500/503 para source_unavailable', async () => {
-    for (const status of [500, 503]) {
-      globalThis.fetch = async () => ({ ok: false, status, statusText: 'Service Unavailable' });
-      const result = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
-      expect(result.state).toBe('source_unavailable');
-    }
+  it('mapeia HTTP 503 para source_unavailable e preserva body JSON', async () => {
+    const errorBody = '{"message": "Gateway Timeout"}';
+    globalThis.fetch = async () => ({ ok: false, status: 503, statusText: 'Service Unavailable', text: async () => errorBody });
+    const result = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
+    expect(result.state).toBe('source_unavailable');
+    expect(result.rawText).toBe(errorBody);
+    expect(result.parsedPayload).toEqual({ message: "Gateway Timeout" });
+    expect(result.httpStatus).toBe(503);
+  });
+
+  it('mapeia HTTP 500 para source_unavailable e preserva body texto (HTML/String)', async () => {
+    const errorBody = '<html>Internal Server Error</html>';
+    globalThis.fetch = async () => ({ ok: false, status: 500, statusText: 'Internal Server Error', text: async () => errorBody });
+    const result = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
+    expect(result.state).toBe('source_unavailable');
+    expect(result.rawText).toBe(errorBody);
+    expect(result.parsedPayload).toBeNull();
+    expect(result.httpStatus).toBe(500);
   });
 
   it('mapeia JSON inválido para failed e timeout para timeout', async () => {

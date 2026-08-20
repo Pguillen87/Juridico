@@ -32,12 +32,12 @@ Comando executado: `npm test -- --reporter=verbose`.
 
 | Métrica | Resultado |
 |---|---:|
-| Testes executados | 25 |
-| Aprovados | 25 |
+| Testes executados | 28 |
+| Aprovados | 28 |
 | Falhos | 0 |
 | Ignorados | 0 |
 
-A suíte cobre comparação unificada, deduplicação, normalização real, hash determinístico unificado, validação completa de CNJ, `process_not_found`, HTTP 429, HTTP 500/503, JSON inválido, regressão de baseline (sucesso após falha) e timeout simulado.
+A suíte cobre comparação unificada, deduplicação, normalização real, hash determinístico unificado, validação completa de CNJ, `process_not_found`, HTTP 429 (com body), HTTP 500/503 (com body), JSON inválido, regressão de baseline (sucesso após falha), preservação do body HTTP não-2xx, teste automatizado do `rawHash` (SHA-256 exato) e timeout simulado.
 
 ## Execução Real (Segunda Rodada de PoC)
 

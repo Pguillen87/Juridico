@@ -19,6 +19,7 @@ const cnjs = [
 ];
 
 const { compareSnapshots, generateSnapshotHash } = require('./comparison');
+const { writeEvidence } = require('./evidence');
 
 async function run() {
   const provider = new DataJudProvider(API_KEY);
@@ -47,24 +48,8 @@ async function run() {
     }
 
     const run1Dir = path.join(processDir, 'run-001');
-    fs.mkdirSync(run1Dir, { recursive: true });
-    
-    if (res1.rawText) {
-      fs.writeFileSync(path.join(run1Dir, 'raw.json'), res1.rawText);
-      const rawHash = crypto.createHash('sha256').update(res1.rawText).digest('hex');
-      const hashesObj = { rawHash };
-      if (res1.snapshotHash) hashesObj.snapshotHash = res1.snapshotHash;
-      fs.writeFileSync(path.join(run1Dir, 'hashes.json'), JSON.stringify(hashesObj, null, 2));
-      
-      if (res1.normalizedData) {
-        fs.writeFileSync(path.join(run1Dir, 'normalized.json'), JSON.stringify(res1.normalizedData, null, 2));
-      }
-    }
-    const metadata1 = { state: state1, durationMs: res1.durationMs };
-    if (res1.httpStatus) metadata1.httpStatus = res1.httpStatus;
-    if (res1.errorCode) metadata1.errorCode = res1.errorCode;
-    if (res1.errorMessage) metadata1.errorMessage = res1.errorMessage;
-    fs.writeFileSync(path.join(run1Dir, 'metadata.json'), JSON.stringify(metadata1, null, 2));
+    res1.state = state1; // Atualiza com a avaliação do baseline
+    writeEvidence(run1Dir, res1);
 
     // Rodada 2 (imediatamente após, para testar deduplicação sem alteração real)
     console.log(`Consultando ${cnj} (Rodada 2)...`);
@@ -79,23 +64,8 @@ async function run() {
     }
 
     const run2Dir = path.join(processDir, 'run-002');
-    fs.mkdirSync(run2Dir, { recursive: true });
-    if (res2.rawText) {
-      fs.writeFileSync(path.join(run2Dir, 'raw.json'), res2.rawText);
-      const rawHash = crypto.createHash('sha256').update(res2.rawText).digest('hex');
-      const hashesObj = { rawHash };
-      if (res2.snapshotHash) hashesObj.snapshotHash = res2.snapshotHash;
-      fs.writeFileSync(path.join(run2Dir, 'hashes.json'), JSON.stringify(hashesObj, null, 2));
-      
-      if (res2.normalizedData) {
-        fs.writeFileSync(path.join(run2Dir, 'normalized.json'), JSON.stringify(res2.normalizedData, null, 2));
-      }
-    }
-    const metadata2 = { state: state2, durationMs: res2.durationMs };
-    if (res2.httpStatus) metadata2.httpStatus = res2.httpStatus;
-    if (res2.errorCode) metadata2.errorCode = res2.errorCode;
-    if (res2.errorMessage) metadata2.errorMessage = res2.errorMessage;
-    fs.writeFileSync(path.join(run2Dir, 'metadata.json'), JSON.stringify(metadata2, null, 2));
+    res2.state = state2; // Atualiza com a avaliação da deduplicação
+    writeEvidence(run2Dir, res2);
 
     results.push({
       cnj,
