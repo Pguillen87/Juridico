@@ -29,7 +29,7 @@ Os estados utilizados neste documento são `proposed`, `approved`, `rejected`, `
 | D-019 | Não consultar processos sigilosos automaticamente no MVP | `approved` provisório | Advogado | Escopo atual | Reduz risco de acesso indevido | Não bloqueante |
 | D-020 | Fazer PoC com 5–10 processos públicos reais | `approved` como estratégia | Usuário/advogado | Antes do DataJud integral | Valida risco técnico | Bloqueante para execução |
 | D-021 | CNJs devem ser fornecidos e aprovados explicitamente | `requires_user_input` | Usuário | Antes da PoC | Autoriza consulta | Bloqueante |
-| D-022 | Definir papéis finais (`owner`, `lawyer`, `operator`, `reviewer`, `auditor`) | `requires_user_input` | Advogado | Antes de RLS | Define autorização | Bloqueante para autorização |
+| D-022 | Definir modelo de autorização: `role` funcional único (`lawyer`, `operator`, `reviewer`, `auditor`) + `is_owner` administrativo. Matriz em `docs/10-matriz-papeis-e-autorizacao.md` | `approved` | Usuário/owner | Antes de RLS | Define autorização e libera RLS | Não é mais bloqueante |
 | D-023 | Ambiente de Execução Local via Docker | `approved` | Owner | Antes da implantação | Afeta execução e deploy | Bloqueante para produção |
 | D-024 | Definir fornecedor de e-mail | `deferred` | Owner | Antes do envio real | Exige contratação e credencial | Bloqueante para envio real |
 | D-025 | Definir RPO/RTO e estratégia de backup | `requires_user_input` | Owner/técnico | Antes da produção | Afeta recuperação | Bloqueante para implantação |
@@ -40,7 +40,7 @@ Os estados utilizados neste documento são `proposed`, `approved`, `rejected`, `
 
 ## Decisões Bloqueantes Atuais
 
-A implementação das regras de negócio permanece bloqueada pela definição dos papéis, confirmação do fuso e horários, definição do fornecedor de e-mail, política jurídica de retenção, RPO/RTO e parâmetros de workers. A fundação técnica e a execução local via Docker já estão aprovadas.
+A implementação das regras de negócio permanece bloqueada pela confirmação do fuso e horários, definição do fornecedor de e-mail, política jurídica de retenção, RPO/RTO e parâmetros de workers. A fundação técnica, a execução local via Docker e a matriz de papéis (D-022) já estão aprovadas.
 
 ## Decisões Não Bloqueantes
 

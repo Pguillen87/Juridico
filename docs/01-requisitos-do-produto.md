@@ -27,7 +27,18 @@ Não fazem parte do MVP portal do cliente, app nativo, cobrança de múltiplos e
 
 ## 6. Papéis e Permissões
 
-`office_owner` administra o escritório e usuários; `lawyer` gerencia processos, partes, monitoramento, revisão e aprovação; `operator` executa cadastros e reprocessamento dentro do escopo autorizado; `reviewer` edita e revisa relatórios, mas não envia sem aprovação; `auditor` consulta registros de auditoria sem alterá-los. O modelo final de permissões exige validação do advogado. Todo acesso deverá observar `office_id` e RLS.
+O sistema utiliza um modelo de autorização baseado em um papel funcional único (`role`) e uma capacidade administrativa separada (`is_owner`).
+
+Papéis funcionais:
+- `lawyer`: possui poderes jurídicos, aprova relatórios e gerencia processos.
+- `operator`: executa cadastros, reprocessamento e tarefas operacionais autorizadas.
+- `reviewer`: edita e revisa relatórios, mas não possui permissão para aprovação final.
+- `auditor`: possui acesso exclusivo de leitura para auditoria, sem poderes de mutação.
+
+Capacidade administrativa:
+- `is_owner`: administra usuários, papéis e configurações do escritório, mas não ganha poderes jurídicos ou operacionais extras automaticamente.
+
+Todo acesso deverá observar o isolamento por `office_id` e ser protegido por RLS (Row Level Security). Para a matriz detalhada de permissões, consulte `docs/10-matriz-papeis-e-autorizacao.md`.
 
 ## 7. Requisitos Funcionais Priorizados
 

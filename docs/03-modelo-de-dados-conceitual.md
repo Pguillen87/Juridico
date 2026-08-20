@@ -27,14 +27,14 @@ Dados de processos, partes, payloads, relatórios e PDFs serão privados. RLS de
 | Aspecto | Definição |
 |---|---|
 | Finalidade | Perfil de autorização ligado à identidade de autenticação. |
-| Campos principais e obrigatórios | `id` PK/Auth FK, `office_id` FK, `name`, `role`, `status`, `created_at`. |
-| Chaves e unicidade | E-mail administrado pelo Auth; usuário ativo deve possuir escritório. |
+| Campos principais e obrigatórios | `id` PK/Auth FK, `office_id` FK, `name`, `role` (`lawyer`, `operator`, `reviewer`, `auditor`), `is_owner` boolean, `is_active` boolean, `created_at`. |
+| Chaves e unicidade | E-mail administrado pelo Auth; usuário ativo deve possuir escritório. Exatamente um `role` funcional por usuário. |
 | Relacionamentos/cardinalidade | N:1 com `office`; 1:N com auditoria, aprovações e confirmações. |
-| Índices | `office_id`, `role`, `status`. |
-| Auditoria | Criação, alteração de papel, bloqueio e exclusão lógica. |
+| Índices | `office_id`, `role`, `is_owner`, `is_active`. |
+| Auditoria | Criação, alteração de papel, alteração de `is_owner`, inativação e exclusão lógica. Proteção contra autoelevação. |
 | Dados pessoais | Nome e e-mail. |
-| Retenção/exclusão | Desativação; preservação de autoria histórica. |
-| Falha | Usuário inativo não autentica nem executa comandos. |
+| Retenção/exclusão | Inativação. Último `is_owner` ativo do escritório possui proteção transacional contra remoção. Preservação de autoria histórica. |
+| Falha | Usuário inativo não executa comandos. `is_owner` não concede poderes jurídicos automaticamente. |
 
 ### `party`
 

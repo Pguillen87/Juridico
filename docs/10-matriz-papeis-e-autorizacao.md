@@ -1,4 +1,6 @@
-# Status: PROPOSTA — AGUARDANDO APROVAÇÃO DO USUÁRIO
+# Status: APPROVED — APROVADO EXPLICITAMENTE PELO USUÁRIO
+
+*Aprovação do usuário registrada em 20 de agosto de 2026. O pacote aprovado é o conteúdo exato estabelecido no commit `9c5234031845ebf0519ab3f320070b0ea02e5fa8`. A decisão D-022 está formalmente aprovada.*
 
 ## 1. Documentos analisados
 
@@ -157,4 +159,4 @@ A validação da autorização exigirá testes automatizados rigorosos para gara
 11. Auditoria administrativa separada da auditoria operacional.
 12. Service role exclusivamente backend.
 
-Status desse bloco: **AGUARDANDO APROVAÇÃO EXPLÍCITA DO USUÁRIO**
+Status desse bloco: **APPROVED — APROVADO EXPLICITAMENTE PELO USUÁRIO**

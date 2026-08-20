@@ -50,7 +50,7 @@
 | D-009 | Não excluir relatórios e auditoria automaticamente | `proposed` | Jurídico/owner | Antes da produção | Afeta privacidade e storage | Validação jurídica |
 | D-010 | Não consultar sigilosos no MVP | `approved` provisório | Advogado | Escopo atual | Limita cobertura, reduz risco | Revisão jurídica se mudar |
 | D-011 | Fornecer 5–10 CNJs públicos reais | `requires_user_input` | Usuário/advogado | Antes da PoC | Bloqueia teste real | Aprovação explícita |
-| D-012 | Definir papéis definitivos | `requires_user_input` | Advogado | Antes de RLS | Afeta autorização | Validação do advogado |
+| D-012 | Definir papéis definitivos | `approved` | Advogado | Antes de RLS | Afeta autorização | Ver D-022 e `docs/10` |
 | D-013 | Definir RPO/RTO | `requires_user_input` | Owner/técnico | Antes da produção | Afeta backup e custo | Aprovação do usuário |
 | D-014 | Definir limites de retry e lock | `proposed` | Técnico | Antes dos workers | Afeta carga e recuperação | Validação técnica |
 
