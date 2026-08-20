@@ -1,0 +1,25 @@
+name: PoC DataJud CI
+
+on:
+  push:
+    branches: [ phase-2-poc-datajud ]
+  pull_request:
+    branches: [ phase-2-poc-datajud, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci --prefix poc
+
+      - name: Run tests
+        run: npm --prefix poc test -- --reporter=verbose

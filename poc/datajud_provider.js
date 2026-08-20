@@ -20,7 +20,7 @@ class DataJudProvider {
 
   async query(cnjNumber, tribunalAlias) {
     if (!this.canQuery(cnjNumber, tribunalAlias)) {
-      return { state: 'unsupported', errorMessage: `Endpoint não suportado: ${tribunalAlias}`, rawPayload: null, durationMs: 0 };
+      return { state: 'unsupported', errorMessage: `Endpoint não suportado: ${tribunalAlias}`, rawText: null, parsedPayload: null, durationMs: 0 };
     }
 
     const cleanCnj = cnjNumber.replace(/\D/g, '');
@@ -49,32 +49,32 @@ class DataJudProvider {
       });
     } catch (error) {
       if (error.name === 'TimeoutError' || error.name === 'AbortError') {
-        return { state: 'timeout', errorMessage: 'Timeout na consulta ao DataJud', rawPayload: null, durationMs: Date.now() - startTime };
+        return { state: 'timeout', errorMessage: 'Timeout na consulta ao DataJud', rawText: null, parsedPayload: null, durationMs: Date.now() - startTime };
       }
-      return { state: 'source_unavailable', errorMessage: error.message, rawPayload: null, durationMs: Date.now() - startTime };
+      return { state: 'source_unavailable', errorMessage: error.message, rawText: null, parsedPayload: null, durationMs: Date.now() - startTime };
     }
 
     const durationMs = Date.now() - startTime;
     
     if (response.status === 429) {
-      return { state: 'rate_limited', errorCode: '429', rawPayload: null, durationMs };
+      return { state: 'rate_limited', errorCode: '429', rawText: null, parsedPayload: null, durationMs };
     }
     
     if (!response.ok) {
-      return { state: 'source_unavailable', errorCode: response.status.toString(), errorMessage: response.statusText, rawPayload: null, durationMs };
+      return { state: 'source_unavailable', errorCode: response.status.toString(), errorMessage: response.statusText, rawText: null, parsedPayload: null, durationMs };
     }
 
-    let rawText;
-    let data;
+    let rawText = null;
+    let data = null;
     try {
       rawText = await response.text();
       data = JSON.parse(rawText);
     } catch (e) {
-      return { state: 'failed', errorMessage: 'Falha ao ler/parsear JSON da resposta', rawPayload: rawText || null, durationMs };
+      return { state: 'failed', errorMessage: 'Falha ao ler/parsear JSON da resposta', rawText, parsedPayload: null, durationMs };
     }
 
     if (!data.hits || !data.hits.hits || data.hits.hits.length === 0) {
-      return { state: 'process_not_found', rawPayload: data, durationMs };
+      return { state: 'process_not_found', rawText, parsedPayload: data, durationMs };
     }
 
     const _source = data.hits.hits[0]._source;
@@ -103,7 +103,8 @@ class DataJudProvider {
 
     return {
       state: 'success_without_changes', // Será reavaliado pelo comparador na pipeline
-      rawPayload: data, // Resposta bruta completa
+      rawText,
+      parsedPayload: data,
       httpStatus: response.status,
       normalizedData,
       snapshotHash,

@@ -28,15 +28,23 @@ node validate_cnj.js
 ```
 
 ### Testes Automatizados
-Para executar a suíte conceitual que valida o algoritmo de comparação e deduplicação sem fazer requisições reais:
+Para executar a suíte completa de testes automatizados (validação CNJ, provider, deduplicação e hashes) sem fazer requisições reais ao DataJud:
 ```bash
-npx vitest comparison.test.ts
-# ou, se estiver usando jest: npx jest comparison.test.ts
+npm test
 ```
+*Nota: os testes unitários são locais e não exigem chave de API ou acesso à rede.*
 
 ### Execução da PoC (Consultas Reais)
-Para executar o orquestrador que consulta o DataJud e gera as evidências:
+O `runner.js` executa consultas reais ao DataJud e exige autorização e credenciais.
+Para testar o fluxo completo:
 ```bash
+# Defina a chave no ambiente (NÃO salve a chave no repositório)
+# Linux/macOS:
+export DATAJUD_API_KEY=sua_chave_base64_aqui
+# Windows (PowerShell):
+$env:DATAJUD_API_KEY="sua_chave_base64_aqui"
+
+# Execute o script
 node runner.js
 ```
 

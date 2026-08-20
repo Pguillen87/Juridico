@@ -6,7 +6,7 @@ A Prova de Conceito técnica demonstrou que é possível consultar processos pú
 
 **Limitação:** esta rodada da PoC valida o provider DataJud para TJPR, mas não valida ainda o roteamento entre tribunais distintos.
 
-Os payloads brutos e evidências completas permanecem exclusivamente no ambiente local e não foram publicados no repositório.
+O `rawHash` armazenado corresponde exatamente ao `rawText` bruto recebido, preservado localmente em `raw.json`. Os payloads brutos e evidências completas permanecem exclusivamente no ambiente local e não foram publicados no repositório.
 
 ## Critérios Avaliados
 
@@ -20,7 +20,7 @@ Os payloads brutos e evidências completas permanecem exclusivamente no ambiente
 8. **Snapshot:** PASS (Snapshot determinístico criado para comparação)
 9. **Hash:** PASS (Hashes SHA-256 gerados ignorando milissegundos voláteis)
 10. **Comparação:** PASS (Testado baseline vs nova consulta)
-11. **Deduplicação:** PASS (Rodada 2 gerou `success_without_changes` para 8 processos)
+11. **Deduplicação:** PASS (Rodada 2 gerou `success_without_changes` para todos os 10 processos. Trata repetição do mesmo movimento no mesmo payload, ordem diferente e consulta idêntica)
 12. **Consulta sem alteração:** PASS (Diferenciada de erro e de alteração)
 13. **Detecção de alteração:** PASS (Validada via `TEST_FIXTURE_ONLY` gerando `success_with_changes`)
 14. **Indisponibilidade / Timeout:** PASS (Tratado e simulado nos testes unitários)
@@ -32,8 +32,8 @@ Comando executado: `npm test -- --reporter=verbose`.
 
 | Métrica | Resultado |
 |---|---:|
-| Testes executados | 16 |
-| Aprovados | 16 |
+| Testes executados | 25 |
+| Aprovados | 25 |
 | Falhos | 0 |
 | Ignorados | 0 |
 

@@ -13,8 +13,9 @@ function generateMovementHash(cnjNumber, movement) {
 }
 
 function generateSnapshotHash(cnjNumber, movements) {
-  const movHashes = movements.map(m => m.stableHash).sort();
-  const snapshotHashInput = JSON.stringify({ cnj: cnjNumber, movs: movHashes });
+  // Deduplica movimentos idênticos no mesmo payload antes de gerar o snapshot
+  const uniqueMovHashes = [...new Set(movements.map(m => m.stableHash))].sort();
+  const snapshotHashInput = JSON.stringify({ cnj: cnjNumber, movs: uniqueMovHashes });
   return crypto.createHash('sha256').update(snapshotHashInput).digest('hex');
 }
 

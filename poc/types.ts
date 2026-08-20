@@ -35,17 +35,18 @@ export interface ProcessMovement {
 export interface NormalizedProcess {
   cnjNumber: string;
   tribunal: string;
-  system?: string;
-  source: string;
-  externalId?: string;
+  classe?: string;
+  assuntos?: string[];
+  dataAjuizamento?: string;
   lastUpdateDate?: string;
-  parties?: ProcessParty[];
+  source: string;
   movements: ProcessMovement[];
 }
 
 export interface ProviderResponse {
   state: QueryState;
-  rawPayload: any | null;
+  rawText: string | null;
+  parsedPayload: any | null;
   normalizedData?: NormalizedProcess;
   snapshotHash?: string;
   capabilitiesProvided?: ProviderCapability[];

@@ -13,10 +13,26 @@ describe('DataJudProvider - testes locais', () => {
   it('rejeita tribunalAlias não suportado', async () => {
     const result = await new DataJudProvider('dummy').query('00044531220268160000', 'api_publica_tjsp');
     expect(result.state).toBe('unsupported');
-    expect(result.rawPayload).toBeNull();
+    expect(result.rawText).toBeNull();
   });
 
-  it('normaliza resposta e preserva payload bruto completo', async () => {
+  it('normaliza resposta e preserva rawText exato', async () => {
+    // String exata com formatação específica
+    const exactRawText = '{ \n  "hits" : { \n    "hits" : [] \n  } \n}';
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      text: async () => exactRawText
+    });
+
+    const result = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
+    expect(result.state).toBe('process_not_found');
+    expect(result.rawText).toBe(exactRawText);
+    expect(result.parsedPayload).toEqual({ hits: { hits: [] } });
+  });
+
+  it('normaliza resposta e extrai _source separadamente', async () => {
     const fakeRaw = {
       hits: {
         hits: [{
@@ -38,7 +54,8 @@ describe('DataJudProvider - testes locais', () => {
 
     const result = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
     expect(result.state).toBe('success_without_changes');
-    expect(result.rawPayload).toEqual(fakeRaw);
+    expect(result.rawText).toBe(JSON.stringify(fakeRaw));
+    expect(result.parsedPayload).toEqual(fakeRaw);
     expect(result.normalizedData.movements).toHaveLength(1);
     expect(result.capabilitiesProvided).toEqual(['basic_data', 'movements']);
   });
@@ -67,7 +84,7 @@ describe('DataJudProvider - testes locais', () => {
     globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => 'not a json' });
     const invalidJson = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');
     expect(invalidJson.state).toBe('failed');
-    expect(invalidJson.rawPayload).toBe('not a json');
+    expect(invalidJson.rawText).toBe('not a json');
 
     globalThis.fetch = async () => { throw new DOMException('timeout', 'TimeoutError'); };
     const timeout = await new DataJudProvider('dummy-test-key').query('00044531220268160000', 'api_publica_tjpr');

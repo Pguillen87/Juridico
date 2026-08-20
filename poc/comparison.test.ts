@@ -36,6 +36,25 @@ describe('Motor de Comparação e Deduplicação (Módulo Compartilhado)', () =>
     expect(generateSnapshotHash(cnj, [m1, m2])).toBe(generateSnapshotHash(cnj, [m2, m1]));
   });
 
+  describe('Deduplicação real dentro do mesmo payload', () => {
+    it('deve gerar o mesmo snapshot para [A] e [A, A]', () => {
+      const mA = { stableHash: 'hashA' };
+      expect(generateSnapshotHash(cnj, [mA])).toBe(generateSnapshotHash(cnj, [mA, mA]));
+    });
+
+    it('deve gerar o mesmo snapshot para [A, B] e [B, A, A, B]', () => {
+      const mA = { stableHash: 'hashA' };
+      const mB = { stableHash: 'hashB' };
+      expect(generateSnapshotHash(cnj, [mA, mB])).toBe(generateSnapshotHash(cnj, [mB, mA, mA, mB]));
+    });
+
+    it('deve gerar snapshots diferentes para [A] e [A, B]', () => {
+      const mA = { stableHash: 'hashA' };
+      const mB = { stableHash: 'hashB' };
+      expect(generateSnapshotHash(cnj, [mA])).not.toBe(generateSnapshotHash(cnj, [mA, mB]));
+    });
+  });
+
   it('deve gerar snapshot diferente para nova movimentação', () => {
     const m1 = { stableHash: 'hash1' };
     const m2 = { stableHash: 'hash2' };
