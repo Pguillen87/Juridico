@@ -17,7 +17,7 @@ O usuário possuirá exatamente **um papel funcional** (`role`) entre:
 Adicionalmente, o usuário poderá possuir uma **capacidade administrativa** definida por um atributo booleano separado:
 - `is_owner`
 
-O atributo `is_owner` concede poderes para administrar o escritório (convidar usuários, alterar configurações, inativar contas), mas **não** concede automaticamente poderes jurídicos (como aprovar relatórios). Os poderes jurídicos continuam derivados estritamente do `role`. Por exemplo, um advogado proprietário terá `role = lawyer` e `is_owner = true`, somando as permissões jurídicas do advogado às permissões administrativas do proprietário.
+O atributo `is_owner` concede poderes para administrar o escritório (convidar usuários, alterar configurações, inativar contas), mas **não** concede automaticamente poderes jurídicos ou acesso operacional extra. Os poderes operacionais continuam derivados estritamente do `role`. Por exemplo, um advogado proprietário terá `role = lawyer` e `is_owner = true`, somando as permissões operacionais do advogado às permissões administrativas do proprietário. Um usuário `role = operator` e `is_owner = true` continua com o acesso operacional de operador, somado às capacidades administrativas.
 
 ## 3. Matriz atômica de permissões
 
@@ -25,7 +25,7 @@ A tabela abaixo detalha as permissões atômicas de acesso e operação para cad
 
 | Ação | `lawyer` | `operator` | `reviewer` | `auditor` | `is_owner` adiciona |
 |---|---|---|---|---|---|
-| 1. Visualizar dados operacionais do escritório | ALLOW | ALLOW | ALLOW (se necessário à revisão) | DENY | ALLOW |
+| 1. Visualizar dados operacionais do escritório | ALLOW | ALLOW | ALLOW | DENY | DENY |
 | 2. Convidar usuário | DENY | DENY | DENY | DENY | ALLOW |
 | 3. Inativar usuário | DENY | DENY | DENY | DENY | ALLOW |
 | 4. Alterar papel funcional | DENY | DENY | DENY | DENY | ALLOW |
@@ -48,10 +48,19 @@ A tabela abaixo detalha as permissões atômicas de acesso e operação para cad
 | 21. Cancelar relatório | ALLOW | DENY | DENY | DENY | DENY |
 | 22. Gerar PDF final | ALLOW | DENY | DENY | DENY | DENY |
 | 23. Autorizar envio | ALLOW | DENY | DENY | DENY | DENY |
-| 24. Visualizar audit_log | ALLOW | DENY | DENY | ALLOW | ALLOW |
-| 25. Exportar auditoria | ALLOW | DENY | DENY | ALLOW | ALLOW |
-| 26. Exportar dados operacionais | ALLOW | DENY | DENY | DENY | ALLOW |
-| 27. Alterar configurações administrativas | DENY | DENY | DENY | DENY | ALLOW |
+| 24. Visualizar auditoria operacional | ALLOW | DENY | DENY | ALLOW | DENY |
+| 25. Exportar auditoria operacional | ALLOW | DENY | DENY | ALLOW | DENY |
+| 26. Visualizar auditoria administrativa | DENY | DENY | DENY | ALLOW | ALLOW |
+| 27. Exportar auditoria administrativa | DENY | DENY | DENY | ALLOW | ALLOW |
+| 28. Exportar dados operacionais | ALLOW | DENY | DENY | DENY | DENY |
+| 29. Alterar configurações administrativas | DENY | DENY | DENY | DENY | ALLOW |
+
+### Escopo das permissões ALLOW
+
+O valor `ALLOW` não significa acesso irrestrito a todas as linhas ou recursos.
+- Para `reviewer`, o acesso operacional (como visualizar dados e evidências sanitizadas) deve ser limitado somente aos recursos necessários ao fluxo de revisão autorizado, aplicando o isolamento por `office_id`, estado do relatório e demais restrições do domínio.
+- Para `operator`, o reprocessamento manual deve observar limites de taxa e ser restrito aos processos autorizados.
+- A auditoria administrativa trata de convites, inativação, mudança de papel, concessão de `is_owner`, configurações e eventos de segurança, separada da auditoria operacional.
 
 ## 4. Decisões A–N (Pontos que exigem decisão do usuário)
 
@@ -59,20 +68,20 @@ A implementação da autorização requer decisões explícitas sobre comportame
 
 | Item | Pergunta | Recomendação | Justificativa e Riscos |
 |---|---|---|---|
-| A | OWNER pode aprovar relatório jurídico? | **DENY (isoladamente)** | A aprovação exige conhecimento jurídico. O `is_owner` sozinho não permite aprovar; o usuário deve ter `role=lawyer` + `is_owner=true`. Liberar apenas pelo `is_owner` arrisca aprovação por administrador técnico. |
+| A | is_owner pode aprovar relatório jurídico? | **DENY** | A aprovação decorre exclusivamente de `role=lawyer`, independentemente de possuir `is_owner`. Liberar aprovação apenas pelo atributo administrativo arrisca o envio sem crivo jurídico. |
 | B | REVIEWER pode editar relatório? | **ALLOW** | A revisão pressupõe a capacidade de corrigir erros antes da aprovação. Restringir a apenas leitura reduziria a utilidade do papel. |
 | C | REVIEWER pode aprovar relatório final? | **DENY** | A aprovação para envio ao cliente deve ser responsabilidade exclusiva do advogado (`lawyer`). Liberar essa ação arrisca o envio de informações sem crivo jurídico final. |
-| D | OPERATOR pode executar reprocessamento manual? | **ALLOW (com limites)** | É rotina técnica para resolver falhas (ex: timeouts), sem alterar mérito jurídico. Deve haver limites, auditoria e restrição a processos autorizados para evitar consumo excessivo da API. |
+| D | OPERATOR pode executar reprocessamento manual? | **ALLOW** | É rotina técnica para resolver falhas (ex: timeouts), sem alterar mérito jurídico. Deve haver limites, auditoria e restrição a processos autorizados para evitar consumo excessivo da API. |
 | E | OPERATOR pode visualizar payload bruto? | **DENY** | O payload pode conter dados sensíveis ou técnicos não destinados à operação básica. O operador deve se guiar pela interface normalizada. |
 | F | AUDITOR pode visualizar payload bruto? | **DENY** | O auditor deve focar nas trilhas de ações e estados, não na depuração de rede. Liberar isso expõe dados potencialmente sigilosos contidos nos payloads brutos. |
-| G | LAWYER pode convidar usuários? | **DENY (pelo role)** | A gestão de acessos deve ser centralizada. Apenas se o advogado possuir `is_owner=true` a ação será permitida (ALLOW). |
-| H | Somente OWNER pode alterar papéis? | **ALLOW apenas para is_owner=true** | A alteração de papéis é uma escalada de privilégios e deve ser restrita ao administrador, garantindo o Princípio do Menor Privilégio. |
-| I | Um usuário pode ter mais de um papel? | **DENY no MVP** | O usuário terá um único papel funcional (`role`) e a capacidade administrativa separada (`is_owner`), simplificando a lógica de RLS sem perder flexibilidade. |
-| J | Papel é único por usuário no MVP? | **ALLOW (papel funcional único)** | Armazenar o papel em uma única coluna enum na tabela de perfil é a abordagem mais segura e rápida para o MVP. |
-| K | Usuário inativo perde acesso imediatamente? | **ALLOW (revogação imediata)** | Requisito de segurança. As policies e guards devem verificar `user_profile.is_active = true`, não dependendo apenas da revogação da sessão. |
-| L | OWNER pode desativar a própria conta? | **DENY (salvo se houver outro ativo)** | O `owner` só pode desativar a si mesmo se existir outro `owner` ativo capaz de administrar o escritório, prevenindo lockout irreversível. |
+| G | LAWYER pode convidar usuários? | **DENY** | A gestão de acessos deve ser centralizada. Apenas se o usuário possuir `is_owner=true` a ação será permitida. |
+| H | Somente OWNER pode alterar papéis? | **ALLOW** | A alteração de papéis é uma escalada de privilégios e deve ser restrita ao administrador com `is_owner=true`, garantindo o Princípio do Menor Privilégio. |
+| I | Um usuário pode ter mais de um papel? | **DENY** | O usuário terá um único papel funcional (`role`) e a capacidade administrativa separada (`is_owner`), simplificando a lógica de RLS sem perder flexibilidade. |
+| J | Papel é único por usuário no MVP? | **ALLOW** | Armazenar o papel em uma única coluna enum na tabela de perfil é a abordagem mais segura e rápida para o MVP. |
+| K | Usuário inativo perde acesso imediatamente? | **ALLOW** | Requisito de segurança. As policies e guards devem verificar `user_profile.is_active = true`, não dependendo apenas da revogação da sessão. |
+| L | OWNER pode desativar a própria conta? | **DENY** | O `owner` só pode desativar a si mesmo se existir outro `owner` ativo capaz de administrar o escritório, prevenindo lockout irreversível. |
 | M | Último OWNER pode ser removido? | **DENY** | O sistema deve garantir a existência de pelo menos um `owner` ativo por escritório para evitar instâncias órfãs. |
-| N | Quem visualiza documentos protegidos? | **lawyer (por padrão)** | Documentos jurídicos protegidos são acessíveis ao `lawyer`. O `is_owner` sozinho não concede acesso. O `reviewer` poderá acessar apenas se estritamente necessário à revisão. |
+| N | Quem visualiza documentos protegidos? | **NOT_APPLICABLE** | Apenas `role=lawyer` tem acesso padrão. O `is_owner` sozinho não concede acesso. O `reviewer` poderá acessar apenas se estritamente necessário à revisão. |
 
 ## 5. Cadastro público no MVP?
 
@@ -96,7 +105,7 @@ As políticas RLS a serem implementadas na Fase 4 seguirão princípios estritos
 - **Restrição de Mutação por Papel:** A mutação de dados será restrita conforme o `role` e o `is_owner`.
 - **Prevenção de Escalada:** Nenhum usuário poderá alterar seu próprio `role` ou conceder `is_owner` a si próprio.
 - **Segurança da Service Role:** A chave de serviço (`service_role`), que ignora o RLS, será mantida estritamente no backend e nunca exposta ao ambiente do navegador.
-- **Proteção do Último Owner:** A garantia de que o último `owner` ativo nunca seja removido ou inativado deverá existir de forma transacional no banco ou em função SQL controlada para impedir condições de corrida.
+- **Proteção do Último Owner:** A garantia de que o último `owner` ativo nunca seja removido, inativado ou tenha `is_owner` revogado deverá existir de forma transacional no banco ou em função SQL controlada para impedir condições de corrida.
 
 ## 8. Escopo futuro de Supabase Auth
 
@@ -124,11 +133,28 @@ A validação da autorização exigirá testes automatizados rigorosos para gara
 - `office_id` enviado pelo cliente não permite falsificação.
 - Acesso direto à API não contorna restrições da UI.
 - `service_role` nunca é exposta ao browser.
+- `operator` + `is_owner` não ganha acesso de `lawyer`.
+- `reviewer` + `is_owner` não aprova relatório.
+- `auditor` + `is_owner` não ganha acesso a payload bruto.
+- `is_owner` sem `role` lawyer não exporta dados operacionais gerais.
+- `is_owner` acessa auditoria administrativa.
+- `is_owner` não ganha auditoria operacional apenas pelo atributo.
+- `lawyer` consegue aprovar com `is_owner=false`.
+- `lawyer` + `is_owner` possui soma de poderes jurídicos e administrativos.
 
-## 10. Pontos pendentes de decisão do usuário
+## 10. Pacote proposto para aprovação de D-022
 
-A decisão D-022 permanece pendente de aprovação explícita do usuário. As seguintes definições precisam ser confirmadas antes de iniciar a implementação da Fase 4:
-- Adoção do modelo separando `role` funcional e capacidade administrativa `is_owner`.
-- Aprovação da matriz atômica de permissões.
-- Aprovação das recomendações para os itens de decisão A–N e do item sobre cadastro público.
-- Implementação transacional da regra de proteção do último `owner` ativo.
+1. Um role funcional por usuário: `lawyer`/`operator`/`reviewer`/`auditor`.
+2. `is_owner` boolean independente para administração.
+3. `is_owner` não concede poderes jurídicos ou acesso operacional extra.
+4. Aprovação jurídica exclusiva de `role=lawyer`.
+5. Matriz atômica conforme documento.
+6. Cadastro público negado; somente convite administrativo.
+7. `is_active` obrigatório em guards e RLS.
+8. `office_id` resolvido pelo perfil associado a `auth.uid()`.
+9. Autoelevação proibida.
+10. Último owner ativo protegido transacionalmente.
+11. Auditoria administrativa separada da auditoria operacional.
+12. Service role exclusivamente backend.
+
+Status desse bloco: **AGUARDANDO APROVAÇÃO EXPLÍCITA DO USUÁRIO**
