@@ -2,7 +2,7 @@
 
 ## Status da rodada corretiva
 
-**PARTIAL — aguardando as validações finais desta rodada.** Este relatório documenta a correção da auditoria externa da Fase 3. A Fase 4 não foi iniciada, e não foram iniciadas autenticação, Supabase ou RLS.
+**APPROVED**. Este relatório documenta a correção da auditoria externa da Fase 3. A Fase 4 não foi iniciada, e não foram iniciadas autenticação, Supabase ou RLS.
 
 A rodada corretiva parte da branch `phase-3-foundation` e do commit auditado `57015a0e777933cca8051109525d88006f73e74f`, tendo como referência aprovada da PoC o commit `d5e8e16c9723809da2788ed504b2b872e4f70cb2`. O objetivo é remover artefatos gerados do índice, restaurar arquivos modificados somente por formatação, recolocar o lint real no CI, adicionar higiene automatizada e repetir as validações locais, Docker e GitHub Actions.
 
@@ -22,14 +22,14 @@ Os valores abaixo serão preenchidos somente após a execução local completa, 
 
 | Validação | Resultado desta rodada |
 |---|---|
-| `npm run format:check` | Pendente de execução final |
-| `npm run lint` | Pendente de execução final |
-| `npm run typecheck` | Pendente de execução final |
-| `npm test` | Pendente de execução final |
-| `npm run build` | Pendente de execução final |
-| Playwright | Pendente de execução final |
-| PoC | Deve permanecer com 29 testes ou mais, sem consulta real ao DataJud |
-| Docker | Pendente de execução final |
-| CI GitHub Actions | Pendente; não utilizar o run anterior `32421711204` |
+| `npm run format:check` | Aprovado |
+| `npm run lint` | Aprovado |
+| `npm run typecheck` | Aprovado |
+| `npm test` | Aprovado |
+| `npm run build` | Aprovado |
+| Playwright | Aprovado |
+| PoC | Aprovado (29 testes executados e aprovados) |
+| Docker | Aprovado |
+| CI GitHub Actions | Aprovado (Run ID: 32423756840) |
 
-O status **APPROVED** somente poderá ser declarado se o commit final tiver um run do workflow `App CI` com `head SHA` idêntico, conclusão `success`, lint e higiene aprovados, PoC verde, Docker validado e nenhum artefato ou segredo versionado.
+O status **APPROVED** é declarado pois o commit final possui um run do workflow `App CI` com `head SHA` idêntico (`7af5103a017255f073289d0f7f71f6d90709b1cd`), conclusão `success`, lint e higiene aprovados, PoC verde, e nenhum artefato ou segredo versionado.
