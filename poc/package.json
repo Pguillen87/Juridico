@@ -1,0 +1,13 @@
+{
+  "name": "juridico-poc-datajud",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prova de conceito local da integração DataJud para o projeto Juridico",
+  "type": "commonjs",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
+  }
+}
