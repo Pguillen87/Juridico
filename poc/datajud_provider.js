@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const { generateMovementHash, generateSnapshotHash } = require('./comparison');
 
 class DataJudProvider {
   constructor(apiKey) {
@@ -11,14 +11,18 @@ class DataJudProvider {
   }
 
   capabilities() {
-    return ['basic_data', 'movements', 'parties']; // Pode variar por tribunal
+    return ['basic_data', 'movements']; // Partes não estão presentes nos payloads atuais
   }
 
   canQuery(cnjNumber, tribunalAlias) {
-    return !!(cnjNumber && tribunalAlias);
+    return !!cnjNumber && tribunalAlias === 'api_publica_tjpr';
   }
 
   async query(cnjNumber, tribunalAlias) {
+    if (!this.canQuery(cnjNumber, tribunalAlias)) {
+      return { state: 'unsupported', errorMessage: `Endpoint não suportado: ${tribunalAlias}`, rawPayload: null, durationMs: 0 };
+    }
+
     const cleanCnj = cnjNumber.replace(/\D/g, '');
     const url = `${this.baseUrl}/${tribunalAlias}/_search`;
     
@@ -60,34 +64,32 @@ class DataJudProvider {
       return { state: 'source_unavailable', errorCode: response.status.toString(), errorMessage: response.statusText, rawPayload: null, durationMs };
     }
 
+    let rawText;
     let data;
     try {
-      data = await response.json();
+      rawText = await response.text();
+      data = JSON.parse(rawText);
     } catch (e) {
-      return { state: 'failed', errorMessage: 'Falha ao parsear JSON da resposta', rawPayload: null, durationMs };
+      return { state: 'failed', errorMessage: 'Falha ao ler/parsear JSON da resposta', rawPayload: rawText || null, durationMs };
     }
 
     if (!data.hits || !data.hits.hits || data.hits.hits.length === 0) {
       return { state: 'process_not_found', rawPayload: data, durationMs };
     }
 
-    const rawPayload = data.hits.hits[0]._source;
+    const _source = data.hits.hits[0]._source;
     
     // Normalização básica
     const normalizedData = {
-      cnjNumber: rawPayload.numeroProcesso,
+      cnjNumber: _source.numeroProcesso,
       tribunal: tribunalAlias,
-      classe: rawPayload.classe?.nome,
-      assuntos: rawPayload.assuntos?.map(a => a.nome),
-      dataAjuizamento: rawPayload.dataAjuizamento,
-      lastUpdateDate: rawPayload.dataAtualizacao,
+      classe: _source.classe?.nome,
+      assuntos: _source.assuntos?.map(a => a.nome),
+      dataAjuizamento: _source.dataAjuizamento,
+      lastUpdateDate: _source.dataAtualizacao,
       source: this.id(),
-      movements: (rawPayload.movimentos || []).map(m => {
-        // Gera stableHash ignorando variações milissegundos
-        const dateStr = m.dataHora ? m.dataHora.split('.')[0] : '';
-        const hashInput = `${cleanCnj}_${m.codigo || ''}_${m.nome}_${dateStr}`;
-        const stableHash = crypto.createHash('sha256').update(hashInput).digest('hex');
-        
+      movements: (_source.movimentos || []).map(m => {
+        const stableHash = generateMovementHash(cleanCnj, m);
         return {
           code: m.codigo,
           description: m.nome,
@@ -97,16 +99,12 @@ class DataJudProvider {
       })
     };
 
-    // O hash do snapshot determinístico para comparação
-    const snapshotHashInput = JSON.stringify({
-      cnj: normalizedData.cnjNumber,
-      movs: normalizedData.movements.map(m => m.stableHash).sort()
-    });
-    const snapshotHash = crypto.createHash('sha256').update(snapshotHashInput).digest('hex');
+    const snapshotHash = generateSnapshotHash(normalizedData.cnjNumber, normalizedData.movements);
 
     return {
       state: 'success_without_changes', // Será reavaliado pelo comparador na pipeline
-      rawPayload,
+      rawPayload: data, // Resposta bruta completa
+      httpStatus: response.status,
       normalizedData,
       snapshotHash,
       capabilitiesProvided: this.capabilities(),

@@ -1,57 +1,68 @@
-// Exemplo conceitual dos testes de deduplicação e comparação para a PoC
 import { describe, it, expect } from 'vitest';
-import { QueryState, ProcessMovement, NormalizedProcess } from './types';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { generateMovementHash, generateSnapshotHash, compareSnapshots } = require('./comparison.js');
 
-// Funções simuladas para a PoC
-function generateStableHash(movement: any): string {
-  // Simula um hash que ignora data exata de extração e foca no evento
-  return `hash_${movement.codigo || 0}_${movement.nome.toLowerCase().replace(/\s/g, '')}_${movement.dataHora.split('T')[0]}`;
-}
-
-function compareSnapshots(oldSnap: NormalizedProcess | null, newSnap: NormalizedProcess): QueryState {
-  if (!oldSnap) return 'success_with_changes'; // Baseline
+describe('Motor de Comparação e Deduplicação (Módulo Compartilhado)', () => {
+  const cnj = '00044531220268160000';
   
-  const oldHashes = new Set(oldSnap.movements.map(m => m.stableHash));
-  const newHashes = newSnap.movements.map(m => m.stableHash);
-  
-  const hasNew = newHashes.some(hash => !oldHashes.has(hash));
-  return hasNew ? 'success_with_changes' : 'success_without_changes';
-}
-
-describe('Motor de Comparação e Deduplicação', () => {
-  const movA = { codigo: 26, nome: 'Distribuição', dataHora: '2024-03-15T08:32:00.000Z' };
-  const movB = { codigo: 60, nome: 'Juntada de Petição', dataHora: '2024-03-22T14:10:00.000Z' };
-
-  it('deve gerar o mesmo hash para movimentações equivalentes', () => {
-    const hash1 = generateStableHash(movA);
-    const hash2 = generateStableHash({ ...movA, dataHora: '2024-03-15T09:00:00.000Z' }); // Mesma data, hora diferente
-    expect(hash1).toBe(hash2);
+  it('deve gerar o mesmo hash para movimentações exatamente iguais', () => {
+    const mov1 = { codigo: 1, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.000Z' };
+    const mov2 = { codigo: 1, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.000Z' };
+    expect(generateMovementHash(cnj, mov1)).toBe(generateMovementHash(cnj, mov2));
   });
 
-  it('deve detectar alteração quando há novos movimentos (success_with_changes)', () => {
-    const oldSnap: NormalizedProcess = {
-      cnjNumber: '000123456720248260100', tribunal: 'tjsp', source: 'datajud',
-      movements: [{ description: movA.nome, date: movA.dataHora, stableHash: generateStableHash(movA) }]
-    };
-    
-    const newSnap: NormalizedProcess = {
-      ...oldSnap,
-      movements: [
-        { description: movA.nome, date: movA.dataHora, stableHash: generateStableHash(movA) },
-        { description: movB.nome, date: movB.dataHora, stableHash: generateStableHash(movB) }
-      ]
-    };
-
-    expect(compareSnapshots(oldSnap, newSnap)).toBe('success_with_changes');
+  it('deve gerar o mesmo hash quando a diferença for apenas nos milissegundos (volatilidade tratada)', () => {
+    const mov1 = { codigo: 1, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.000Z' };
+    const mov2 = { codigo: 1, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.999Z' };
+    expect(generateMovementHash(cnj, mov1)).toBe(generateMovementHash(cnj, mov2));
   });
 
-  it('deve classificar como sem alteração quando não há movimentos novos (success_without_changes)', () => {
-    const snap: NormalizedProcess = {
-      cnjNumber: '000123456720248260100', tribunal: 'tjsp', source: 'datajud',
-      movements: [{ description: movA.nome, date: movA.dataHora, stableHash: generateStableHash(movA) }]
-    };
+  it('deve gerar hash diferente se o código for diferente', () => {
+    const mov1 = { codigo: 1, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.000Z' };
+    const mov2 = { codigo: 2, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.000Z' };
+    expect(generateMovementHash(cnj, mov1)).not.toBe(generateMovementHash(cnj, mov2));
+  });
 
-    // Nova consulta retorna exatamente os mesmos dados
-    expect(compareSnapshots(snap, snap)).toBe('success_without_changes');
+  it('deve gerar hash diferente se a descrição for diferente', () => {
+    const mov1 = { codigo: 1, nome: 'Distribuição', dataHora: '2026-01-01T10:00:00.000Z' };
+    const mov2 = { codigo: 1, nome: 'Distribuição Sorteio', dataHora: '2026-01-01T10:00:00.000Z' };
+    expect(generateMovementHash(cnj, mov1)).not.toBe(generateMovementHash(cnj, mov2));
+  });
+
+  it('deve gerar o mesmo snapshot para ordem diferente das mesmas movimentações', () => {
+    const m1 = { stableHash: 'hash1' };
+    const m2 = { stableHash: 'hash2' };
+    expect(generateSnapshotHash(cnj, [m1, m2])).toBe(generateSnapshotHash(cnj, [m2, m1]));
+  });
+
+  it('deve gerar snapshot diferente para nova movimentação', () => {
+    const m1 = { stableHash: 'hash1' };
+    const m2 = { stableHash: 'hash2' };
+    expect(generateSnapshotHash(cnj, [m1])).not.toBe(generateSnapshotHash(cnj, [m1, m2]));
+  });
+
+  it('deve classificar como success_without_changes quando os snapshots são idênticos', () => {
+    const snap1 = generateSnapshotHash(cnj, [{ stableHash: 'hash1' }]);
+    const snap2 = generateSnapshotHash(cnj, [{ stableHash: 'hash1' }]);
+    expect(compareSnapshots(snap1, snap2)).toBe('success_without_changes');
+  });
+
+  it('deve classificar como success_with_changes quando há alteração real', () => {
+    const snap1 = generateSnapshotHash(cnj, [{ stableHash: 'hash1' }]);
+    const snap2 = generateSnapshotHash(cnj, [{ stableHash: 'hash1' }, { stableHash: 'hash2' }]);
+    expect(compareSnapshots(snap1, snap2)).toBe('success_with_changes');
+  });
+
+  describe('Regressão de Baseline (primeira consulta válida)', () => {
+    it('deve retornar success_with_changes após timeout (snapshot anterior null)', () => {
+      const snap2 = generateSnapshotHash(cnj, [{ stableHash: 'hash1' }]);
+      expect(compareSnapshots(null, snap2)).toBe('success_with_changes');
+    });
+
+    it('deve retornar success_with_changes após source_unavailable (snapshot anterior null)', () => {
+      const snap2 = generateSnapshotHash(cnj, [{ stableHash: 'hash1' }]);
+      expect(compareSnapshots(null, snap2)).toBe('success_with_changes');
+    });
   });
 });

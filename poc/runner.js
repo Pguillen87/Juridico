@@ -18,10 +18,7 @@ const cnjs = [
   '0143282-07.2025.8.16.0000', '0129656-18.2025.8.16.0000'
 ];
 
-function compareSnapshots(oldHash, newHash) {
-  if (!oldHash) return 'success_with_changes'; // Primeira vez = baseline = nova "alteração" detectada para o sistema
-  return oldHash === newHash ? 'success_without_changes' : 'success_with_changes';
-}
+const { compareSnapshots, generateSnapshotHash } = require('./comparison');
 
 async function run() {
   const provider = new DataJudProvider(API_KEY);
@@ -53,21 +50,24 @@ async function run() {
     fs.mkdirSync(run1Dir, { recursive: true });
     
     if (res1.rawPayload) {
-      const rawStr = JSON.stringify(res1.rawPayload, null, 2);
+      const rawStr = typeof res1.rawPayload === 'string' ? res1.rawPayload : JSON.stringify(res1.rawPayload, null, 2);
       fs.writeFileSync(path.join(run1Dir, 'raw.json'), rawStr);
       const rawHash = crypto.createHash('sha256').update(rawStr).digest('hex');
       fs.writeFileSync(path.join(run1Dir, 'hashes.json'), JSON.stringify({ rawHash, snapshotHash: res1.snapshotHash }, null, 2));
       fs.writeFileSync(path.join(run1Dir, 'normalized.json'), JSON.stringify(res1.normalizedData, null, 2));
     }
-    fs.writeFileSync(path.join(run1Dir, 'metadata.json'), JSON.stringify({ state: state1, durationMs: res1.durationMs, error: res1.errorMessage }, null, 2));
+    fs.writeFileSync(path.join(run1Dir, 'metadata.json'), JSON.stringify({ state: state1, durationMs: res1.durationMs, error: res1.errorMessage, httpStatus: res1.httpStatus }, null, 2));
 
     // Rodada 2 (imediatamente após, para testar deduplicação sem alteração real)
     console.log(`Consultando ${cnj} (Rodada 2)...`);
     const res2 = await provider.query(val.clean, val.endpointAlias);
     
     let state2 = res2.state;
-    if (res2.state === 'success_without_changes' && res1.snapshotHash) {
-      state2 = compareSnapshots(res1.snapshotHash, res2.snapshotHash);
+    if (res2.state === 'success_without_changes') {
+      // Usa o hash da rodada 1 apenas se a rodada 1 foi bem sucedida,
+      // senão a rodada 2 torna-se o primeiro baseline válido
+      const previousHash = res1.snapshotHash || null;
+      state2 = compareSnapshots(previousHash, res2.snapshotHash);
     }
 
     const run2Dir = path.join(processDir, 'run-002');
@@ -105,11 +105,7 @@ async function run() {
       stableHash: "artificial_hash_123"
     });
     
-    const newSnapshotHashInput = JSON.stringify({
-      cnj: normData.cnjNumber,
-      movs: normData.movements.map(m => m.stableHash).sort()
-    });
-    const newSnapshotHash = crypto.createHash('sha256').update(newSnapshotHashInput).digest('hex');
+    const newSnapshotHash = generateSnapshotHash(normData.cnjNumber, normData.movements);
     
     const simState = compareSnapshots(oldHash, newSnapshotHash);
     console.log(`Teste Fixture: Snapshot A -> Snapshot B (com movimento artificial) = ${simState}`);

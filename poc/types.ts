@@ -44,12 +44,15 @@ export interface NormalizedProcess {
 }
 
 export interface ProviderResponse {
-  rawPayload: Record<string, any>;
-  normalizedData?: NormalizedProcess;
-  capabilitiesProvided: ProviderCapability[];
   state: QueryState;
+  rawPayload: any | null;
+  normalizedData?: NormalizedProcess;
+  snapshotHash?: string;
+  capabilitiesProvided?: ProviderCapability[];
   errorCode?: string;
   errorMessage?: string;
+  httpStatus?: number;
+  durationMs: number;
 }
 
 export interface ProcessProvider {
