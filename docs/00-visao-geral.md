@@ -23,18 +23,18 @@ A operação inicial usará a API Pública do DataJud e um provedor manual para 
 
 ## Decisões Provisórias
 
-| Item | Valor inicial | Estado e validação |
-|---|---|---|
-| Stack | Next.js, TypeScript, Supabase/PostgreSQL, Supabase Auth, RLS, Tailwind, Zod, Vitest e Playwright | `proposed`; aprovação do usuário |
-| Fuso operacional | `America/Sao_Paulo` | `proposed`; validação do advogado |
-| Consultas | 08:00, 13:00 e 18:00 | `proposed`; validação do advogado |
-| Fechamento semanal | Sexta-feira às 17:00 | `proposed`; validação do advogado |
-| Alertas | E-mail | `proposed`; aprovação do usuário |
-| Fornecedor de e-mail | Interface abstrata | `deferred`; contratação e credencial externa |
-| Ambiente de testes | Adaptador falso ou sandbox | `proposed`; validação técnica |
-| Retenção de respostas brutas | 180 dias inicialmente | `proposed`; validação jurídica |
-| Relatórios enviados e auditoria | Sem exclusão automática até decisão jurídica | `proposed`; validação jurídica |
-| Processos sigilosos | Sem consulta automática no MVP | `rejected` para o escopo atual |
+| Item                            | Valor inicial                                                                                    | Estado e validação                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| Stack                           | Next.js, TypeScript, Supabase/PostgreSQL, Supabase Auth, RLS, Tailwind, Zod, Vitest e Playwright | `proposed`; aprovação do usuário             |
+| Fuso operacional                | `America/Sao_Paulo`                                                                              | `proposed`; validação do advogado            |
+| Consultas                       | 08:00, 13:00 e 18:00                                                                             | `proposed`; validação do advogado            |
+| Fechamento semanal              | Sexta-feira às 17:00                                                                             | `proposed`; validação do advogado            |
+| Alertas                         | E-mail                                                                                           | `proposed`; aprovação do usuário             |
+| Fornecedor de e-mail            | Interface abstrata                                                                               | `deferred`; contratação e credencial externa |
+| Ambiente de testes              | Adaptador falso ou sandbox                                                                       | `proposed`; validação técnica                |
+| Retenção de respostas brutas    | 180 dias inicialmente                                                                            | `proposed`; validação jurídica               |
+| Relatórios enviados e auditoria | Sem exclusão automática até decisão jurídica                                                     | `proposed`; validação jurídica               |
+| Processos sigilosos             | Sem consulta automática no MVP                                                                   | `rejected` para o escopo atual               |
 
 ## Escopo do MVP
 

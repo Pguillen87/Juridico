@@ -8,7 +8,7 @@ const cnjs = [
   '0152098-75.2025.8.16.0000',
   '0099021-54.2025.8.16.0000',
   '0143282-07.2025.8.16.0000',
-  '0129656-18.2025.8.16.0000'
+  '0129656-18.2025.8.16.0000',
 ];
 
 function calculateCheckDigits(clean) {
@@ -24,14 +24,17 @@ function validateCnj(cnj) {
   const tribunal = isValidLength ? clean.substring(14, 16) : '';
   const actualCheckDigits = isValidLength ? clean.substring(7, 9) : '';
   const expectedCheckDigits = isValidLength ? calculateCheckDigits(clean) : '';
-  const checkDigitsValid = isValidLength && actualCheckDigits === expectedCheckDigits;
+  const checkDigitsValid =
+    isValidLength && actualCheckDigits === expectedCheckDigits;
   const belongsToTjpr = segment === '8' && tribunal === '16';
   const isValid = isValidLength && checkDigitsValid && belongsToTjpr;
 
   let reason = '';
   if (!isValidLength) reason = `Tamanho inválido: ${clean.length} dígitos.`;
-  else if (!checkDigitsValid) reason = `Dígitos verificadores inválidos: esperado ${expectedCheckDigits}, recebido ${actualCheckDigits}.`;
-  else if (!belongsToTjpr) reason = `Segmento (${segment}) ou tribunal (${tribunal}) não corresponde ao TJPR (8.16).`;
+  else if (!checkDigitsValid)
+    reason = `Dígitos verificadores inválidos: esperado ${expectedCheckDigits}, recebido ${actualCheckDigits}.`;
+  else if (!belongsToTjpr)
+    reason = `Segmento (${segment}) ou tribunal (${tribunal}) não corresponde ao TJPR (8.16).`;
 
   return {
     original: cnj,
@@ -44,7 +47,7 @@ function validateCnj(cnj) {
     checkDigitsValid,
     endpointAlias: belongsToTjpr ? 'api_publica_tjpr' : null,
     isValid,
-    reason
+    reason,
   };
 }
 

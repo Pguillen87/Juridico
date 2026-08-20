@@ -33,7 +33,7 @@ describe('Validador CNJ', () => {
     const base = '000123420248260100';
     const dv = calculateCheckDigits('00012340020248260100'); // Mock para pegar DV correto
     const cnjTjsp = `0001234-${dv}.2024.8.26.0100`;
-    
+
     const res = validateCnj(cnjTjsp);
     expect(res.isValid).toBe(false);
     expect(res.endpointAlias).toBeNull();
@@ -43,7 +43,7 @@ describe('Validador CNJ', () => {
   it('deve rejeitar CNJ de outro segmento (ex: TRT - 5.15)', () => {
     const dv = calculateCheckDigits('00012340020245150100');
     const cnjTrt = `0001234-${dv}.2024.5.15.0100`;
-    
+
     const res = validateCnj(cnjTrt);
     expect(res.isValid).toBe(false);
     expect(res.endpointAlias).toBeNull();
