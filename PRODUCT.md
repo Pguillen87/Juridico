@@ -72,16 +72,16 @@ A interface deverá comunicar estados, falhas, alterações e pendências por te
 
 ## Open Decisions
 
-| Decisão                                                    | Estado                | Validação necessária                           |
-| ---------------------------------------------------------- | --------------------- | ---------------------------------------------- |
-| Stack técnica                                              | `proposed`            | Aprovação do usuário e revisão técnica         |
-| Fuso `America/Sao_Paulo`                                   | `proposed`            | Validação do advogado                          |
-| Horários 08:00, 13:00 e 18:00                              | `proposed`            | Validação do advogado                          |
-| Fechamento sexta-feira 17:00                               | `proposed`            | Validação do advogado                          |
-| Canal inicial e-mail                                       | `proposed`            | Aprovação do usuário                           |
-| Fornecedor de e-mail                                       | `deferred`            | Contratação de fornecedor e credencial externa |
-| Adaptador falso/sandbox                                    | `proposed`            | Validação técnica                              |
-| Retenção bruta de 180 dias                                 | `proposed`            | Validação jurídica                             |
-| Retenção de relatórios e auditoria sem exclusão automática | `proposed`            | Validação jurídica                             |
-| Consulta automática de processos sigilosos                 | `rejected` no MVP     | Revisão jurídica se o escopo mudar             |
-| Números CNJ da PoC                                         | `requires_user_input` | Fornecimento e aprovação explícita do usuário  |
+| Decisão | Estado | Validação necessária |
+|---|---|---|
+| Stack técnica | `proposed` | Aprovação do usuário e revisão técnica |
+| Fuso `America/Sao_Paulo` | `proposed` | Validação do advogado |
+| Horários 08:00, 13:00 e 18:00 | `proposed` | Validação do advogado |
+| Fechamento sexta-feira 17:00 | `proposed` | Validação do advogado |
+| Canal inicial e-mail | `proposed` | Aprovação do usuário |
+| Fornecedor de e-mail | `deferred` | Contratação de fornecedor e credencial externa |
+| Adaptador falso/sandbox | `proposed` | Validação técnica |
+| Retenção bruta de 180 dias | `proposed` | Validação jurídica |
+| Retenção de relatórios e auditoria sem exclusão automática | `proposed` | Validação jurídica |
+| Consulta automática de processos sigilosos | `rejected` no MVP | Revisão jurídica se o escopo mudar |
+| Números CNJ da PoC | `requires_user_input` | Fornecimento e aprovação explícita do usuário |

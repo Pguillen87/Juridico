@@ -39,17 +39,17 @@ O frontend não acessará diretamente provedores processuais, storage privado ou
 
 ## 2. Fronteiras entre Camadas
 
-| Camada                  | Responsabilidade                                                  | Não deve fazer                                                        |
-| ----------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Frontend                | Apresentar dados, estados, ações e erros; coletar confirmação     | Consultar tribunal diretamente ou decidir autorização                 |
-| API                     | Autenticar, autorizar, validar comandos e orquestrar casos de uso | Esconder falha como ausência de movimentação                          |
-| Banco                   | Persistir estado, constraints, RLS, hashes e auditoria            | Conter segredo em payload ou depender de texto livre para integridade |
-| Scheduler               | Calcular janelas no fuso operacional e criar jobs idempotentes    | Executar consultas diretamente no processo do usuário                 |
-| Fila/worker             | Executar jobs com lock, retries e classificação                   | Criar duplicações ou manter lock indefinido                           |
-| Provider                | Converter contrato interno em chamada de fonte autorizada         | Fazer scraping, bypass ou inventar capacidades                        |
-| Normalizador/comparador | Canonicalizar, criar snapshots e detectar diferenças              | Consultar fonte ou emitir parecer jurídico                            |
-| IA opcional             | Sugerir rascunhos                                                 | Ser fonte oficial, aprovar, alterar datas ou enviar                   |
-| E-mail                  | Entregar mensagens aprovadas e registrar resposta                 | Escolher versão não aprovada                                          |
+| Camada | Responsabilidade | Não deve fazer |
+|---|---|---|
+| Frontend | Apresentar dados, estados, ações e erros; coletar confirmação | Consultar tribunal diretamente ou decidir autorização |
+| API | Autenticar, autorizar, validar comandos e orquestrar casos de uso | Esconder falha como ausência de movimentação |
+| Banco | Persistir estado, constraints, RLS, hashes e auditoria | Conter segredo em payload ou depender de texto livre para integridade |
+| Scheduler | Calcular janelas no fuso operacional e criar jobs idempotentes | Executar consultas diretamente no processo do usuário |
+| Fila/worker | Executar jobs com lock, retries e classificação | Criar duplicações ou manter lock indefinido |
+| Provider | Converter contrato interno em chamada de fonte autorizada | Fazer scraping, bypass ou inventar capacidades |
+| Normalizador/comparador | Canonicalizar, criar snapshots e detectar diferenças | Consultar fonte ou emitir parecer jurídico |
+| IA opcional | Sugerir rascunhos | Ser fonte oficial, aprovar, alterar datas ou enviar |
+| E-mail | Entregar mensagens aprovadas e registrar resposta | Escolher versão não aprovada |
 
 ## 3. Fluxo de Consulta
 
@@ -92,13 +92,13 @@ Os horários iniciais são 08:00, 13:00 e 18:00 em `America/Sao_Paulo`, configur
 
 Chaves conceituais:
 
-| Operação    | Chave idempotente                                                              |
-| ----------- | ------------------------------------------------------------------------------ |
-| Consulta    | `office_id + process_id + scheduled_window_utc + provider_id`                  |
-| Alteração   | `process_id + previous_snapshot_hash + new_snapshot_hash + change_fingerprint` |
-| Notificação | `detected_change_id + recipient + channel + template_version`                  |
-| Relatório   | `office_id + client_id + period_start_utc + period_end_utc`                    |
-| Entrega     | `report_version_id + recipient + artifact_hash`                                |
+| Operação | Chave idempotente |
+|---|---|
+| Consulta | `office_id + process_id + scheduled_window_utc + provider_id` |
+| Alteração | `process_id + previous_snapshot_hash + new_snapshot_hash + change_fingerprint` |
+| Notificação | `detected_change_id + recipient + channel + template_version` |
+| Relatório | `office_id + client_id + period_start_utc + period_end_utc` |
+| Entrega | `report_version_id + recipient + artifact_hash` |
 
 O banco terá constraints únicas para essas chaves quando aplicável. Antes de consultar, o worker adquirirá lock por `office_id + process_id`, com TTL e renovação controlada. Lock expirado poderá ser recuperado por worker de manutenção. Uma consulta concorrente do mesmo processo deverá ser rejeitada ou agregada, nunca executada duas vezes em paralelo.
 

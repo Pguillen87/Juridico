@@ -1,12 +1,12 @@
-export type ProviderCapability =
-  | 'basic_data'
-  | 'movements'
-  | 'parties'
-  | 'publications'
-  | 'documents'
+export type ProviderCapability = 
+  | 'basic_data' 
+  | 'movements' 
+  | 'parties' 
+  | 'publications' 
+  | 'documents' 
   | 'sealed_process';
 
-export type QueryState =
+export type QueryState = 
   | 'pending'
   | 'running'
   | 'success_with_changes'

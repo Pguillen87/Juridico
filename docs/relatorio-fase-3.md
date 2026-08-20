@@ -1,35 +1,39 @@
 # Relatório da Fase 3 - Fundação Técnica
 
-## Status da rodada corretiva
+## Status da rodada de fechamento
 
-**APPROVED**. Este relatório documenta a correção da auditoria externa da Fase 3. A Fase 4 não foi iniciada, e não foram iniciadas autenticação, Supabase ou RLS.
+**PARTIAL — aguardando a auditoria do novo CI desta rodada.** Este relatório documenta o fechamento corretivo da Fase 3. A Fase 4 não foi iniciada, e não foram iniciados Supabase, autenticação ou RLS.
 
-A rodada corretiva parte da branch `phase-3-foundation` e do commit auditado `57015a0e777933cca8051109525d88006f73e74f`, tendo como referência aprovada da PoC o commit `d5e8e16c9723809da2788ed504b2b872e4f70cb2`. O objetivo é remover artefatos gerados do índice, restaurar arquivos modificados somente por formatação, recolocar o lint real no CI, adicionar higiene automatizada e repetir as validações locais, Docker e GitHub Actions.
+A base aprovada da PoC/Fase 2 é `d5e8e16c9723809da2788ed504b2b872e4f70cb2`. O HEAD auditado antes desta rodada era `9c4aaef8353f77cd39f7c1c6cd762e0c93442620`. O commit corretivo anterior da branch é `7af51032dc64f7f4363dcd6d9f86a967309d6289`; o run histórico `32423756840` corresponde a esse commit. O run histórico `32424067509` corresponde ao HEAD anterior `9c4aaef8353f77cd39f7c1c6cd762e0c93442620`. Esses runs não são reutilizados como evidência do commit que será criado nesta rodada.
 
-## Correções realizadas
+O CI é obrigatório para a classificação final. Após o push desta rodada, o novo run deverá ser verificado no GitHub e deverá possuir `head SHA` idêntico ao novo commit, conclusão `success` e sucesso nos passos Repository Hygiene, Format Check, Lint, Typecheck, Unit Tests, Build, E2E Tests e Verify PoC.
 
-O diretório `poc/node_modules` foi removido somente do índice Git, preservando as dependências locais para execução. A regra de ignorância foi ampliada para `node_modules/` em qualquer nível, mantendo as proteções para `.env*`, `.next/`, `coverage/`, `playwright-report/`, `test-results/` e `poc/evidence/`.
+## Correções e restauração exata
 
-Os documentos históricos e os arquivos da PoC que haviam sido alterados apenas por formatação foram restaurados ao conteúdo do commit aprovado da Fase 2. Foram mantidas somente as alterações documentais intencionais em `docs/07-decisoes-do-mvp.md` e `poc/POC_RESULT.md`, além deste relatório. O arquivo `poc/vitest.config.ts` permanece apenas para permitir a execução isolada da suíte da PoC.
+Os arquivos fora do escopo foram restaurados exatamente a partir da base aprovada, incluindo `DESIGN.md`, `PRODUCT.md`, os documentos históricos especificados em `docs/`, `.github/workflows/poc-ci.yml` e os arquivos técnicos da PoC especificados no plano. A comparação individual com `git diff --quiet d5e8e16c9723809da2788ed504b2b872e4f70cb2 -- <arquivo>` apresentou zero diferenças residuais para todos os arquivos classificados como restaurados.
 
-O script `lint` foi corrigido de `next lint` para `eslint .`, e o ESLint foi configurado para ignorar a PoC e artefatos gerados sem desativar as regras da aplicação, das configurações e dos testes E2E. O lint foi reinserido no workflow `app-ci.yml`. Também foi criado `.prettierignore`, limitando o Prettier ao escopo de código e arquivos de aplicação e impedindo novas reformatacões acidentais da documentação histórica e da PoC.
+Foram mantidas somente as mudanças intencionais da fundação: `docs/07-decisoes-do-mvp.md`, `poc/POC_RESULT.md` com a correção factual de 29 testes executados e aprovados, `poc/vitest.config.ts` para a execução isolada da PoC, os arquivos da aplicação principal, Docker, CI, higiene e este relatório. O `.prettierignore` continua protegendo `docs/`, `poc/`, `.github/workflows/poc-ci.yml`, `PRODUCT.md`, `DESIGN.md` e os artefatos gerados.
 
-A página mínima passou a usar `lang="pt-BR"`, metadata com título `Juridico` e descrição coerente com monitoramento jurídico. A página não foi redesenhada e nenhum dashboard foi criado.
+O diretório `poc/node_modules` permanece fora do índice Git, e a regra global `node_modules/` evita que dependências sejam versionadas em qualquer nível. O workflow mantém o passo `Repository Hygiene`, que falha se encontrar dependências, evidências, arquivos de ambiente reais ou relatórios gerados versionados.
 
-## Validações finais pendentes de registro
+## Resultados locais observados
 
-Os valores abaixo serão preenchidos somente após a execução local completa, a validação Docker e a conclusão do novo workflow do GitHub Actions ligado exatamente ao commit final.
+As validações locais já executadas nesta rodada foram aprovadas: `npm ci`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm ci --prefix poc`, `npm --prefix poc test -- --reporter=verbose` com 29 testes aprovados, `npx playwright install chromium` e `npm run e2e` com 2 testes aprovados. Nenhuma dessas validações consultou o DataJud ou utilizou `DATAJUD_API_KEY`.
 
-| Validação | Resultado desta rodada |
+A validação Docker real foi executada no clone atualizado da branch, no computador local do usuário. `docker info` respondeu com Docker Server `29.7.2`; `docker compose config` foi aprovado; `docker compose build` criou a imagem; `docker compose up -d` iniciou o serviço; `docker compose ps` mostrou o container `juridico-phase3-ci-2-web-1` ativo e a porta `3000:3000`; a requisição para `/` retornou HTTP 200; `/api/health` retornou HTTP 200 com `{"status":"ok"}`; `docker compose down` removeu o container e a rede; e `docker compose ps` final não mostrou serviços ativos.
+
+| Validação | Resultado observado ou condição |
 |---|---|
+| Restauração exata | Aprovada; 0 diferenças residuais nos arquivos restaurados |
+| Higiene do Git | Aprovada; nenhum `*/node_modules/**` versionado |
 | `npm run format:check` | Aprovado |
 | `npm run lint` | Aprovado |
 | `npm run typecheck` | Aprovado |
 | `npm test` | Aprovado |
 | `npm run build` | Aprovado |
-| Playwright | Aprovado |
-| PoC | Aprovado (29 testes executados e aprovados) |
-| Docker | Aprovado |
-| CI GitHub Actions | Aprovado (Run ID: 32423756840) |
+| PoC | Aprovada; 29/29 testes locais |
+| Playwright | Aprovado; 2 testes |
+| Docker | Aprovado; config, build, up, ps, HTTP, down e ps final executados |
+| CI final | Pendente; deve corresponder ao novo commit |
 
-O status **APPROVED** é declarado pois o commit final possui um run do workflow `App CI` com `head SHA` idêntico (`7af5103a017255f073289d0f7f71f6d90709b1cd`), conclusão `success`, lint e higiene aprovados, PoC verde, e nenhum artefato ou segredo versionado.
+A classificação **APPROVED** somente poderá ser registrada depois que Docker e o novo CI forem realmente verificados. Este relatório não antecipa essa classificação nem cria uma referência autorreferente ao próprio commit futuro.

@@ -56,25 +56,25 @@ Critério obrigatório: não enviar relatório sem aprovação; não enviar arte
 
 Uma ficha deverá ser preenchida para cada processo aprovado:
 
-| Campo                                         | Resultado                                 |
-| --------------------------------------------- | ----------------------------------------- |
-| Identificador CNJ mascarado quando necessário | A preencher na PoC                        |
-| Tribunal                                      | A preencher na PoC                        |
-| Processo público confirmado                   | Sim/Não, com evidência                    |
-| Autorização do usuário                        | Data e responsável                        |
-| Data da consulta                              | UTC e apresentação local                  |
-| Provider                                      | DataJud ou ManualProvider                 |
-| Resposta HTTP                                 | Código ou não aplicável                   |
-| Campos recebidos                              | Lista objetiva                            |
-| Movimentos recebidos                          | Quantidade e hashes                       |
-| Snapshot criado                               | Sim/Não e ID interno                      |
-| Hash criado                                   | Valor interno mascarado quando necessário |
-| Alteração detectada                           | Sim/Não e fingerprint                     |
-| Falha encontrada                              | Estado padronizado ou “nenhuma”           |
-| Notificação criada                            | Sim/Não e chave                           |
-| Relatório incluído                            | Processo/parte/ambos                      |
-| Resultado                                     | Aprovado/Reprovado                        |
-| Observações                                   | Evidências e pendências                   |
+| Campo | Resultado |
+|---|---|
+| Identificador CNJ mascarado quando necessário | A preencher na PoC |
+| Tribunal | A preencher na PoC |
+| Processo público confirmado | Sim/Não, com evidência |
+| Autorização do usuário | Data e responsável |
+| Data da consulta | UTC e apresentação local |
+| Provider | DataJud ou ManualProvider |
+| Resposta HTTP | Código ou não aplicável |
+| Campos recebidos | Lista objetiva |
+| Movimentos recebidos | Quantidade e hashes |
+| Snapshot criado | Sim/Não e ID interno |
+| Hash criado | Valor interno mascarado quando necessário |
+| Alteração detectada | Sim/Não e fingerprint |
+| Falha encontrada | Estado padronizado ou “nenhuma” |
+| Notificação criada | Sim/Não e chave |
+| Relatório incluído | Processo/parte/ambos |
+| Resultado | Aprovado/Reprovado |
+| Observações | Evidências e pendências |
 
 ## Critérios de Aprovação da PoC
 

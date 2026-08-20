@@ -1,7 +1,5 @@
 <!-- SEED: estabelecido como orientação provisória antes da implementação; executar $impeccable document depois que houver código para extrair tokens e componentes reais. -->
-
 ---
-
 name: juridico
 description: Documento visual provisório para a aplicação administrativa Juridico, uma central de monitoramento jurídico orientada à rastreabilidade, revisão humana e clareza de estados.
 ---

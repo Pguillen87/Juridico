@@ -14,13 +14,8 @@ function generateMovementHash(cnjNumber, movement) {
 
 function generateSnapshotHash(cnjNumber, movements) {
   // Deduplica movimentos idênticos no mesmo payload antes de gerar o snapshot
-  const uniqueMovHashes = [
-    ...new Set(movements.map((m) => m.stableHash)),
-  ].sort();
-  const snapshotHashInput = JSON.stringify({
-    cnj: cnjNumber,
-    movs: uniqueMovHashes,
-  });
+  const uniqueMovHashes = [...new Set(movements.map(m => m.stableHash))].sort();
+  const snapshotHashInput = JSON.stringify({ cnj: cnjNumber, movs: uniqueMovHashes });
   return crypto.createHash('sha256').update(snapshotHashInput).digest('hex');
 }
 
@@ -29,13 +24,11 @@ function compareSnapshots(oldHash, newHash) {
   // é sempre uma nova "alteração" (baseline), mesmo que tenha havido
   // timeout ou falha em rodadas anteriores.
   if (!oldHash) return 'success_with_changes';
-  return oldHash === newHash
-    ? 'success_without_changes'
-    : 'success_with_changes';
+  return oldHash === newHash ? 'success_without_changes' : 'success_with_changes';
 }
 
 module.exports = {
   generateMovementHash,
   generateSnapshotHash,
-  compareSnapshots,
+  compareSnapshots
 };

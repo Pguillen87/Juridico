@@ -2,9 +2,9 @@ name: PoC DataJud CI
 
 on:
   push:
-    branches: [phase-2-poc-datajud]
+    branches: [ phase-2-poc-datajud ]
   pull_request:
-    branches: [phase-2-poc-datajud, main]
+    branches: [ phase-2-poc-datajud, main ]
 
 jobs:
   test:
