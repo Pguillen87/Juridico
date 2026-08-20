@@ -30,12 +30,12 @@ O `rawHash` armazenado corresponde exatamente ao `rawText` bruto recebido, prese
 
 Comando executado: `npm test -- --reporter=verbose`.
 
-| Métrica           | Resultado |
-| ----------------- | --------: |
-| Testes executados |        29 |
-| Aprovados         |        29 |
-| Falhos            |         0 |
-| Ignorados         |         0 |
+| Métrica | Resultado |
+|---|---:|
+| Testes executados | 29 |
+| Aprovados | 29 |
+| Falhos | 0 |
+| Ignorados | 0 |
 
 A suíte cobre comparação unificada, deduplicação, normalização real, hash determinístico unificado, validação completa de CNJ, `process_not_found`, HTTP 429 (com body), HTTP 500/503 (com body), JSON inválido, regressão de baseline (sucesso após falha), preservação do body HTTP não-2xx, teste automatizado do `rawHash` (SHA-256 exato) e timeout simulado.
 
@@ -48,25 +48,23 @@ A suíte cobre comparação unificada, deduplicação, normalização real, hash
 
 ### Resumo por Processo
 
-| CNJ                       | Rodada 1               | Rodada 2                  | Movimentações |
-| ------------------------- | ---------------------- | ------------------------- | ------------- |
-| 0004453-12.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 36            |
-| 0008569-61.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 34            |
-| 0002557-31.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 42            |
-| 0008902-13.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 32            |
-| 0003907-54.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 42            |
-| 0123860-46.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 39            |
-| 0152098-75.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 30            |
-| 0099021-54.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 55            |
-| 0143282-07.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 48            |
-| 0129656-18.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 38            |
+| CNJ | Rodada 1 | Rodada 2 | Movimentações |
+|---|---|---|---|
+| 0004453-12.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 36 |
+| 0008569-61.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 34 |
+| 0002557-31.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 42 |
+| 0008902-13.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 32 |
+| 0003907-54.2026.8.16.0000 | `success_with_changes` | `success_without_changes` | 42 |
+| 0123860-46.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 39 |
+| 0152098-75.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 30 |
+| 0099021-54.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 55 |
+| 0143282-07.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 48 |
+| 0129656-18.2025.8.16.0000 | `success_with_changes` | `success_without_changes` | 38 |
 
-_(Nota: a Rodada 1 retorna `success_with_changes` por ser a consulta baseline - o snapshot anterior era nulo)._
+*(Nota: a Rodada 1 retorna `success_with_changes` por ser a consulta baseline - o snapshot anterior era nulo).*
 
 ### Teste de Fixture Controlada
-
 Uma movimentação artificial (`TEST_FIXTURE_ONLY`) foi injetada no snapshot do CNJ `0008569`. A comparação do hash antigo com o hash do novo snapshot detectou corretamente a divergência e retornou `success_with_changes`.
 
 ## Conclusão
-
 O núcleo de extração, normalização e comparação determinística funciona conforme planejado. O mecanismo é resiliente a variações de rede (timeouts foram classificados corretamente e não geraram falso positivo de ausência de movimentação). O projeto está tecnicamente apto a avançar para a Fase 3 (Fundação Técnica) assim que autorizado.

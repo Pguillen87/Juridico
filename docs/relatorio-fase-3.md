@@ -1,26 +1,35 @@
 # Relatório da Fase 3 - Fundação Técnica
 
-A Fase 3, referente à Fundação Técnica do projeto **Juridico**, foi concluída com sucesso. Durante esta etapa, o foco principal foi estabelecer a base arquitetural e as ferramentas de qualidade, sem implementar regras de negócio ou alterar a branch principal (`main`).
+## Status da rodada corretiva
 
-Para garantir a precisão da documentação, o arquivo de resultados da Prova de Conceito (`poc/POC_RESULT.md`) foi atualizado para refletir o total correto de 29 testes aprovados. Adicionalmente, o registro de decisões (`docs/07-decisoes-do-mvp.md`) foi revisado, marcando as decisões tecnológicas fundamentais como aprovadas, incluindo a adoção do DataJud, Next.js, TypeScript, Supabase e as ferramentas de teste. A decisão de utilizar o Docker como ambiente de execução local também foi formalizada.
+**PARTIAL — aguardando as validações finais desta rodada.** Este relatório documenta a correção da auditoria externa da Fase 3. A Fase 4 não foi iniciada, e não foram iniciadas autenticação, Supabase ou RLS.
 
-A configuração do ambiente foi aprimorada com a criação de um módulo de validação de variáveis de ambiente utilizando o Zod (`src/lib/env.ts`). Isso garante que a aplicação não inicie sem as configurações essenciais. Os arquivos de exemplo e locais de variáveis de ambiente foram ajustados para refletir essa nova estrutura.
+A rodada corretiva parte da branch `phase-3-foundation` e do commit auditado `57015a0e777933cca8051109525d88006f73e74f`, tendo como referência aprovada da PoC o commit `d5e8e16c9723809da2788ed504b2b872e4f70cb2`. O objetivo é remover artefatos gerados do índice, restaurar arquivos modificados somente por formatação, recolocar o lint real no CI, adicionar higiene automatizada e repetir as validações locais, Docker e GitHub Actions.
 
-A fim de assegurar a reprodutibilidade do ambiente de desenvolvimento e produção, a aplicação foi conteinerizada. Um `Dockerfile` multi-stage foi criado, otimizado para o Node.js 22 LTS e configurado para utilizar o output `standalone` do Next.js. O arquivo `docker-compose.yml` foi adicionado para simplificar a inicialização do serviço, mapeando a porta 3000 e definindo as variáveis de ambiente necessárias.
+## Correções realizadas
 
-O controle de versão foi aprimorado com a atualização do `.gitignore` para excluir artefatos gerados pelo Next.js e relatórios de testes. Um novo `README.md` foi elaborado, fornecendo instruções claras e completas sobre os requisitos do projeto, a execução via Docker, os scripts disponíveis e a localização da Prova de Conceito.
+O diretório `poc/node_modules` foi removido somente do índice Git, preservando as dependências locais para execução. A regra de ignorância foi ampliada para `node_modules/` em qualquer nível, mantendo as proteções para `.env*`, `.next/`, `coverage/`, `playwright-report/`, `test-results/` e `poc/evidence/`.
 
-Por fim, a Integração Contínua (CI) foi estabelecida através do GitHub Actions. O workflow `app-ci.yml` foi configurado para executar uma bateria completa de validações a cada push. A execução bem-sucedida do CI garante a estabilidade da fundação técnica estabelecida.
+Os documentos históricos e os arquivos da PoC que haviam sido alterados apenas por formatação foram restaurados ao conteúdo do commit aprovado da Fase 2. Foram mantidas somente as alterações documentais intencionais em `docs/07-decisoes-do-mvp.md` e `poc/POC_RESULT.md`, além deste relatório. O arquivo `poc/vitest.config.ts` permanece apenas para permitir a execução isolada da suíte da PoC.
 
-### Resumo das Validações
+O script `lint` foi corrigido de `next lint` para `eslint .`, e o ESLint foi configurado para ignorar a PoC e artefatos gerados sem desativar as regras da aplicação, das configurações e dos testes E2E. O lint foi reinserido no workflow `app-ci.yml`. Também foi criado `.prettierignore`, limitando o Prettier ao escopo de código e arquivos de aplicação e impedindo novas reformatacões acidentais da documentação histórica e da PoC.
 
-| Validação | Ferramenta | Status |
-| :--- | :--- | :--- |
-| Verificação de Tipos | TypeScript | Aprovado |
-| Testes Unitários | Vitest | Aprovado |
-| Build da Aplicação | Next.js | Aprovado |
-| Testes E2E | Playwright | Aprovado |
-| Testes da PoC DataJud | Vitest | Aprovado (29 testes) |
-| Integração Contínua | GitHub Actions | Aprovado (Run ID: 32421711204) |
+A página mínima passou a usar `lang="pt-BR"`, metadata com título `Juridico` e descrição coerente com monitoramento jurídico. A página não foi redesenhada e nenhum dashboard foi criado.
 
-O projeto encontra-se agora com uma base técnica robusta e validada, pronto para avançar para as próximas fases de desenvolvimento, mantendo a integridade da branch principal.
+## Validações finais pendentes de registro
+
+Os valores abaixo serão preenchidos somente após a execução local completa, a validação Docker e a conclusão do novo workflow do GitHub Actions ligado exatamente ao commit final.
+
+| Validação | Resultado desta rodada |
+|---|---|
+| `npm run format:check` | Pendente de execução final |
+| `npm run lint` | Pendente de execução final |
+| `npm run typecheck` | Pendente de execução final |
+| `npm test` | Pendente de execução final |
+| `npm run build` | Pendente de execução final |
+| Playwright | Pendente de execução final |
+| PoC | Deve permanecer com 29 testes ou mais, sem consulta real ao DataJud |
+| Docker | Pendente de execução final |
+| CI GitHub Actions | Pendente; não utilizar o run anterior `32421711204` |
+
+O status **APPROVED** somente poderá ser declarado se o commit final tiver um run do workflow `App CI` com `head SHA` idêntico, conclusão `success`, lint e higiene aprovados, PoC verde, Docker validado e nenhum artefato ou segredo versionado.

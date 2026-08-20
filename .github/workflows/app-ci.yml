@@ -22,8 +22,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Repository Hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          prohibited=$(git ls-files | grep -E '(^|/)(node_modules|poc/evidence|\.next|playwright-report|test-results)(/|$)|(^|/)\.env($|\.)' | grep -vE '(^|/)\.env\.example$' || true)
+          if [ -n "$prohibited" ]; then
+            echo "Arquivos proibidos versionados:"
+            printf '%s\n' "$prohibited"
+            exit 1
+          fi
+          echo "Nenhum artefato proibido está versionado."
+
       - name: Format Check
         run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck

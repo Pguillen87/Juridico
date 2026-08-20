@@ -1,0 +1,10 @@
+docs/
+poc/
+.github/workflows/poc-ci.yml
+PRODUCT.md
+DESIGN.md
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
