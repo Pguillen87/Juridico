@@ -4,12 +4,7 @@ import { safeInternalRedirect } from '@/lib/auth/guards';
 import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 
-const allowedOtpTypes = new Set<EmailOtpType>([
-  'email',
-  'invite',
-  'recovery',
-  'signup',
-]);
+const allowedOtpTypes = new Set<EmailOtpType>(['email', 'invite', 'recovery']);
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
