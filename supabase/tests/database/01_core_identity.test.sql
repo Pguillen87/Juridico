@@ -5,6 +5,7 @@ SELECT plan(35);
 -- Helper para setar o usuário logado no contexto da transação
 CREATE OR REPLACE FUNCTION set_auth_user(user_id UUID) RETURNS void AS $$
 BEGIN
+    PERFORM set_config('role', 'authenticated', true);
     PERFORM set_config('request.jwt.claims', format('{"sub": "%s"}', user_id), true);
 END;
 $$ LANGUAGE plpgsql;

@@ -15,6 +15,7 @@ CREATE TABLE public.office (
 -- Habilitar RLS na tabela office
 ALTER TABLE public.office ENABLE ROW LEVEL SECURITY;
 -- Apenas leitura e update limitados no office para authenticated nesta fase
+REVOKE ALL ON public.office FROM authenticated;
 GRANT SELECT ON public.office TO authenticated;
 GRANT UPDATE(name) ON public.office TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.office TO service_role;
