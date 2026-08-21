@@ -42,11 +42,11 @@ COMMIT;
 PID2=$!
 
 echo "Aguardando conclusões..."
-wait $PID1
-RC1=$?
+wait $PID1 || RC1=$?
+RC1=${RC1:-0}
 
-wait $PID2
-RC2=$?
+wait $PID2 || RC2=$?
+RC2=${RC2:-0}
 
 echo "RC1: $RC1"
 echo "RC2: $RC2"
