@@ -1,8 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-test('Página inicial abre e contém o título correto', async ({ page }) => {
+test('Página inicial redireciona para o login do Juridico', async ({
+  page,
+}) => {
   await page.goto('/');
-  await expect(page.locator('h1')).toHaveText('Juridico');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText('Juridico').first()).toBeVisible();
 });
 
 test('Endpoint de health check responde corretamente', async ({ request }) => {

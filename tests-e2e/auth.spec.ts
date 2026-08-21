@@ -1,0 +1,201 @@
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from '@playwright/test';
+
+const password = process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
+const mailBaseUrl =
+  process.env.JURIDICO_MAIL_CATCHER_URL ?? 'http://127.0.0.1:54324';
+
+async function login(page: Page, email: string, secret = password) {
+  await page.goto('/login');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Senha').fill(secret);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/);
+}
+
+async function purgeMailbox(request: APIRequestContext) {
+  // Supabase CLI 2.115 uses Mailpit locally. The E2E suite is serial and owns
+  // this local catcher, so clearing all messages prevents stale latest-message
+  // results without relying on a mailbox route that Mailpit does not expose.
+  await request.delete(`${mailBaseUrl}/api/v1/messages`);
+}
+
+type MailpitMessage = {
+  To?: Array<{ Address?: string }>;
+  Text?: string;
+  HTML?: string;
+  body?: { text?: string; html?: string };
+};
+
+async function waitForLatestMessage(request: APIRequestContext, email: string) {
+  let latest: MailpitMessage | null = null;
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get(
+          `${mailBaseUrl}/api/v1/message/latest`
+        );
+        if (!response.ok()) return null;
+        const candidate = (await response.json()) as MailpitMessage;
+        const recipients = (candidate.To ?? []).map(
+          (recipient) => recipient.Address
+        );
+        latest = recipients.includes(email) ? candidate : null;
+        return latest;
+      },
+      { timeout: 20_000, intervals: [500, 1000, 2000] }
+    )
+    .not.toBeNull();
+
+  if (!latest) throw new Error('O mail catcher não trouxe uma mensagem.');
+  return latest;
+}
+
+function extractLink(message: MailpitMessage) {
+  const source =
+    `${message.Text ?? message.body?.text ?? ''}\n${message.HTML ?? message.body?.html ?? ''}`
+      .replaceAll('&amp;', '&')
+      .replaceAll('&#x3D;', '=');
+  const match = source.match(/https?:\/\/[^\s"'<>]+/);
+  if (!match) throw new Error('O mail catcher não trouxe um link navegável.');
+  return match[0].replace(/[),.;]+$/, '');
+}
+
+test.describe('Auth funcional local', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test('A: anônimo em /app vai para login e credencial inválida é genérica', async ({
+    page,
+  }) => {
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/login$/);
+    await page.getByLabel('E-mail').fill('owner@example.test');
+    await page.getByLabel('Senha').fill('senha-incorreta');
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.locator('form [role="alert"]')).toHaveText(
+      'E-mail ou senha incorretos.'
+    );
+  });
+
+  test('B-E: owner entra, vê contexto e mantém sessão no refresh', async ({
+    page,
+  }) => {
+    await login(page, 'owner@example.test');
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(
+      page.getByRole('heading', { name: /Bem-vindo, Owner E2E/ })
+    ).toBeVisible();
+    await expect(page.getByText('Escritório E2E Teste')).toBeVisible();
+    await expect(page.getByText('Advogado')).toBeVisible();
+    await expect(page.getByText('Administrador')).toBeVisible();
+    await page.reload();
+    await expect(page).toHaveURL(/\/app$/);
+  });
+
+  test('F-G: logout remove acesso à área protegida', async ({ page }) => {
+    await login(page, 'owner@example.test');
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('H-I: perfil inativo e office inativo são bloqueados', async ({
+    page,
+  }) => {
+    await login(page, 'inactive@example.test');
+    await expect(page).toHaveURL(/\/login\?error=inactive$/);
+    await expect(page.locator('form [role="alert"]')).toContainText('inativo');
+
+    await login(page, 'office-inactive@example.test');
+    await expect(page).toHaveURL(/\/login\?error=inactive$/);
+  });
+
+  test('J-M: recovery tem resposta genérica, mail local e reset funcional', async ({
+    page,
+    request,
+  }) => {
+    const email = 'recovery@example.test';
+    await purgeMailbox(request);
+    await page.goto('/esqueci-minha-senha');
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByRole('button', { name: 'Enviar instruções' }).click();
+    await expect(page.getByRole('status')).toContainText(
+      'Se existir uma conta'
+    );
+
+    const message = await waitForLatestMessage(request, email);
+    const link = extractLink(message);
+    await page.goto(link);
+    await expect(page).toHaveURL(/\/redefinir-senha/);
+    await page
+      .getByLabel('Nova senha', { exact: true })
+      .fill('TestOnly-Recovery-456!');
+    await page
+      .getByLabel('Confirmar nova senha')
+      .fill('TestOnly-Recovery-456!');
+    await page.getByRole('button', { name: 'Atualizar senha' }).click();
+    await expect(page.getByRole('status')).toContainText('Senha atualizada');
+    await page.waitForURL(/\/login\?success=password-reset$/);
+    await login(page, email, 'TestOnly-Recovery-456!');
+    await expect(page).toHaveURL(/\/app$/);
+  });
+
+  test('N-O: owner acessa usuários e non-owner recebe deny server-side', async ({
+    page,
+  }) => {
+    await login(page, 'owner@example.test');
+    await page.getByRole('link', { name: 'Gerenciar usuários' }).click();
+    await expect(page).toHaveURL(/\/app\/usuarios$/);
+    await expect(
+      page.getByRole('heading', { name: 'Usuários do escritório' })
+    ).toBeVisible();
+
+    await page.goto('/app');
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await login(page, 'operator@example.test');
+    await page.goto('/app/usuarios');
+    await expect(page).toHaveURL(/\/app\?error=forbidden$/);
+  });
+
+  test('Q-V: owner convida operator, mail local traz aceite e operator entra sem owner', async ({
+    page,
+    request,
+  }) => {
+    const email = 'invited-operator@example.test';
+    await purgeMailbox(request);
+    await login(page, 'owner@example.test');
+    await page.goto('/app/usuarios');
+    await page.getByLabel('Nome').fill('Invited Operator');
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByLabel('Papel').selectOption('operator');
+    await page.getByRole('button', { name: 'Enviar convite' }).click();
+    await expect(page.getByRole('status')).toContainText('Convite enviado');
+
+    const message = await waitForLatestMessage(request, email);
+    const link = extractLink(message);
+    await page.goto(link);
+    await expect(page).toHaveURL(/\/redefinir-senha/);
+    await page
+      .getByLabel('Nova senha', { exact: true })
+      .fill('TestOnly-Invite-789!');
+    await page.getByLabel('Confirmar nova senha').fill('TestOnly-Invite-789!');
+    await page.getByRole('button', { name: 'Atualizar senha' }).click();
+    await page.waitForURL(/\/login\?success=password-reset$/);
+    await login(page, email, 'TestOnly-Invite-789!');
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(page.getByText('Operador')).toBeVisible();
+    await expect(page.getByText('Usuário')).toBeVisible();
+    await page.goto('/app/usuarios');
+    await expect(page).toHaveURL(/\/app\?error=forbidden$/);
+  });
+
+  test('W: não existe fluxo público funcional de signup', async ({ page }) => {
+    await page.goto('/signup');
+    await expect(page).toHaveURL(/\/login$/);
+  });
+});

@@ -1,0 +1,14 @@
+<h2>Redefina sua senha</h2>
+
+<p>
+  Recebemos uma solicitação para redefinir sua senha. Use o link abaixo para
+  escolher uma nova senha.
+</p>
+
+<p>
+  <a
+    href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/redefinir-senha"
+  >
+    Redefinir senha
+  </a>
+</p>

@@ -36,7 +36,33 @@ export async function proxy(request: NextRequest) {
   // IMPORTANTE: NÃO usar supabase.auth.getSession() para proteger rotas.
   // Use supabase.auth.getUser() para validar a identidade de forma segura no servidor.
   // O Proxy apenas garante que a sessão seja atualizada.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const url = request.nextUrl.clone();
+  const path = url.pathname;
+
+  const publicRoutes = [
+    '/login',
+    '/esqueci-minha-senha',
+    '/auth/callback',
+    '/redefinir-senha',
+  ];
+  const isPublicRoute = publicRoutes.some((route) => path.startsWith(route));
+
+  // Se o usuário está autenticado e tenta acessar /login ou /, redireciona para /app
+  // (Note que a verificação de is_active do perfil será feita no servidor nas rotas protegidas)
+  if (user && (path === '/login' || path === '/')) {
+    url.pathname = '/app';
+    return NextResponse.redirect(url);
+  }
+
+  // Se não está autenticado e tenta acessar uma rota protegida (não pública), redireciona para /login
+  if (!user && !isPublicRoute && path !== '/') {
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }

@@ -1,0 +1,91 @@
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import {
+  applyLocalSupabaseEnv,
+  readLocalSupabaseEnv,
+} from './local-supabase-env.mjs';
+
+const localEnv = readLocalSupabaseEnv();
+applyLocalSupabaseEnv(localEnv);
+
+function run(commandLine, command, args) {
+  if (process.platform === 'win32') {
+    return spawnSync(
+      process.env.ComSpec ?? 'cmd.exe',
+      ['/d', '/s', '/c', commandLine],
+      {
+        cwd: process.cwd(),
+        env: process.env,
+        stdio: 'inherit',
+      }
+    );
+  }
+
+  return spawnSync(command, args, {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: 'inherit',
+  });
+}
+
+const envLocalPath = resolve(process.cwd(), '.env.local');
+const hadEnvLocal = existsSync(envLocalPath);
+const previousEnvLocal = hadEnvLocal
+  ? readFileSync(envLocalPath, 'utf8')
+  : null;
+const envLocalContents = [
+  `NEXT_PUBLIC_SUPABASE_URL=${localEnv.API_URL}`,
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${localEnv.ANON_KEY}`,
+  'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000',
+  '',
+].join('\n');
+
+writeFileSync(envLocalPath, envLocalContents, 'utf8');
+
+try {
+  const buildRun = run('npm run build', 'npm', ['run', 'build']);
+  if (buildRun.error) {
+    process.stderr.write(
+      `Falha ao iniciar build Auth E2E: ${buildRun.error.message}\n`
+    );
+    process.exitCode = 1;
+  } else if (buildRun.status !== 0) {
+    process.exitCode = buildRun.status ?? 1;
+  } else {
+    const fixtureRun = run('npm run auth:fixtures', 'npm', [
+      'run',
+      'auth:fixtures',
+    ]);
+    if (fixtureRun.error) {
+      process.stderr.write(
+        `Falha ao iniciar fixtures Auth: ${fixtureRun.error.message}\n`
+      );
+      process.exitCode = 1;
+    } else if (fixtureRun.status !== 0) {
+      process.exitCode = fixtureRun.status ?? 1;
+    } else {
+      process.env.PLAYWRIGHT_START_COMMAND = 'npm run start';
+      process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
+      const e2eRun = run('npx --no-install playwright test', 'npx', [
+        '--no-install',
+        'playwright',
+        'test',
+      ]);
+      if (e2eRun.error) {
+        process.stderr.write(
+          `Falha ao iniciar Auth E2E: ${e2eRun.error.message}\n`
+        );
+        process.exitCode = 1;
+      } else {
+        process.exitCode = e2eRun.status ?? 1;
+      }
+    }
+  }
+} finally {
+  if (hadEnvLocal) {
+    writeFileSync(envLocalPath, previousEnvLocal, 'utf8');
+  } else if (existsSync(envLocalPath)) {
+    unlinkSync(envLocalPath);
+  }
+}
