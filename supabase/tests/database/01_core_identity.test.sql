@@ -61,7 +61,7 @@ SELECT is(
 -- Nota: RLS não lança exceção em UPDATE não autorizado, apenas afeta 0 linhas.
 SELECT results_eq(
     $$ UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222' RETURNING 1 $$,
-    $$ VALUES (NULL::integer) WHERE false $$,
+    $$ SELECT 1::integer WHERE false $$,
     'B. User from Office A cannot write to Office B profiles (0 rows affected)'
 );
 -- Para testar que não afeta:
