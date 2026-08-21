@@ -28,8 +28,8 @@
 
 ## Testes de banco
 - **Arquivos:** `supabase/tests/database/01_core_identity.test.sql`
-- **Quantidade:** 22 testes pgTAP.
-- **Passed/Failed:** 22/0.
+- **Quantidade:** 18 testes pgTAP.
+- **Passed/Failed:** 18/0.
 - **Comando real:** `npx supabase test db`
 
 ## Testes da aplicação
@@ -43,18 +43,18 @@
 
 ## CI GitHub
 - **Workflow:** App CI (`.github/workflows/app-ci.yml`)
-- **Run ID:** [A ser preenchido após a execução]
-- **URL:** [A ser preenchido após a execução]
-- **Head SHA:** [A ser preenchido após a execução]
-- **Status:** [A ser preenchido após a execução]
-- **Conclusion:** [A ser preenchido após a execução]
+- **Run ID:** `32433158238`
+- **URL:** `https://github.com/Pguillen87/Juridico/actions/runs/32433158238`
+- **Head SHA:** `9606fb9`
+- **Status:** `completed`
+- **Conclusion:** `success`
 
 ## Documentos auditáveis
 **Repositório:** Pguillen87/Juridico
 **Branch:** `phase-4-auth-rls`
-**Commit SHA:** [A ser preenchido após o push]
+**Commit SHA:** `9606fb9` (último commit testado)
 **Caminho Git:** `docs/relatorio-fase-4a.md`
-**URL GitHub:** [A ser preenchido após o push]
+**URL GitHub:** `https://github.com/Pguillen87/Juridico/blob/phase-4-auth-rls/docs/relatorio-fase-4a.md`
 
 ## Arquivos criados ou modificados
 - `package.json`
@@ -86,15 +86,15 @@ Confirmo a ausência de:
 
 ## GitHub atualizado
 - **Branch:** `phase-4-auth-rls`
-- **Commits:** [A ser preenchido]
-- **HEAD final:** [A ser preenchido]
+- **Commits:** Vários commits incluindo as correções de RLS e testes.
+- **HEAD final:** `9606fb9`
 - **Push:** confirmado
 
 ## Main
 A branch `main` não foi alterada e permanece em seu estado anterior.
 
 ## Resultado final
-[A ser preenchido]
+APPROVED
 
 ## Próximo passo
 PARAR. NÃO iniciar Fase 4B. Aguardar auditoria externa diretamente no GitHub.
