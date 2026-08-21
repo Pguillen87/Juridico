@@ -20,7 +20,7 @@ ON CONFLICT DO NOTHING;
 
 echo "Iniciando transação 1 em background..."
 # Transação 1: Inativa o owner 1, mas segura a transação por 2 segundos antes do commit
-docker exec supabase_db_juridico-sync psql -U postgres -d postgres -c "
+docker exec supabase_db_juridico-sync psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
 BEGIN;
 UPDATE public.user_profile SET is_active = false WHERE id = '00000000-0000-0000-0000-000000000011';
 SELECT pg_sleep(2);
@@ -34,7 +34,7 @@ sleep 0.5
 echo "Iniciando transação 2 em background..."
 # Transação 2: Tenta inativar o owner 2. Deve bloquear aguardando o lock da transação 1.
 # Quando a transação 1 commitar, a transação 2 avaliará a trigger e deverá falhar.
-docker exec supabase_db_juridico-sync psql -U postgres -d postgres -c "
+docker exec supabase_db_juridico-sync psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "
 BEGIN;
 UPDATE public.user_profile SET is_active = false WHERE id = '00000000-0000-0000-0000-000000000012';
 COMMIT;
@@ -42,16 +42,34 @@ COMMIT;
 PID2=$!
 
 echo "Aguardando conclusões..."
-wait $PID1 || true
-wait $PID2 || true
+wait $PID1
+RC1=$?
+
+wait $PID2
+RC2=$?
+
+echo "RC1: $RC1"
+echo "RC2: $RC2"
 
 echo "Verificando resultado final..."
 ACTIVE_OWNERS=$(docker exec supabase_db_juridico-sync psql -U postgres -d postgres -t -c "SELECT count(*) FROM public.user_profile WHERE office_id = '55555555-5555-5555-5555-555555555555' AND is_owner = true AND is_active = true;" | tr -d '[:space:]')
 
-if [ "$ACTIVE_OWNERS" -eq 0 ]; then
-    echo "FALHA: O teste de concorrência permitiu inativar todos os owners."
+echo "Owners ativos finais: $ACTIVE_OWNERS"
+
+if [ "$RC1" -eq 0 ] && [ "$RC2" -eq 0 ]; then
+    echo "FALHA: Ambas as transações reportaram sucesso (0)."
     exit 1
-else
-    echo "SUCESSO: Restam $ACTIVE_OWNERS owners ativos. A proteção funcionou."
-    exit 0
 fi
+
+if [ "$RC1" -ne 0 ] && [ "$RC2" -ne 0 ]; then
+    echo "FALHA: Ambas as transações falharam."
+    exit 1
+fi
+
+if [ "$ACTIVE_OWNERS" -ne 1 ]; then
+    echo "FALHA: Quantidade final de owners ativos ($ACTIVE_OWNERS) diferente de 1."
+    exit 1
+fi
+
+echo "SUCESSO: Exatamente 1 sucesso, 1 rejeição, 1 owner ativo."
+exit 0

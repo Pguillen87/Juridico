@@ -62,11 +62,10 @@ jobs:
 
       - name: Start Supabase Local
         run: |
-          npx supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1 || {
-            echo "Falha ao iniciar o Supabase local. Verifique os logs (credenciais omitidas)."
-            cat "$RUNNER_TEMP/supabase-start.log" | grep -vE '(ANON_KEY|SERVICE_ROLE_KEY|JWT_SECRET|DB_PASSWORD|POSTGRES_PASSWORD)' || true
+          if ! npx supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            echo "Falha ao iniciar o Supabase local; saída sensível omitida."
             exit 1
-          }
+          fi
 
       - name: Supabase DB Reset
         run: npm run db:reset
@@ -81,7 +80,18 @@ jobs:
         run: ./supabase/tests/concurrency/test_concurrency.sh
 
       - name: Supabase DB Types Check
-        run: npm run db:types
+        run: |
+          tmp=$(mktemp)
+          npx supabase gen types typescript --local > "$tmp"
+
+          # Remove carriage returns para comparar apenas o conteúdo (ignorando CRLF vs LF)
+          sed -i 's/\r$//' src/types/database.types.ts
+          sed -i 's/\r$//' "$tmp"
+
+          if ! diff -u src/types/database.types.ts "$tmp"; then
+            echo "Tipos do banco desatualizados! Execute 'npm run db:types' localmente e versione o arquivo src/types/database.types.ts."
+            exit 1
+          fi
 
       - name: Stop Supabase Local
         if: always()

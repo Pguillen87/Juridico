@@ -15,7 +15,8 @@ CREATE TABLE public.office (
 -- Habilitar RLS na tabela office
 ALTER TABLE public.office ENABLE ROW LEVEL SECURITY;
 -- Apenas leitura e update limitados no office para authenticated nesta fase
-GRANT SELECT, UPDATE ON public.office TO authenticated;
+GRANT SELECT ON public.office TO authenticated;
+GRANT UPDATE(name) ON public.office TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.office TO service_role;
 
 -- 3. Tabela User Profile
@@ -65,7 +66,7 @@ USING (
     id = (SELECT office_id FROM public.get_auth_user_profile() LIMIT 1)
 );
 
--- Apenas owner pode atualizar o nome do office (is_active não pode ser mudado por ele mesmo para evitar lockout do tenant, ou requer cuidado extra, mas para o MVP deixamos update restrito)
+-- Apenas owner pode atualizar o nome do office (is_active não pode ser mudado por ele mesmo para evitar lockout do tenant)
 CREATE POLICY "Owners can update their office"
 ON public.office
 FOR UPDATE

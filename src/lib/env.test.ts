@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { env } from './env';
-import { z } from 'zod';
 
 describe('Environment Configuration', () => {
   it('deve ter um NODE_ENV definido', () => {

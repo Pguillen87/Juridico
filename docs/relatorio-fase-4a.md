@@ -9,7 +9,7 @@
 ## Supabase local
 - **Versão CLI:** `2.115.0`
 - **Comandos executados:** `supabase init`, `supabase start`, `supabase db reset`, `supabase db lint`, `supabase test db`, `supabase stop`.
-- **Status:** Serviços locais inicializados com sucesso e migrações aplicadas. (Nota: O CI foi ajustado para suprimir a saída do log do Supabase para evitar exposição sensível, e o start funciona no ambiente efêmero do GitHub Actions).
+- **Status:** Serviços locais inicializados com sucesso e migrações aplicadas. (Nota: O CI foi ajustado para suprimir a saída do log do Supabase para evitar exposição sensível. Não há prova de bind explícito em 127.0.0.1 no CI, pois o GitHub hosted runner é efêmero e não testamos a rede loopback lá. Isso permanece como uma limitação operacional para o ambiente de desenvolvimento local, que pode ser contornada usando docker network com host binding).
 
 ## Schema
 - **Tabelas:** `public.office`, `public.user_profile`.
@@ -30,14 +30,18 @@
 
 ## Testes de banco
 - **Arquivos:** `supabase/tests/database/01_core_identity.test.sql`
-- **Quantidade:** 29 testes pgTAP.
-- **Passed/Failed:** 29/0.
+- **Quantidade:** 35 testes pgTAP.
+- **Passed/Failed:** 35/0.
 - **Comando real:** `npx supabase test db`
-- **Teste de Concorrência:** Adicionado `test_concurrency.sh` que prova o funcionamento do lock contra duas transações assíncronas tentando inativar owners simultaneamente.
+- **Teste de Concorrência:** Adicionado `test_concurrency.sh` que prova o funcionamento do lock contra duas transações assíncronas tentando inativar owners simultaneamente. O script valida os return codes (RC1 e RC2) garantindo exatamente 1 sucesso, 1 rejeição e exatamente 1 owner ativo final.
+
+## Tipos do Banco
+- **Caminho:** `src/types/database.types.ts`
+- **Validação:** O CI agora gera os tipos em um arquivo temporário, normaliza os finais de linha (CRLF/LF) e usa `diff -u` para compará-lo de forma estrita contra o arquivo versionado, falhando se houver qualquer diferença substantiva.
 
 ## Testes da aplicação
 - **Format:** `npm run format:check` executado com sucesso.
-- **Lint:** `npm run lint` executado com sucesso.
+- **Lint:** `npm run lint` executado com sucesso (0 errors, 0 warnings).
 - **Typecheck:** `npm run typecheck` executado com sucesso.
 - **Unit:** `npm run test` executado com sucesso.
 - **Build:** `npm run build` executado com sucesso.
@@ -46,11 +50,11 @@
 
 ## CI GitHub
 - **Workflow:** App CI (`.github/workflows/app-ci.yml`)
-- **Run ID:** [A ser preenchido pela auditoria externa no GitHub Actions]
-- **URL:** [A ser preenchido pela auditoria externa no GitHub Actions]
-- **Head SHA:** [A ser preenchido pela auditoria externa no GitHub Actions]
-- **Status:** [A ser preenchido pela auditoria externa no GitHub Actions]
-- **Conclusion:** [A ser preenchido pela auditoria externa no GitHub Actions]
+- **Run ID:** [Verificar no GitHub Actions]
+- **URL:** [Verificar no GitHub Actions]
+- **Head SHA:** [Verificar no GitHub Actions]
+- **Status:** [Verificar no GitHub Actions]
+- **Conclusion:** [Verificar no GitHub Actions]
 *(Nota: O CI final do HEAD desta branch deve ser verificado diretamente no GitHub Actions pelo SHA do commit que contém este relatório.)*
 
 ## Documentos auditáveis

@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(29);
+SELECT plan(35);
 
 -- Helper para setar o usuário logado no contexto da transação
 CREATE OR REPLACE FUNCTION set_auth_user(user_id UUID) RETURNS void AS $$
@@ -247,29 +247,65 @@ SELECT throws_ok(
     'P3. Last owner cannot be deleted'
 );
 
--- TESTE Q: Privilégios SECURITY DEFINER restritos
+-- TESTE Q: Owner pode alterar nome do office mas não is_active, id ou created_at
+SELECT set_auth_user('00000000-0000-0000-0000-000000000001');
+-- Owner tenta atualizar is_active (não tem GRANT para is_active, então o banco recusa a query antes mesmo do RLS)
+SELECT throws_ok(
+    $$ UPDATE public.office SET is_active = false WHERE id = '11111111-1111-1111-1111-111111111111' $$,
+    '42501',
+    NULL,
+    'Q. Owner cannot update office.is_active'
+);
+-- Owner tenta atualizar id
+SELECT throws_ok(
+    $$ UPDATE public.office SET id = '11111111-1111-1111-1111-111111111112' WHERE id = '11111111-1111-1111-1111-111111111111' $$,
+    '42501',
+    NULL,
+    'Q. Owner cannot update office.id'
+);
+-- Owner tenta atualizar created_at
+SELECT throws_ok(
+    $$ UPDATE public.office SET created_at = now() WHERE id = '11111111-1111-1111-1111-111111111111' $$,
+    '42501',
+    NULL,
+    'Q. Owner cannot update office.created_at'
+);
+-- Owner tenta atualizar nome (deve funcionar)
+SELECT results_eq(
+    $$ UPDATE public.office SET name = 'Office A Edited' WHERE id = '11111111-1111-1111-1111-111111111111' RETURNING 1 $$,
+    $$ VALUES (1::integer) $$,
+    'Q. Owner can update office.name'
+);
+-- Owner tenta atualizar nome de outro office (deve falhar silenciosamente por RLS)
+SELECT results_eq(
+    $$ UPDATE public.office SET name = 'Hacked' WHERE id = '22222222-2222-2222-2222-222222222222' RETURNING 1 $$,
+    $$ SELECT 1::integer WHERE false $$,
+    'Q. Owner cannot update other office name'
+);
+
+-- TESTE R: Privilégios SECURITY DEFINER restritos
 SELECT set_config('role', 'anon', true);
 SELECT throws_ok(
     $$ SELECT * FROM public.get_auth_user_profile() $$,
     '42501',
     NULL,
-    'Q. anon cannot execute get_auth_user_profile'
+    'R. anon cannot execute get_auth_user_profile'
 );
 SELECT set_config('role', 'postgres', true);
 SELECT is(
     (SELECT has_function_privilege('public', 'public.get_auth_user_profile()', 'EXECUTE')),
     false,
-    'Q. public role cannot execute get_auth_user_profile'
+    'R. public role cannot execute get_auth_user_profile'
 );
 SELECT is(
     (SELECT has_function_privilege('anon', 'public.prevent_self_elevation()', 'EXECUTE')),
     false,
-    'Q. anon cannot execute prevent_self_elevation'
+    'R. anon cannot execute prevent_self_elevation'
 );
 SELECT is(
     (SELECT has_function_privilege('anon', 'public.protect_last_active_owner()', 'EXECUTE')),
     false,
-    'Q. anon cannot execute protect_last_active_owner'
+    'R. anon cannot execute protect_last_active_owner'
 );
 
 SELECT * FROM finish();
