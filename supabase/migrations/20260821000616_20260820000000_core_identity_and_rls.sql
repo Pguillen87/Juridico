@@ -149,13 +149,13 @@ BEGIN
        OR (TG_OP = 'DELETE' AND OLD.is_owner = true AND OLD.is_active = true) THEN
         
         -- Contar quantos owners ativos existem neste office, bloqueando a linha para evitar race conditions
+        -- Nota: FOR UPDATE não é permitido com funções agregadas como count(*)
         SELECT count(*) INTO active_owners_count
         FROM public.user_profile
         WHERE office_id = OLD.office_id
           AND is_owner = true
           AND is_active = true
-          AND id != OLD.id
-        FOR UPDATE;
+          AND id != OLD.id;
         
         IF active_owners_count = 0 THEN
             RAISE EXCEPTION 'Cannot remove or deactivate the last active owner of an office';
