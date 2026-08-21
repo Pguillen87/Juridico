@@ -84,7 +84,8 @@ jobs:
         run: |
           npm run db:types
           if [ -n "$(git status --porcelain src/types/database.types.ts)" ]; then
-            echo "Tipos do banco desatualizados! Execute 'npm run db:types' localmente e versione o arquivo src/types/database.types.ts."
+            echo "Tipos do banco desatualizados! Aqui está o novo arquivo:"
+            cat src/types/database.types.ts
             exit 1
           fi
 
