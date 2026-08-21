@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(18);
+SELECT plan(30);
 
 -- Helper para setar o usuário logado no contexto da transação
 CREATE OR REPLACE FUNCTION set_auth_user(user_id UUID) RETURNS void AS $$
@@ -76,12 +76,20 @@ SELECT set_config('role', 'authenticated', true);
 
 -- TESTE D: Usuário inativo com contexto autenticado não lê
 SELECT set_auth_user('00000000-0000-0000-0000-000000000008');
--- Inactive user currently sees their own profile due to "id = auth.uid()" policy without is_active check
--- Updating test to reflect current RLS behavior (can see own profile, but no others)
 SELECT is(
     (SELECT count(*) FROM public.user_profile),
-    1::bigint,
-    'D. Inactive user can read own profile'
+    0::bigint,
+    'D. Inactive user cannot read any profile (including own)'
+);
+SELECT is(
+    (SELECT count(*) FROM public.office),
+    0::bigint,
+    'D. Inactive user cannot read any office'
+);
+SELECT results_eq(
+    $$ UPDATE public.user_profile SET name = 'Hacked' RETURNING 1 $$,
+    $$ SELECT 1::integer WHERE false $$,
+    'D. Inactive user cannot update any profile (0 rows affected)'
 );
 
 -- TESTE E: operator não altera próprio role
@@ -191,6 +199,77 @@ SELECT is(
     (SELECT count(*) FROM public.get_auth_user_profile() WHERE office_id = '22222222-2222-2222-2222-222222222222'),
     0::bigint,
     'N. SECURITY DEFINER function returns only the user''s own profile'
+);
+
+-- TESTE O: Usuário de office inativo não lê nem opera
+-- Criar um office inativo e usuário nele (bypass RLS)
+SELECT set_config('role', 'postgres', true);
+INSERT INTO auth.users (id, email) VALUES ('00000000-0000-0000-0000-000000000009', 'user@officeC.com');
+INSERT INTO public.office (id, name, is_active) VALUES ('33333333-3333-3333-3333-333333333333', 'Office C', false);
+INSERT INTO public.user_profile (id, office_id, name, role, is_owner, is_active) VALUES ('00000000-0000-0000-0000-000000000009', '33333333-3333-3333-3333-333333333333', 'User C', 'lawyer', true, true);
+SELECT set_config('role', 'authenticated', true);
+
+SELECT set_auth_user('00000000-0000-0000-0000-000000000009');
+SELECT is(
+    (SELECT count(*) FROM public.user_profile),
+    0::bigint,
+    'O. User in inactive office cannot read profiles'
+);
+SELECT is(
+    (SELECT count(*) FROM public.office),
+    0::bigint,
+    'O. User in inactive office cannot read office'
+);
+
+-- TESTE P: Testar as três formas de perder o último owner
+SELECT set_config('role', 'postgres', true);
+-- Office D com apenas um owner
+INSERT INTO auth.users (id, email) VALUES ('00000000-0000-0000-0000-000000000010', 'owner@officeD.com');
+INSERT INTO public.office (id, name, is_active) VALUES ('44444444-4444-4444-4444-444444444444', 'Office D', true);
+INSERT INTO public.user_profile (id, office_id, name, role, is_owner, is_active) VALUES ('00000000-0000-0000-0000-000000000010', '44444444-4444-4444-4444-444444444444', 'Owner D', 'lawyer', true, true);
+
+-- 1. is_owner true -> false
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET is_owner = false WHERE id = '00000000-0000-0000-0000-000000000010' $$,
+    'Cannot remove or deactivate the last active owner of an office',
+    'P1. Last owner cannot lose is_owner'
+);
+-- 2. is_active true -> false
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET is_active = false WHERE id = '00000000-0000-0000-0000-000000000010' $$,
+    'Cannot remove or deactivate the last active owner of an office',
+    'P2. Last owner cannot be deactivated'
+);
+-- 3. DELETE
+SELECT throws_ok(
+    $$ DELETE FROM public.user_profile WHERE id = '00000000-0000-0000-0000-000000000010' $$,
+    'Cannot remove or deactivate the last active owner of an office',
+    'P3. Last owner cannot be deleted'
+);
+
+-- TESTE Q: Privilégios SECURITY DEFINER restritos
+SELECT set_config('role', 'anon', true);
+SELECT throws_ok(
+    $$ SELECT * FROM public.get_auth_user_profile() $$,
+    '42501',
+    NULL,
+    'Q. anon cannot execute get_auth_user_profile'
+);
+SELECT set_config('role', 'postgres', true);
+SELECT is(
+    (SELECT has_function_privilege('public', 'public.get_auth_user_profile()', 'EXECUTE')),
+    false,
+    'Q. public role cannot execute get_auth_user_profile'
+);
+SELECT is(
+    (SELECT has_function_privilege('anon', 'public.prevent_self_elevation()', 'EXECUTE')),
+    false,
+    'Q. anon cannot execute prevent_self_elevation'
+);
+SELECT is(
+    (SELECT has_function_privilege('anon', 'public.protect_last_active_owner()', 'EXECUTE')),
+    false,
+    'Q. anon cannot execute protect_last_active_owner'
 );
 
 SELECT * FROM finish();

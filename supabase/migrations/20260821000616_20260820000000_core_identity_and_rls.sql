@@ -14,7 +14,8 @@ CREATE TABLE public.office (
 
 -- Habilitar RLS na tabela office
 ALTER TABLE public.office ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.office TO authenticated;
+-- Apenas leitura e update limitados no office para authenticated nesta fase
+GRANT SELECT, UPDATE ON public.office TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.office TO service_role;
 
 -- 3. Tabela User Profile
@@ -36,7 +37,8 @@ CREATE INDEX idx_user_profile_is_active ON public.user_profile(is_active);
 
 -- Habilitar RLS na tabela user_profile
 ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_profile TO authenticated;
+-- Apenas leitura e update limitados no user_profile para authenticated nesta fase
+GRANT SELECT, UPDATE ON public.user_profile TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_profile TO service_role;
 
 -- 4. Função para obter o perfil do usuário logado de forma segura (Security Definer para ler apenas o próprio perfil caso necessário, mas RLS já cobre a própria leitura)
@@ -46,9 +48,11 @@ RETURNS SETOF public.user_profile
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog, public
 AS $$
-    SELECT * FROM public.user_profile WHERE id = auth.uid() AND is_active = true;
+    SELECT up.* FROM public.user_profile up
+    JOIN public.office o ON up.office_id = o.id
+    WHERE up.id = auth.uid() AND up.is_active = true AND o.is_active = true;
 $$;
 
 -- 5. Policies para public.office
@@ -74,13 +78,13 @@ WITH CHECK (
 );
 
 -- 6. Policies para public.user_profile
--- Usuários podem ver seu próprio perfil
+-- Usuários ativos em offices ativos podem ver seu próprio perfil
 CREATE POLICY "Users can view their own profile"
 ON public.user_profile
 FOR SELECT
 TO authenticated
 USING (
-    id = auth.uid()
+    id = auth.uid() AND is_active = true AND (SELECT is_active FROM public.office WHERE id = office_id) = true
 );
 
 -- Owners podem ver todos os perfis do seu office
@@ -111,7 +115,7 @@ CREATE OR REPLACE FUNCTION public.prevent_self_elevation()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog, public
 AS $$
 BEGIN
     IF auth.uid() = NEW.id THEN
@@ -139,7 +143,7 @@ CREATE OR REPLACE FUNCTION public.protect_last_active_owner()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
     active_owners_count INTEGER;
@@ -148,8 +152,13 @@ BEGIN
     IF (TG_OP = 'UPDATE' AND OLD.is_owner = true AND OLD.is_active = true AND (NEW.is_owner = false OR NEW.is_active = false))
        OR (TG_OP = 'DELETE' AND OLD.is_owner = true AND OLD.is_active = true) THEN
         
-        -- Contar quantos owners ativos existem neste office, bloqueando a linha para evitar race conditions
-        -- Nota: FOR UPDATE não é permitido com funções agregadas como count(*)
+        -- Obter lock exclusivo sobre a linha do office para serializar transações concorrentes
+        PERFORM 1
+        FROM public.office
+        WHERE id = OLD.office_id
+        FOR UPDATE;
+        
+        -- Contar quantos owners ativos existem neste office, já sob lock
         SELECT count(*) INTO active_owners_count
         FROM public.user_profile
         WHERE office_id = OLD.office_id
@@ -178,3 +187,20 @@ CREATE TRIGGER tr_protect_last_active_owner_delete
 BEFORE DELETE ON public.user_profile
 FOR EACH ROW
 EXECUTE FUNCTION public.protect_last_active_owner();
+
+
+-- 8. Restrição de privilégios de execução para funções SECURITY DEFINER
+REVOKE EXECUTE ON FUNCTION public.get_auth_user_profile() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_auth_user_profile() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_auth_user_profile() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_auth_user_profile() TO service_role;
+
+REVOKE EXECUTE ON FUNCTION public.prevent_self_elevation() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.prevent_self_elevation() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.prevent_self_elevation() FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.prevent_self_elevation() TO service_role;
+
+REVOKE EXECUTE ON FUNCTION public.protect_last_active_owner() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.protect_last_active_owner() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.protect_last_active_owner() FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.protect_last_active_owner() TO service_role;

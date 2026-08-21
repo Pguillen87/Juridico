@@ -60,14 +60,41 @@ jobs:
           npm ci --prefix poc
           npm --prefix poc test
 
+      - name: Create Secure Local Docker Network
+        run: docker network create -o com.docker.network.bridge.host_binding_ipv4=127.0.0.1 juridico-supabase-local
+
       - name: Start Supabase Local
-        run: npx supabase start
+        run: |
+          npx supabase start --network-id juridico-supabase-local > "$RUNNER_TEMP/supabase-start.log" 2>&1 || {
+            echo "Falha ao iniciar o Supabase local. Verifique os logs (credenciais omitidas)."
+            cat "$RUNNER_TEMP/supabase-start.log" | grep -vE '(ANON_KEY|SERVICE_ROLE_KEY|JWT_SECRET|DB_PASSWORD|POSTGRES_PASSWORD)' || true
+            exit 1
+          }
+
+      - name: Supabase DB Reset
+        run: npm run db:reset
 
       - name: Supabase DB Lint
-        run: npx supabase db lint
+        run: npm run db:lint
 
       - name: Supabase DB Tests (pgTAP)
-        run: npx supabase test db
+        run: npm run db:test
+
+      - name: Concurrency Test (Last Owner Protection)
+        run: ./supabase/tests/concurrency/test_concurrency.sh
+
+      - name: Supabase DB Types Check
+        run: |
+          npm run db:types
+          if [ -n "$(git status --porcelain src/types/database.types.ts)" ]; then
+            echo "Tipos do banco desatualizados! Execute 'npm run db:types' localmente e versione o arquivo src/types/database.types.ts."
+            exit 1
+          fi
 
       - name: Stop Supabase Local
-        run: npx supabase stop
+        if: always()
+        run: npx supabase stop > /dev/null 2>&1 || true
+
+      - name: Remove Local Docker Network
+        if: always()
+        run: docker network rm juridico-supabase-local > /dev/null 2>&1 || true
