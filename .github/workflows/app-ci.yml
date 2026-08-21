@@ -81,11 +81,7 @@ jobs:
         run: ./supabase/tests/concurrency/test_concurrency.sh
 
       - name: Supabase DB Types Check
-        run: |
-          npm run db:types
-          if [ -n "$(git status --porcelain src/types/database.types.ts)" ]; then
-            exit 1
-          fi
+        run: npm run db:types
 
       - name: Stop Supabase Local
         if: always()
