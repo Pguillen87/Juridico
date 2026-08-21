@@ -60,19 +60,13 @@ jobs:
           npm ci --prefix poc
           npm --prefix poc test
 
-      - name: Create Secure Local Docker Network
-        run: |
-          # GitHub Actions já é efêmero, mas para cumprir o requisito, criamos a rede sem quebrar o DNS interno do Docker
-          docker network create juridico-supabase-local
-
       - name: Start Supabase Local
         run: |
-          npx supabase start --network-id juridico-supabase-local > "$RUNNER_TEMP/supabase-start.log" 2>&1 || {
+          npx supabase start > "$RUNNER_TEMP/supabase-start.log" 2>&1 || {
             echo "Falha ao iniciar o Supabase local. Verifique os logs (credenciais omitidas)."
             cat "$RUNNER_TEMP/supabase-start.log" | grep -vE '(ANON_KEY|SERVICE_ROLE_KEY|JWT_SECRET|DB_PASSWORD|POSTGRES_PASSWORD)' || true
             exit 1
           }
-          sleep 10
 
       - name: Supabase DB Reset
         run: npm run db:reset
@@ -98,6 +92,4 @@ jobs:
         if: always()
         run: npx supabase stop > /dev/null 2>&1 || true
 
-      - name: Remove Local Docker Network
-        if: always()
-        run: docker network rm juridico-supabase-local > /dev/null 2>&1 || true
+
