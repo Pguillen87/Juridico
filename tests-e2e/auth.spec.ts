@@ -62,7 +62,9 @@ function extractLink(message: MailpitMessage) {
       .replaceAll('&#x3D;', '=');
   const match = source.match(/https?:\/\/[^\s"'<>]+/);
   if (!match) throw new Error('O mail catcher não trouxe um link navegável.');
-  return match[0].replace(/[),.;]+$/, '');
+  const link = match[0].replace(/[),.;]+$/, '');
+  const parsed = new URL(link);
+  return `${parsed.pathname}${parsed.search}`;
 }
 
 test.describe('Auth funcional local', () => {

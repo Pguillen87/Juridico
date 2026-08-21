@@ -39,6 +39,18 @@ async function upsertProfile(admin, profile) {
   if (error) throw error;
 }
 
+async function removeUserIfPresent(admin, email) {
+  const { data, error } = await admin.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+  if (error) throw error;
+  const existing = data.users.find((user) => user.email === email);
+  if (!existing) return;
+  const { error: deleteError } = await admin.auth.admin.deleteUser(existing.id);
+  if (deleteError) throw deleteError;
+}
+
 async function main() {
   const values = readLocalSupabaseEnv();
   const url = values.API_URL;
@@ -51,6 +63,7 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const password = process.env.JURIDICO_E2E_PASSWORD ?? DEFAULT_PASSWORD;
+  await removeUserIfPresent(admin, 'invited-operator@example.test');
 
   const { error: officeError } = await admin.from('office').upsert(
     [

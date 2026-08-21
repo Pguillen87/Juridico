@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
@@ -53,6 +59,19 @@ try {
   } else if (buildRun.status !== 0) {
     process.exitCode = buildRun.status ?? 1;
   } else {
+    const standaloneRoot = resolve(process.cwd(), '.next/standalone');
+    const standaloneStatic = resolve(standaloneRoot, '.next/static');
+    const staticSource = resolve(process.cwd(), '.next/static');
+    if (existsSync(staticSource)) {
+      cpSync(staticSource, standaloneStatic, { recursive: true });
+    }
+    const publicSource = resolve(process.cwd(), 'public');
+    if (existsSync(publicSource)) {
+      cpSync(publicSource, resolve(standaloneRoot, 'public'), {
+        recursive: true,
+      });
+    }
+
     const fixtureRun = run('npm run auth:fixtures', 'npm', [
       'run',
       'auth:fixtures',
