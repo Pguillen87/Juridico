@@ -14,6 +14,8 @@ CREATE TABLE public.office (
 
 -- Habilitar RLS na tabela office
 ALTER TABLE public.office ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.office TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.office TO service_role;
 
 -- 3. Tabela User Profile
 CREATE TABLE public.user_profile (
@@ -34,6 +36,8 @@ CREATE INDEX idx_user_profile_is_active ON public.user_profile(is_active);
 
 -- Habilitar RLS na tabela user_profile
 ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_profile TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_profile TO service_role;
 
 -- 4. Função para obter o perfil do usuário logado de forma segura (Security Definer para ler apenas o próprio perfil caso necessário, mas RLS já cobre a própria leitura)
 -- Criamos um helper STABLE para uso nas policies
