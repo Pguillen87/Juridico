@@ -25,9 +25,13 @@ describe('Environment Configuration', () => {
 
       // Importar dinamicamente para forçar a re-avaliação
       const { env: reloadedEnv } = await import('./env');
-      
-      expect(reloadedEnv.NEXT_PUBLIC_SUPABASE_URL).toBe('https://valid-url.supabase.co');
-      expect(reloadedEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe('valid-key');
+
+      expect(reloadedEnv.NEXT_PUBLIC_SUPABASE_URL).toBe(
+        'https://valid-url.supabase.co'
+      );
+      expect(reloadedEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe(
+        'valid-key'
+      );
     });
 
     it('deve permitir a ausência de variáveis do Supabase (opcionais)', async () => {
@@ -35,17 +39,18 @@ describe('Environment Configuration', () => {
       delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
       const { env: reloadedEnv } = await import('./env');
-      
+
       expect(reloadedEnv.NEXT_PUBLIC_SUPABASE_URL).toBeUndefined();
       expect(reloadedEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBeUndefined();
     });
 
     it('não deve conter segredos no contrato client-side', () => {
       const keys = Object.keys(env);
-      const secretKeys = keys.filter(key => 
-        key.toLowerCase().includes('secret') || 
-        key.toLowerCase().includes('service_role') ||
-        key.toLowerCase().includes('password')
+      const secretKeys = keys.filter(
+        (key) =>
+          key.toLowerCase().includes('secret') ||
+          key.toLowerCase().includes('service_role') ||
+          key.toLowerCase().includes('password')
       );
       expect(secretKeys).toHaveLength(0);
     });
