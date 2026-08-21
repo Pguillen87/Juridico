@@ -11,9 +11,17 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:lint": "supabase db lint",
+    "db:types": "supabase gen types typescript --local > src/types/database.types.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.3",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -28,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "prettier": "^3.9.6",
+    "supabase": "^2.115.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"
