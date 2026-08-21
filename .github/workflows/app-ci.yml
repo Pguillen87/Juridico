@@ -91,5 +91,3 @@ jobs:
       - name: Stop Supabase Local
         if: always()
         run: npx supabase stop > /dev/null 2>&1 || true
-
-

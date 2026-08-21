@@ -43,16 +43,16 @@
 
 ## CI GitHub
 - **Workflow:** App CI (`.github/workflows/app-ci.yml`)
-- **Run ID:** `32433158238`
-- **URL:** `https://github.com/Pguillen87/Juridico/actions/runs/32433158238`
-- **Head SHA:** `9606fb9`
-- **Status:** `completed`
-- **Conclusion:** `success`
+- **Run ID:** [Pendente]
+- **URL:** [Pendente]
+- **Head SHA:** `f9675b4`
+- **Status:** [Pendente]
+- **Conclusion:** [Pendente]
 
 ## Documentos auditáveis
 **Repositório:** Pguillen87/Juridico
 **Branch:** `phase-4-auth-rls`
-**Commit SHA:** `9606fb9` (último commit testado)
+**Commit SHA:** `f9675b4` (último commit testado)
 **Caminho Git:** `docs/relatorio-fase-4a.md`
 **URL GitHub:** `https://github.com/Pguillen87/Juridico/blob/phase-4-auth-rls/docs/relatorio-fase-4a.md`
 
@@ -86,8 +86,8 @@ Confirmo a ausência de:
 
 ## GitHub atualizado
 - **Branch:** `phase-4-auth-rls`
-- **Commits:** Vários commits incluindo as correções de RLS e testes.
-- **HEAD final:** `9606fb9`
+- **Commits:** Vários commits incluindo as correções de RLS, testes, proxy e higiene do CI.
+- **HEAD final:** `f9675b4`
 - **Push:** confirmado
 
 ## Main
