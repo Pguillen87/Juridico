@@ -56,11 +56,23 @@ jobs:
       - name: Supabase DB Reset
         run: npm run db:reset
 
+      - name: Prepare .env.local
+        run: |
+          echo "NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000" > .env.local
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> .env.local
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(npx supabase status -o env | grep ANON_KEY | cut -d= -f2 | tr -d '\"')" >> .env.local
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      - name: Prepare Auth Fixtures
+        run: npm run auth:fixtures
+
+      - name: Build
+        run: npm run build
+
       - name: E2E Tests
-        run: npm run auth:e2e
+        run: PLAYWRIGHT_START_COMMAND="node .next/standalone/server.js" PLAYWRIGHT_REUSE_SERVER=false npx playwright test
 
       - name: Verify PoC
         run: |
