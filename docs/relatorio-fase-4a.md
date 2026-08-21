@@ -9,7 +9,7 @@
 ## Supabase local
 - **Versão CLI:** `2.115.0`
 - **Comandos executados:** `supabase init`, `supabase start`, `supabase db reset`, `supabase db lint`, `supabase test db`, `supabase stop`.
-- **Status:** Serviços locais inicializados com sucesso e migrações aplicadas.
+- **Status:** Serviços locais inicializados com sucesso e migrações aplicadas. (Nota: O CI foi ajustado para suprimir a saída do log do Supabase para evitar exposição sensível, e o start funciona no ambiente efêmero do GitHub Actions).
 
 ## Schema
 - **Tabelas:** `public.office`, `public.user_profile`.
@@ -17,20 +17,23 @@
 - **Funções:** `get_auth_user_profile`, `prevent_self_elevation`, `protect_last_active_owner`.
 - **Triggers:** `tr_prevent_self_elevation`, `tr_protect_last_active_owner_update`, `tr_protect_last_active_owner_delete`.
 - **Policies:** RLS habilitado nas tabelas. Políticas para `SELECT` e `UPDATE` baseadas no `office_id` e privilégios de `is_owner`.
+- **SECURITY DEFINER:** As funções de trigger e helper tiveram o privilégio `EXECUTE` revogado de `PUBLIC` e `anon`, garantindo que só as roles autorizadas (`authenticated`, `service_role`) possam invocá-las, com `search_path` fixado em `pg_catalog, public`.
 
 ## RLS
 - **Isolamento `office_id`:** Políticas garantem que os usuários só possam ler ou modificar perfis pertencentes ao seu próprio escritório.
-- **`is_active`:** Usuários inativos não conseguem ler nem escrever dados.
+- `is_active`: Usuários inativos não conseguem ler nem escrever dados. (Nem o próprio perfil, garantido por policy restritiva explícita `AND is_active = true`).
+- `office.is_active`: Usuários em um office inativo também estão bloqueados. O update de `is_active` de um office não pode ser feito diretamente pelos owners (apenas `name` pode ser atualizado via GRANT UPDATE(name)).
 - **`role`:** O papel funcional é rigorosamente aplicado, impedindo usuários comuns de gerenciar perfis.
 - **`is_owner`:** Proprietários do escritório podem visualizar e atualizar todos os perfis em seu escritório, mas não ganham privilégios adicionais fora desse escopo.
 - **Autoelevação:** Um trigger impede que um usuário altere seu próprio papel, seu status de proprietário ou mova seu perfil para outro escritório.
-- **Último owner:** A proteção do último proprietário ativo foi implementada de forma transacional usando `SELECT FOR UPDATE` para prevenir bloqueios de escritório irreversíveis.
+- **Último owner:** A proteção do último proprietário ativo foi implementada de forma transacional obtendo um lock exclusivo sobre a linha correspondente em `public.office` (`PERFORM 1 FROM public.office WHERE id = OLD.office_id FOR UPDATE`) antes de contar os owners ativos restantes. Isso serializa as transações e previne condições de corrida.
 
 ## Testes de banco
 - **Arquivos:** `supabase/tests/database/01_core_identity.test.sql`
-- **Quantidade:** 18 testes pgTAP.
-- **Passed/Failed:** 18/0.
+- **Quantidade:** 29 testes pgTAP.
+- **Passed/Failed:** 29/0.
 - **Comando real:** `npx supabase test db`
+- **Teste de Concorrência:** Adicionado `test_concurrency.sh` que prova o funcionamento do lock contra duas transações assíncronas tentando inativar owners simultaneamente.
 
 ## Testes da aplicação
 - **Format:** `npm run format:check` executado com sucesso.
@@ -43,16 +46,17 @@
 
 ## CI GitHub
 - **Workflow:** App CI (`.github/workflows/app-ci.yml`)
-- **Run ID:** `32490509784`
-- **URL:** `https://github.com/Pguillen87/Juridico/actions/runs/32490509784`
-- **Head SHA:** `49b6c7c`
-- **Status:** `completed`
-- **Conclusion:** `success`
+- **Run ID:** [A ser preenchido pela auditoria externa no GitHub Actions]
+- **URL:** [A ser preenchido pela auditoria externa no GitHub Actions]
+- **Head SHA:** [A ser preenchido pela auditoria externa no GitHub Actions]
+- **Status:** [A ser preenchido pela auditoria externa no GitHub Actions]
+- **Conclusion:** [A ser preenchido pela auditoria externa no GitHub Actions]
+*(Nota: O CI final do HEAD desta branch deve ser verificado diretamente no GitHub Actions pelo SHA do commit que contém este relatório.)*
 
 ## Documentos auditáveis
 **Repositório:** Pguillen87/Juridico
 **Branch:** `phase-4-auth-rls`
-**Commit SHA:** `49b6c7c` (último commit testado)
+**Commit SHA:** [A ser verificado via commit atual no GitHub]
 **Caminho Git:** `docs/relatorio-fase-4a.md`
 **URL GitHub:** `https://github.com/Pguillen87/Juridico/blob/phase-4-auth-rls/docs/relatorio-fase-4a.md`
 
@@ -87,7 +91,7 @@ Confirmo a ausência de:
 ## GitHub atualizado
 - **Branch:** `phase-4-auth-rls`
 - **Commits:** Vários commits incluindo as correções de RLS, testes, proxy, higiene do CI e database types gerados pelo cli.
-- **HEAD final:** `49b6c7c`
+- **HEAD final:** [A ser verificado via commit atual no GitHub]
 - **Push:** confirmado
 
 ## Main
