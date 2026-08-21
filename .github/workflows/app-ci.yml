@@ -84,7 +84,7 @@ jobs:
           tmp="src/types/database.types.tmp.ts"
           npx supabase gen types typescript --local > "$tmp"
           npx prettier --write "$tmp"
-          
+
           # Ignora espaços em branco e quebras de linha no diff
           if ! diff -uw src/types/database.types.ts "$tmp"; then
             echo "Tipos do banco desatualizados! Aqui está o arquivo gerado completo:"
