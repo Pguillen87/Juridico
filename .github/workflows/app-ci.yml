@@ -90,7 +90,8 @@ jobs:
           sed -i 's/\r$//' "$tmp"
 
           if ! diff -u src/types/database.types.ts "$tmp"; then
-            echo "Tipos do banco desatualizados! Execute 'npm run db:types' localmente e versione o arquivo src/types/database.types.ts."
+            echo "Tipos do banco desatualizados! Aqui está o arquivo gerado completo:"
+            cat "$tmp"
             exit 1
           fi
           rm -f "$tmp"
