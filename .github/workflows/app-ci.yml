@@ -84,12 +84,9 @@ jobs:
           tmp="src/types/database.types.tmp.ts"
           npx supabase gen types typescript --local > "$tmp"
           npx prettier --write "$tmp"
-
-          # Remove carriage returns para comparar apenas o conteúdo (ignorando CRLF vs LF)
-          sed -i 's/\r$//' src/types/database.types.ts
-          sed -i 's/\r$//' "$tmp"
-
-          if ! diff -u src/types/database.types.ts "$tmp"; then
+          
+          # Ignora espaços em branco e quebras de linha no diff
+          if ! diff -uw src/types/database.types.ts "$tmp"; then
             echo "Tipos do banco desatualizados! Aqui está o arquivo gerado completo:"
             cat "$tmp"
             exit 1
