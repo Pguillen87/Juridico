@@ -70,6 +70,8 @@ jobs:
             cat "$RUNNER_TEMP/supabase-start.log" | grep -vE '(ANON_KEY|SERVICE_ROLE_KEY|JWT_SECRET|DB_PASSWORD|POSTGRES_PASSWORD)' || true
             exit 1
           }
+          # Aguardar alguns segundos para garantir que todos os containers (storage, etc) estejam prontos antes do db:reset
+          sleep 10
 
       - name: Supabase DB Reset
         run: npm run db:reset
