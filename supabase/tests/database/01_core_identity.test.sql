@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(35);
+SELECT plan(34);
 
 -- Helper para setar o usuário logado no contexto da transação
 CREATE OR REPLACE FUNCTION set_auth_user(user_id UUID) RETURNS void AS $$

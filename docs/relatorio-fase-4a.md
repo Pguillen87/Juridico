@@ -30,8 +30,8 @@
 
 ## Testes de banco
 - **Arquivos:** `supabase/tests/database/01_core_identity.test.sql`
-- **Quantidade:** 35 testes pgTAP.
-- **Passed/Failed:** 35/0.
+- **Quantidade:** 34 testes pgTAP.
+- **Passed/Failed:** 34/0.
 - **Comando real:** `npx supabase test db`
 - **Teste de Concorrência:** Adicionado `test_concurrency.sh` que prova o funcionamento do lock contra duas transações assíncronas tentando inativar owners simultaneamente. O script valida os return codes (RC1 e RC2) garantindo exatamente 1 sucesso, 1 rejeição e exatamente 1 owner ativo final.
 
