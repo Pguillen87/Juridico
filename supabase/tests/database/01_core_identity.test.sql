@@ -58,9 +58,11 @@ SELECT is(
 );
 
 -- TESTE C: Usuário do office A não escreve office B
-SELECT throws_ok(
-    $$ UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222' $$,
-    'B. User from Office A cannot write to Office B profiles (0 rows affected is expected but we test if it affects anything in another test)'
+-- Nota: RLS não lança exceção em UPDATE não autorizado, apenas afeta 0 linhas.
+SELECT results_eq(
+    $$ UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222' RETURNING 1 $$,
+    $$ VALUES (NULL::integer) WHERE false $$,
+    'B. User from Office A cannot write to Office B profiles (0 rows affected)'
 );
 -- Para testar que não afeta:
 UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222';
@@ -84,6 +86,7 @@ SELECT is(
 SELECT set_auth_user('00000000-0000-0000-0000-000000000004');
 SELECT throws_ok(
     $$ UPDATE public.user_profile SET role = 'lawyer' WHERE id = '00000000-0000-0000-0000-000000000004' $$,
+    'P0001',
     'Users cannot change their own role',
     'E. Operator cannot change own role'
 );
@@ -92,6 +95,7 @@ SELECT throws_ok(
 SELECT set_auth_user('00000000-0000-0000-0000-000000000005');
 SELECT throws_ok(
     $$ UPDATE public.user_profile SET is_owner = true WHERE id = '00000000-0000-0000-0000-000000000005' $$,
+    'P0001',
     'Users cannot change their own is_owner status',
     'F. Reviewer cannot grant is_owner to self'
 );
@@ -143,16 +147,19 @@ SELECT is(
 SELECT set_config('role', 'postgres', true);
 SELECT throws_ok(
     $$ UPDATE public.user_profile SET is_active = false WHERE id = '00000000-0000-0000-0000-000000000001' $$,
+    'P0001',
     'Cannot remove or deactivate the last active owner of an office',
     'J. Last active owner cannot be deactivated'
 );
 SELECT throws_ok(
     $$ UPDATE public.user_profile SET is_owner = false WHERE id = '00000000-0000-0000-0000-000000000001' $$,
+    'P0001',
     'Cannot remove or deactivate the last active owner of an office',
     'J. Last active owner cannot lose is_owner'
 );
 SELECT throws_ok(
     $$ DELETE FROM public.user_profile WHERE id = '00000000-0000-0000-0000-000000000001' $$,
+    'P0001',
     'Cannot remove or deactivate the last active owner of an office',
     'J. Last active owner cannot be deleted'
 );
@@ -169,6 +176,7 @@ SELECT is(
 -- TESTE M: usuário não move o próprio perfil para outro office
 SELECT throws_ok(
     $$ UPDATE public.user_profile SET office_id = '22222222-2222-2222-2222-222222222222' WHERE id = '00000000-0000-0000-0000-000000000001' $$,
+    'P0001',
     'Users cannot change their own office_id',
     'M. User cannot move own profile to another office'
 );
