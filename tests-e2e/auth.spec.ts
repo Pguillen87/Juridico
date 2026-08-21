@@ -195,7 +195,8 @@ test.describe('Auth funcional local', () => {
   });
 
   test('W: não existe fluxo público funcional de signup', async ({ page }) => {
-    await page.goto('/signup');
-    await expect(page).toHaveURL(/\/login$/);
+    const response = await page.goto('/signup');
+    // A rota /signup não existe. O servidor deve retornar 404 (Not Found).
+    expect(response?.status()).toBe(404);
   });
 });
