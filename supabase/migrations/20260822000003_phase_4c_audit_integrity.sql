@@ -17,6 +17,7 @@ DECLARE
     target public.user_profile%ROWTYPE;
     action_name TEXT;
     meta JSONB := '{}'::jsonb;
+    audit_id BIGINT;
 BEGIN
     -- Valida o actor (deve ser ativo, owner, em office ativo)
     SELECT * INTO actor FROM public.user_profile
@@ -51,13 +52,28 @@ BEGIN
 
     action_name := 'invite.' || p_outcome;
     
-    -- Usa o mesmo insert interno para garantir consistência
-    RETURN public.write_admin_audit(
+    -- Insere diretamente ignorando write_admin_audit pois write_admin_audit requer actor ativo logado (RLS)
+    -- e o adminClient roda como service_role sem auth context
+    INSERT INTO public.audit_log (
+        audit_scope,
+        office_id,
+        actor_user_id,
+        action,
+        entity_type,
+        entity_id,
+        metadata
+    ) VALUES (
+        'administrative',
+        actor.office_id,
+        actor.id,
         action_name,
         'user_profile',
         p_target_user_id,
         meta
-    );
+    )
+    RETURNING id INTO audit_id;
+    
+    RETURN audit_id;
 END;
 $$;
 
@@ -125,6 +141,7 @@ AS $$
 DECLARE
     actor RECORD;
     target public.user_profile%ROWTYPE;
+    audit_id BIGINT;
 BEGIN
     -- Valida o actor
     SELECT * INTO actor FROM public.user_profile
@@ -157,12 +174,26 @@ BEGIN
         END IF;
     END IF;
 
-    RETURN public.write_admin_audit(
+    INSERT INTO public.audit_log (
+        audit_scope,
+        office_id,
+        actor_user_id,
+        action,
+        entity_type,
+        entity_id,
+        metadata
+    ) VALUES (
+        'administrative',
+        actor.office_id,
+        actor.id,
         p_action,
         p_entity_type,
         p_entity_id,
         jsonb_build_object('reason', p_reason)
-    );
+    )
+    RETURNING id INTO audit_id;
+    
+    RETURN audit_id;
 END;
 $$;
 
