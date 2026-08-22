@@ -227,7 +227,10 @@ test.describe('Auth funcional local', () => {
   }) => {
     const email = 'invited-operator@example.test';
     await purgeMailbox(request);
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/login$/);
     await login(page, 'owner@example.test');
+    await expect(page).toHaveURL(/\/app$/);
     await page.goto('/app/usuarios');
     await page.getByLabel('Nome').fill('Invited Operator');
     await page.getByLabel('E-mail').fill(email);
@@ -281,7 +284,10 @@ test.describe('Auth funcional local', () => {
   }) => {
     const email = 'invited-operator@example.test'; // Mesmo e-mail do cenário V-W
     await purgeMailbox(request);
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/login$/);
     await login(page, 'owner@example.test');
+    await expect(page).toHaveURL(/\/app$/);
     await page.goto('/app/usuarios');
 
     // Tenta convidar novamente com um papel diferente (advogado)
