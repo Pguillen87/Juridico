@@ -1,6 +1,11 @@
 import type { User } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
 import type { Tables } from '@/types/database.types';
+import {
+  canPerformAction,
+  type PermissionAction,
+  type PermissionContext,
+} from './permissions';
 import { createClient } from '../supabase/server';
 
 export type AuthenticatedContext = {
@@ -8,6 +13,15 @@ export type AuthenticatedContext = {
   profile: Tables<'user_profile'>;
   office: Tables<'office'>;
 };
+
+export class PermissionDeniedError extends Error {
+  readonly code = 'FORBIDDEN' as const;
+
+  constructor(readonly action: PermissionAction) {
+    super(`Permission denied for action: ${action}`);
+    this.name = 'PermissionDeniedError';
+  }
+}
 
 export async function requireAuthenticatedProfile(): Promise<AuthenticatedContext> {
   const supabase = await createClient();
@@ -29,6 +43,26 @@ export async function requireAuthenticatedProfile(): Promise<AuthenticatedContex
   if (officeError || !office?.is_active) redirect('/login?error=inactive');
 
   return { user: data.user, profile, office };
+}
+
+export async function requirePermission(
+  action: PermissionAction,
+  options: { redirectOnDenied?: boolean } = {}
+): Promise<AuthenticatedContext> {
+  const context = await requireAuthenticatedProfile();
+  const permissionContext: PermissionContext = {
+    role: context.profile.role,
+    isOwner: context.profile.is_owner,
+    isActive: context.profile.is_active,
+    officeIsActive: context.office.is_active,
+  };
+
+  if (!canPerformAction(permissionContext, action)) {
+    if (options.redirectOnDenied !== false) redirect('/app?error=forbidden');
+    throw new PermissionDeniedError(action);
+  }
+
+  return context;
 }
 
 export async function requireOwnerProfile(): Promise<AuthenticatedContext> {

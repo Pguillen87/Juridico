@@ -218,7 +218,8 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Email provider remains enabled for password login; public signup is not exposed by the application.
+# Email password login and administrative invites remain available.
+# Public signup is disabled by the global auth.enable_signup flag above.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

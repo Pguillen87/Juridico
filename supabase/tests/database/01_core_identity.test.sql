@@ -58,15 +58,14 @@ SELECT is(
     'B. User from Office A cannot read Office B profiles'
 );
 
--- TESTE C: Usuário do office A não escreve office B
--- Nota: RLS não lança exceção em UPDATE não autorizado, apenas afeta 0 linhas.
-SELECT results_eq(
-    $$ UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222' RETURNING 1 $$,
-    $$ SELECT 1::integer WHERE false $$,
-    'B. User from Office A cannot write to Office B profiles (0 rows affected)'
+-- TESTE C: Chave pública não possui UPDATE genérico de perfil
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222' $$,
+    '42501',
+    NULL,
+    'B. Authenticated users cannot use generic profile UPDATE'
 );
--- Para testar que não afeta:
-UPDATE public.user_profile SET name = 'Hacked' WHERE office_id = '22222222-2222-2222-2222-222222222222';
+-- Conferir que nenhum dado do office B foi alterado.
 SELECT set_config('role', 'postgres', true);
 SELECT is(
     (SELECT name FROM public.user_profile WHERE id = '00000000-0000-0000-0000-000000000006'),
@@ -87,30 +86,29 @@ SELECT is(
     0::bigint,
     'D. Inactive user cannot read any office'
 );
-SELECT results_eq(
-    $$ UPDATE public.user_profile SET name = 'Hacked' RETURNING 1 $$,
-    $$ SELECT 1::integer WHERE false $$,
-    'D. Inactive user cannot update any profile (0 rows affected)'
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET name = 'Hacked' $$,
+    '42501',
+    NULL,
+    'D. Inactive user cannot use generic profile UPDATE'
 );
 
 -- TESTE E: operator não altera próprio role
 SELECT set_auth_user('00000000-0000-0000-0000-000000000004');
--- Non-owners cannot update their own profile (only owners can update profiles in their office)
--- So this update will silently fail (affect 0 rows) due to RLS, not trigger the exception
-SELECT results_eq(
-    $$ UPDATE public.user_profile SET role = 'lawyer' WHERE id = '00000000-0000-0000-0000-000000000004' RETURNING 1 $$,
-    $$ SELECT 1::integer WHERE false $$,
-    'E. Operator cannot change own role (0 rows affected due to RLS)'
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET role = 'lawyer' WHERE id = '00000000-0000-0000-0000-000000000004' $$,
+    '42501',
+    NULL,
+    'E. Operator cannot use generic profile UPDATE'
 );
 
 -- TESTE F: reviewer não concede is_owner a si próprio
 SELECT set_auth_user('00000000-0000-0000-0000-000000000005');
--- Non-owners cannot update their own profile (only owners can update profiles in their office)
--- So this update will silently fail (affect 0 rows) due to RLS, not trigger the exception
-SELECT results_eq(
-    $$ UPDATE public.user_profile SET is_owner = true WHERE id = '00000000-0000-0000-0000-000000000005' RETURNING 1 $$,
-    $$ SELECT 1::integer WHERE false $$,
-    'F. Reviewer cannot grant is_owner to self (0 rows affected due to RLS)'
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET is_owner = true WHERE id = '00000000-0000-0000-0000-000000000005' $$,
+    '42501',
+    NULL,
+    'F. Reviewer cannot use generic profile UPDATE'
 );
 
 -- TESTE G: lawyer sem is_owner não administra perfis
@@ -121,23 +119,23 @@ SELECT is(
     1::bigint,
     'G. Lawyer without is_owner can only see own profile'
 );
--- lawyer tenta atualizar outro
-UPDATE public.user_profile SET name = 'Hacked' WHERE id = '00000000-0000-0000-0000-000000000004';
-SELECT set_config('role', 'postgres', true);
-SELECT is(
-    (SELECT name FROM public.user_profile WHERE id = '00000000-0000-0000-0000-000000000004'),
-    'Operator 1 A',
-    'G. Lawyer without is_owner cannot update other profiles'
+-- lawyer tenta atualizar outro pela tabela, caminho removido
+SELECT throws_ok(
+    $$ UPDATE public.user_profile SET name = 'Hacked' WHERE id = '00000000-0000-0000-0000-000000000004' $$,
+    '42501',
+    NULL,
+    'G. Lawyer without is_owner cannot use generic profile UPDATE'
 );
 SELECT set_config('role', 'authenticated', true);
 
--- TESTE H: lawyer + is_owner administra usuário autorizado do mesmo office
+-- TESTE H: lawyer + is_owner administra usuário autorizado do mesmo office por RPC
 SELECT set_auth_user('00000000-0000-0000-0000-000000000001');
-UPDATE public.user_profile SET name = 'Operator 1 A Edited' WHERE id = '00000000-0000-0000-0000-000000000004';
 SELECT is(
-    (SELECT name FROM public.user_profile WHERE id = '00000000-0000-0000-0000-000000000004'),
-    'Operator 1 A Edited',
-    'H. Owner can update profile in same office'
+    (SELECT role::text FROM public.change_user_role(
+        '00000000-0000-0000-0000-000000000004', 'reviewer'
+    )),
+    'reviewer',
+    'H. Owner can change profile role through controlled RPC'
 );
 
 -- TESTE I: is_owner não ganha poderes jurídicos apenas pelo atributo (testado no schema: role e is_owner são separados)
@@ -148,10 +146,12 @@ SELECT is(
 );
 
 -- TESTE J: último owner ativo não pode perder is_owner, ser inativado ou ser removido
--- Primeiro, Owner 1 remove Owner 2 (é permitido pois Owner 1 ainda está ativo)
-UPDATE public.user_profile SET is_owner = false WHERE id = '00000000-0000-0000-0000-000000000002';
+-- Primeiro, Owner 1 remove Owner 2 por RPC (é permitido pois Owner 1 ainda está ativo)
+SELECT set_auth_user('00000000-0000-0000-0000-000000000001');
 SELECT is(
-    (SELECT is_owner FROM public.user_profile WHERE id = '00000000-0000-0000-0000-000000000002'),
+    (SELECT is_owner FROM public.set_user_owner(
+        '00000000-0000-0000-0000-000000000002', false
+    )),
     false,
     'K. Owner can lose is_owner if another owner is active'
 );
@@ -190,8 +190,8 @@ SELECT is(
 -- TESTE M: usuário não move o próprio perfil para outro office
 SELECT throws_ok(
     $$ UPDATE public.user_profile SET office_id = '22222222-2222-2222-2222-222222222222' WHERE id = '00000000-0000-0000-0000-000000000001' $$,
-    'P0001',
-    'Users cannot change their own office_id',
+    '42501',
+    NULL,
     'M. User cannot move own profile to another office'
 );
 
@@ -271,17 +271,18 @@ SELECT throws_ok(
     NULL,
     'Q. Owner cannot update office.created_at'
 );
--- Owner tenta atualizar nome (deve funcionar)
+-- Owner usa somente a RPC específica para alterar o nome do próprio office
 SELECT results_eq(
-    $$ UPDATE public.office SET name = 'Office A Edited' WHERE id = '11111111-1111-1111-1111-111111111111' RETURNING 1 $$,
+    $$ SELECT 1 FROM public.update_office_name('Office A Edited') $$,
     $$ VALUES (1::integer) $$,
-    'Q. Owner can update office.name'
+    'Q. Owner can update office.name through controlled RPC'
 );
--- Owner tenta atualizar nome de outro office (deve falhar silenciosamente por RLS)
-SELECT results_eq(
-    $$ UPDATE public.office SET name = 'Hacked' WHERE id = '22222222-2222-2222-2222-222222222222' RETURNING 1 $$,
-    $$ SELECT 1::integer WHERE false $$,
-    'Q. Owner cannot update other office name'
+-- Mesmo owner não possui caminho genérico para alterar nome de qualquer office
+SELECT throws_ok(
+    $$ UPDATE public.office SET name = 'Hacked' WHERE id = '22222222-2222-2222-2222-222222222222' $$,
+    '42501',
+    NULL,
+    'Q. Owner cannot use generic office UPDATE'
 );
 
 -- TESTE R: Privilégios SECURITY DEFINER restritos

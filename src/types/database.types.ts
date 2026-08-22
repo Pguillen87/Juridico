@@ -34,6 +34,53 @@ export type Database = {
   };
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string;
+          actor_user_id: string | null;
+          audit_scope: string;
+          correlation_id: string;
+          created_at: string;
+          entity_id: string | null;
+          entity_type: string;
+          id: number;
+          metadata: Json;
+          office_id: string;
+        };
+        Insert: {
+          action: string;
+          actor_user_id?: string | null;
+          audit_scope: string;
+          correlation_id?: string;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type: string;
+          id?: never;
+          metadata?: Json;
+          office_id: string;
+        };
+        Update: {
+          action?: string;
+          actor_user_id?: string | null;
+          audit_scope?: string;
+          correlation_id?: string;
+          created_at?: string;
+          entity_id?: string | null;
+          entity_type?: string;
+          id?: never;
+          metadata?: Json;
+          office_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'audit_log_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       office: {
         Row: {
           created_at: string;
@@ -54,6 +101,41 @@ export type Database = {
           name?: string;
         };
         Relationships: [];
+      };
+      rate_limit_bucket: {
+        Row: {
+          actor_user_id: string;
+          office_id: string;
+          operation: string;
+          request_count: number;
+          updated_at: string;
+          window_started_at: string;
+        };
+        Insert: {
+          actor_user_id: string;
+          office_id: string;
+          operation: string;
+          request_count: number;
+          updated_at?: string;
+          window_started_at: string;
+        };
+        Update: {
+          actor_user_id?: string;
+          office_id?: string;
+          operation?: string;
+          request_count?: number;
+          updated_at?: string;
+          window_started_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'rate_limit_bucket_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       user_profile: {
         Row: {
@@ -98,6 +180,58 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      change_user_role: {
+        Args: {
+          p_new_role: Database['public']['Enums']['user_role'];
+          p_target_user_id: string;
+        };
+        Returns: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          is_owner: boolean;
+          name: string;
+          office_id: string;
+          role: Database['public']['Enums']['user_role'];
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'user_profile';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      consume_admin_rate_limit: {
+        Args: { p_operation: string };
+        Returns: {
+          allowed: boolean;
+          current_count: number;
+          limit_count: number;
+          retry_after_seconds: number;
+          window_seconds: number;
+        }[];
+      };
+      get_administrative_audit: {
+        Args: { p_action?: string; p_entity_type?: string; p_limit?: number };
+        Returns: {
+          action: string;
+          actor_user_id: string | null;
+          audit_scope: string;
+          correlation_id: string;
+          created_at: string;
+          entity_id: string | null;
+          entity_type: string;
+          id: number;
+          metadata: Json;
+          office_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'audit_log';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       get_auth_user_profile: {
         Args: never;
         Returns: {
@@ -115,6 +249,89 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      record_audit_export: { Args: never; Returns: number };
+      record_invite_audit: {
+        Args: { p_outcome: string; p_target_user_id: string };
+        Returns: number;
+      };
+      require_active_actor: {
+        Args: never;
+        Returns: {
+          actor_id: string;
+          actor_is_owner: boolean;
+          actor_office_id: string;
+          actor_role: Database['public']['Enums']['user_role'];
+        }[];
+      };
+      require_active_owner: {
+        Args: never;
+        Returns: {
+          actor_id: string;
+          actor_is_owner: boolean;
+          actor_office_id: string;
+          actor_role: Database['public']['Enums']['user_role'];
+        }[];
+      };
+      set_user_active: {
+        Args: { p_is_active: boolean; p_target_user_id: string };
+        Returns: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          is_owner: boolean;
+          name: string;
+          office_id: string;
+          role: Database['public']['Enums']['user_role'];
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'user_profile';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      set_user_owner: {
+        Args: { p_is_owner: boolean; p_target_user_id: string };
+        Returns: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          is_owner: boolean;
+          name: string;
+          office_id: string;
+          role: Database['public']['Enums']['user_role'];
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'user_profile';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      update_office_name: {
+        Args: { p_name: string };
+        Returns: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'office';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      write_admin_audit: {
+        Args: {
+          p_action: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_metadata?: Json;
+        };
+        Returns: number;
       };
     };
     Enums: {

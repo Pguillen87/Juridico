@@ -57,21 +57,40 @@ export default async function AppPage() {
           </div>
         </div>
 
-        {profile.is_owner ? (
+        {profile.is_owner || profile.role === 'auditor' ? (
           <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">
               Administração
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Convide e acompanhe os usuários do seu escritório em uma área
-              separada.
+              {profile.is_owner
+                ? 'Convide e acompanhe os usuários do seu escritório em uma área separada.'
+                : 'Consulte a trilha de auditoria administrativa do seu escritório.'}
             </p>
-            <Link
-              className="mt-5 inline-flex rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
-              href="/app/usuarios"
-            >
-              Gerenciar usuários
-            </Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {profile.is_owner ? (
+                <>
+                  <Link
+                    className="inline-flex rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
+                    href="/app/usuarios"
+                  >
+                    Gerenciar usuários
+                  </Link>
+                  <Link
+                    className="inline-flex rounded-md border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    href="/app/configuracoes"
+                  >
+                    Configurações do escritório
+                  </Link>
+                </>
+              ) : null}
+              <Link
+                className="inline-flex rounded-md border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                href="/app/auditoria-administrativa"
+              >
+                Auditoria administrativa
+              </Link>
+            </div>
           </div>
         ) : null}
       </section>

@@ -11,6 +11,7 @@ vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 import {
   requireAuthenticatedProfile,
   requireOwnerProfile,
+  requirePermission,
   roleLabel,
   safeInternalRedirect,
 } from './guards';
@@ -68,6 +69,18 @@ describe('guards de autenticação', () => {
   it('nega acesso administrativo a non-owner', async () => {
     setupContext(false);
     await expect(requireOwnerProfile()).rejects.toThrow(
+      'redirect:/app?error=forbidden'
+    );
+  });
+
+  it('aplica a permissão administrativa com o contexto do perfil', async () => {
+    setupContext(true);
+    await expect(requirePermission('invite_user')).resolves.toMatchObject({
+      profile: { is_owner: true },
+    });
+
+    setupContext(false);
+    await expect(requirePermission('invite_user')).rejects.toThrow(
       'redirect:/app?error=forbidden'
     );
   });

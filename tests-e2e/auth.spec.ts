@@ -237,7 +237,7 @@ test.describe('Auth funcional local', () => {
     await page.goto('/app/usuarios');
     await page.getByLabel('Nome').fill('Invited Operator');
     await page.getByLabel('E-mail').fill(email);
-    await page.getByLabel('Papel').selectOption('operator');
+    await page.getByLabel('Papel', { exact: true }).selectOption('operator');
     await page.getByRole('button', { name: 'Enviar convite' }).click();
     await expect(page.getByRole('status')).toContainText('Convite enviado');
 
@@ -296,7 +296,7 @@ test.describe('Auth funcional local', () => {
     // Tenta convidar novamente com um papel diferente (advogado)
     await page.getByLabel('Nome').fill('Invited Operator Duplicate Attempt');
     await page.getByLabel('E-mail').fill(email);
-    await page.getByLabel('Papel').selectOption('lawyer');
+    await page.getByLabel('Papel', { exact: true }).selectOption('lawyer');
     await page.getByRole('button', { name: 'Enviar convite' }).click();
 
     // A aplicação deve tratar a falha de forma segura sem expor enumeração

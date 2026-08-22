@@ -35,3 +35,44 @@ export const inviteSchema = z.object({
 });
 
 export type InviteRole = (typeof allowedInviteRoles)[number];
+
+const userIdSchema = z.string().uuid('Identificador de usuário inválido.');
+
+export const changeRoleSchema = z
+  .object({
+    userId: userIdSchema,
+    role: z.enum(allowedInviteRoles),
+  })
+  .strict();
+
+export const setActiveSchema = z
+  .object({
+    userId: userIdSchema,
+    isActive: z.boolean(),
+  })
+  .strict();
+
+export const setOwnerSchema = z
+  .object({
+    userId: userIdSchema,
+    isOwner: z.boolean(),
+  })
+  .strict();
+
+export const updateOfficeNameSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'O nome deve ter pelo menos 2 caracteres.')
+      .max(160, 'O nome deve ter no máximo 160 caracteres.'),
+  })
+  .strict();
+
+export const auditFilterSchema = z
+  .object({
+    action: z.string().trim().min(1).max(80).optional(),
+    entityType: z.string().trim().min(1).max(80).optional(),
+    limit: z.number().int().min(1).max(100).default(50),
+  })
+  .strict();

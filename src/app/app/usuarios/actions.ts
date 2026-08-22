@@ -1,16 +1,72 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireOwnerProfile } from '@/lib/auth/guards';
+import { PermissionDeniedError, requirePermission } from '@/lib/auth/guards';
+import { appendInviteAudit } from '@/lib/audit';
+import {
+  consumeAdminRateLimit,
+  isRateLimitAllowed,
+  type AdminRateLimitOperation,
+} from '@/lib/rate-limit';
+import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { inviteSchema } from '@/lib/auth/validation';
+import {
+  changeRoleSchema,
+  inviteSchema,
+  setActiveSchema,
+  setOwnerSchema,
+} from '@/lib/auth/validation';
 
-export async function inviteUserAction(formData: FormData) {
+export type AdminActionResult = {
+  success?: boolean;
+  error?: string;
+  retryAfterSeconds?: number;
+};
+
+function mapAdminError(error: { code?: string; message?: string }): string {
+  if (error.code === 'P0001') {
+    return 'Operação bloqueada: o escritório precisa manter um administrador ativo.';
+  }
+  if (error.code === 'P0002') {
+    return 'Usuário não encontrado neste escritório.';
+  }
+  if (error.code === '42501') {
+    return 'Você não tem autorização para esta operação.';
+  }
+  if (error.code === '22023') {
+    return 'Dados inválidos para esta operação.';
+  }
+  return 'Não foi possível concluir a operação. Tente novamente.';
+}
+
+function directPermissionError(error: unknown): AdminActionResult | null {
+  if (error instanceof PermissionDeniedError) {
+    return { error: 'Você não tem autorização para esta operação.' };
+  }
+  return null;
+}
+
+async function rpcErrorMessage(error: { code?: string; message?: string }) {
+  return { error: mapAdminError(error) };
+}
+
+async function rateLimitResult(
+  operation: AdminRateLimitOperation
+): Promise<AdminActionResult | null> {
+  const result = await consumeAdminRateLimit(operation);
+  if (isRateLimitAllowed(result)) return null;
+  return {
+    error: 'Operação temporariamente limitada. Tente novamente mais tarde.',
+    retryAfterSeconds: result.retryAfterSeconds,
+  };
+}
+
+export async function inviteUserAction(
+  formData: FormData
+): Promise<AdminActionResult> {
   try {
-    // 1. Autorização: apenas owner autenticado pode convidar
-    const { profile } = await requireOwnerProfile();
+    const { profile } = await requirePermission('invite_user');
 
-    // 2. Validação do payload
     const parsed = inviteSchema.safeParse({
       name: formData.get('name'),
       email: formData.get('email'),
@@ -22,31 +78,22 @@ export async function inviteUserAction(formData: FormData) {
     }
 
     const { name, email, role } = parsed.data;
+    const limited = await rateLimitResult('admin.invite');
+    if (limited) return limited;
 
-    // 3. Cliente administrativo server-only
     const admin = createAdminClient();
-
-    // 4. Convidar usuário via Auth
-    // O redirectTo aponta para o callback que fará exchangeCodeForSession e mandará para redefinir a senha
-    // Como invite gera um "recovery" disfarçado ou "invite" type no PKCE, o callback lida com isso.
     const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/auth/callback?next=/redefinir-senha`;
-
     const { data: authData, error: authError } =
-      await admin.auth.admin.inviteUserByEmail(email, {
-        redirectTo,
-      });
+      await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
 
     if (authError || !authData.user) {
-      // Se o usuário já existir no auth, inviteUserByEmail pode falhar ou retornar erro.
-      // O correto em produção seria conferir se ele já existe e associar, mas para MVP 4B mantemos simples:
+      await appendInviteAudit(null, 'rejected');
       return {
         error:
           'Não foi possível convidar este usuário. Verifique se o e-mail já está em uso.',
       };
     }
 
-    // 5. Criar perfil associado ao office do owner
-    // O office_id vem da sessão do owner, nunca do client
     const { error: profileError } = await admin.from('user_profile').insert({
       id: authData.user.id,
       office_id: profile.office_id,
@@ -57,17 +104,127 @@ export async function inviteUserAction(formData: FormData) {
     });
 
     if (profileError) {
-      // Compensação: se falhar ao criar o perfil, apaga o auth user para não deixar lixo
       await admin.auth.admin.deleteUser(authData.user.id);
+      await appendInviteAudit(null, 'rejected');
       return {
         error:
           'Erro ao registrar o perfil do usuário. O convite foi cancelado.',
       };
     }
 
+    await appendInviteAudit(authData.user.id, 'accepted');
     revalidatePath('/app/usuarios');
     return { success: true };
   } catch {
     return { error: 'Ocorreu um erro inesperado ao processar o convite.' };
+  }
+}
+
+export async function changeRoleAction(
+  formData: FormData
+): Promise<AdminActionResult> {
+  try {
+    await requirePermission('change_role', { redirectOnDenied: false });
+    const parsed = changeRoleSchema.safeParse({
+      userId: formData.get('userId'),
+      role: formData.get('role'),
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+    }
+
+    const limited = await rateLimitResult('admin.change_role');
+    if (limited) return limited;
+
+    const supabase = await createClient();
+    const { error } = await supabase.rpc('change_user_role', {
+      p_target_user_id: parsed.data.userId,
+      p_new_role: parsed.data.role,
+    });
+    if (error) return rpcErrorMessage(error);
+
+    revalidatePath('/app/usuarios');
+    return { success: true };
+  } catch (error) {
+    return (
+      directPermissionError(error) ?? {
+        error: 'Não foi possível alterar o papel deste usuário.',
+      }
+    );
+  }
+}
+
+export async function setActiveAction(
+  formData: FormData
+): Promise<AdminActionResult> {
+  try {
+    await requirePermission('set_active', { redirectOnDenied: false });
+    const rawValue = formData.get('isActive');
+    const isActive =
+      rawValue === 'true' ? true : rawValue === 'false' ? false : rawValue;
+    const parsed = setActiveSchema.safeParse({
+      userId: formData.get('userId'),
+      isActive,
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+    }
+
+    const limited = await rateLimitResult('admin.set_active');
+    if (limited) return limited;
+
+    const supabase = await createClient();
+    const { error } = await supabase.rpc('set_user_active', {
+      p_target_user_id: parsed.data.userId,
+      p_is_active: parsed.data.isActive,
+    });
+    if (error) return rpcErrorMessage(error);
+
+    revalidatePath('/app/usuarios');
+    revalidatePath('/app');
+    return { success: true };
+  } catch (error) {
+    return (
+      directPermissionError(error) ?? {
+        error: 'Não foi possível alterar o status deste usuário.',
+      }
+    );
+  }
+}
+
+export async function setOwnerAction(
+  formData: FormData
+): Promise<AdminActionResult> {
+  try {
+    await requirePermission('set_owner', { redirectOnDenied: false });
+    const rawValue = formData.get('isOwner');
+    const isOwner =
+      rawValue === 'true' ? true : rawValue === 'false' ? false : rawValue;
+    const parsed = setOwnerSchema.safeParse({
+      userId: formData.get('userId'),
+      isOwner,
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+    }
+
+    const limited = await rateLimitResult('admin.set_owner');
+    if (limited) return limited;
+
+    const supabase = await createClient();
+    const { error } = await supabase.rpc('set_user_owner', {
+      p_target_user_id: parsed.data.userId,
+      p_is_owner: parsed.data.isOwner,
+    });
+    if (error) return rpcErrorMessage(error);
+
+    revalidatePath('/app/usuarios');
+    return { success: true };
+  } catch (error) {
+    return (
+      directPermissionError(error) ?? {
+        error: 'Não foi possível alterar a capacidade administrativa.',
+      }
+    );
   }
 }

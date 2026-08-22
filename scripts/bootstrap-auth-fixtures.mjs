@@ -99,6 +99,32 @@ async function main() {
     'recovery@example.test',
     password
   );
+  const lawyer = await findOrCreateUser(admin, 'lawyer@example.test', password);
+  const ownerOperator = await findOrCreateUser(
+    admin,
+    'owner-operator@example.test',
+    password
+  );
+  const reviewer = await findOrCreateUser(
+    admin,
+    'reviewer@example.test',
+    password
+  );
+  const ownerReviewer = await findOrCreateUser(
+    admin,
+    'owner-reviewer@example.test',
+    password
+  );
+  const auditor = await findOrCreateUser(
+    admin,
+    'auditor@example.test',
+    password
+  );
+  const ownerAuditor = await findOrCreateUser(
+    admin,
+    'owner-auditor@example.test',
+    password
+  );
 
   await upsertProfile(admin, {
     id: owner.id,
@@ -140,9 +166,57 @@ async function main() {
     is_owner: false,
     is_active: true,
   });
+  await upsertProfile(admin, {
+    id: lawyer.id,
+    office_id: OFFICE_ID,
+    name: 'Lawyer E2E',
+    role: 'lawyer',
+    is_owner: false,
+    is_active: true,
+  });
+  await upsertProfile(admin, {
+    id: ownerOperator.id,
+    office_id: OFFICE_ID,
+    name: 'Owner Operator E2E',
+    role: 'operator',
+    is_owner: true,
+    is_active: true,
+  });
+  await upsertProfile(admin, {
+    id: reviewer.id,
+    office_id: OFFICE_ID,
+    name: 'Reviewer E2E',
+    role: 'reviewer',
+    is_owner: false,
+    is_active: true,
+  });
+  await upsertProfile(admin, {
+    id: ownerReviewer.id,
+    office_id: OFFICE_ID,
+    name: 'Owner Reviewer E2E',
+    role: 'reviewer',
+    is_owner: true,
+    is_active: true,
+  });
+  await upsertProfile(admin, {
+    id: auditor.id,
+    office_id: OFFICE_ID,
+    name: 'Auditor E2E',
+    role: 'auditor',
+    is_owner: false,
+    is_active: true,
+  });
+  await upsertProfile(admin, {
+    id: ownerAuditor.id,
+    office_id: OFFICE_ID,
+    name: 'Owner Auditor E2E',
+    role: 'auditor',
+    is_owner: true,
+    is_active: true,
+  });
 
   process.stdout.write(
-    'Auth fixtures locais preparados: owner, operator, recovery, inactive e office-inactive.\n'
+    'Auth fixtures locais preparados: oito combinações role/is_owner, recovery, inactive e office-inactive.\n'
   );
 }
 
