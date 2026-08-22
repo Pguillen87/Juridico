@@ -77,8 +77,8 @@ test.describe('Auth funcional local', () => {
     await page.getByLabel('E-mail').fill('owner@example.test');
     await page.getByLabel('Senha').fill('senha-incorreta');
     await page.getByRole('button', { name: 'Entrar' }).click();
-    await expect(page.locator('form [role="alert"]')).toContainText(
-      'Erro no Supabase:'
+    await expect(page.locator('form [role="alert"]')).toHaveText(
+      'E-mail ou senha incorretos.'
     );
     // Limpa o form para o próximo teste serial
     await page.getByLabel('Senha').fill('');
@@ -93,17 +93,7 @@ test.describe('Auth funcional local', () => {
       console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText)
     );
     await login(page, 'owner@example.test');
-    try {
-      await expect(page).toHaveURL(/\/app$/, { timeout: 15000 });
-    } catch (e) {
-      const alert = page.locator('form [role="alert"]');
-      if (await alert.isVisible()) {
-        throw new Error(
-          `Login falhou com alerta: ${await alert.textContent()}`
-        );
-      }
-      throw e;
-    }
+    await expect(page).toHaveURL(/\/app$/);
     await expect(
       page.getByRole('heading', { name: /Bem-vindo, Owner E2E/ })
     ).toBeVisible();
