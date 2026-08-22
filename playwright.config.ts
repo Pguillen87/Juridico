@@ -24,5 +24,11 @@ export default defineConfig({
     command: process.env.PLAYWRIGHT_START_COMMAND ?? 'npm run dev',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === 'true',
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL:
+        process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321',
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
+    },
   },
 });
