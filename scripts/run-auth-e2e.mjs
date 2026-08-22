@@ -85,6 +85,8 @@ try {
       process.exitCode = fixtureRun.status ?? 1;
     } else {
       process.env.PLAYWRIGHT_START_COMMAND = 'node .next/standalone/server.js';
+      process.env.HOSTNAME = '127.0.0.1';
+      process.env.PORT = '3000';
       process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
       const e2eRun = run('npx --no-install playwright test', 'npx', [
         '--no-install',
