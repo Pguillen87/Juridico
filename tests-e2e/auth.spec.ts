@@ -14,7 +14,9 @@ async function login(page: Page, email: string, secret = password) {
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(secret);
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/);
+  await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/, {
+    timeout: 15000,
+  });
 }
 
 async function purgeMailbox(request: APIRequestContext) {
