@@ -93,12 +93,7 @@ test.describe('Auth funcional local', () => {
       console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText)
     );
     await login(page, 'owner@example.test');
-    try {
-      await page.waitForURL(/\/app$/, { timeout: 15000 });
-    } catch (e) {
-      console.log('Timeout no B-E. Conteúdo da página:', await page.content());
-      throw e;
-    }
+    await expect(page).toHaveURL(/\/app$/, { timeout: 15000 });
     await expect(
       page.getByRole('heading', { name: /Bem-vindo, Owner E2E/ })
     ).toBeVisible();
