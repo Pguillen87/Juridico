@@ -61,6 +61,8 @@ jobs:
 
       - name: Auth E2E Tests
         run: npm run auth:e2e
+        env:
+          JURIDICO_E2E_PASSWORD: 'TestOnly-Local-123!'
 
       - name: Verify PoC
         run: |
