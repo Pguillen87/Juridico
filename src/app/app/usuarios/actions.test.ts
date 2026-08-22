@@ -4,7 +4,8 @@ const mocks = vi.hoisted(() => ({
   requirePermission: vi.fn(),
   createAdminClient: vi.fn(),
   createClient: vi.fn(),
-  appendInviteAudit: vi.fn(),
+  appendInviteAuditInternal: vi.fn(),
+  appendRejectionAuditInternal: vi.fn(),
   consumeAdminRateLimit: vi.fn(),
   isRateLimitAllowed: vi.fn(),
   revalidatePath: vi.fn(),
@@ -20,7 +21,8 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: mocks.createClient,
 }));
 vi.mock('@/lib/audit', () => ({
-  appendInviteAudit: mocks.appendInviteAudit,
+  appendInviteAuditInternal: mocks.appendInviteAuditInternal,
+  appendRejectionAuditInternal: mocks.appendRejectionAuditInternal,
 }));
 vi.mock('@/lib/rate-limit', () => ({
   consumeAdminRateLimit: mocks.consumeAdminRateLimit,
@@ -61,7 +63,8 @@ describe('Server Actions administrativas', () => {
       windowSeconds: 900,
     });
     mocks.isRateLimitAllowed.mockReturnValue(true);
-    mocks.appendInviteAudit.mockResolvedValue(1);
+    mocks.appendInviteAuditInternal.mockResolvedValue(1);
+    mocks.appendRejectionAuditInternal.mockResolvedValue(1);
   });
 
   it('nega chamada direta de non-owner sem criar cliente administrativo', async () => {
@@ -73,7 +76,7 @@ describe('Server Actions administrativas', () => {
       error: 'Ocorreu um erro inesperado ao processar o convite.',
     });
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
-    expect(mocks.appendInviteAudit).not.toHaveBeenCalled();
+    expect(mocks.appendInviteAuditInternal).not.toHaveBeenCalled();
   });
 
   it('bloqueia change_role antes do RPC quando o rate limit excede a janela', async () => {
@@ -166,7 +169,7 @@ describe('Server Actions administrativas', () => {
       from: vi.fn().mockReturnValue({ insert }),
     };
     mocks.requirePermission.mockResolvedValue({
-      profile: { office_id: 'office-owner' },
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
     });
     mocks.createAdminClient.mockReturnValue(admin);
 
@@ -181,7 +184,8 @@ describe('Server Actions administrativas', () => {
       is_active: true,
       is_owner: false,
     });
-    expect(mocks.appendInviteAudit).toHaveBeenCalledWith(
+    expect(mocks.appendInviteAuditInternal).toHaveBeenCalledWith(
+      'user-owner-id',
       'auth-user-1',
       'accepted'
     );
