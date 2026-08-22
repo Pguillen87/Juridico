@@ -178,7 +178,9 @@ test.describe('Auth funcional local', () => {
 
     await page.goto('/app');
     await page.getByRole('button', { name: 'Sair' }).click();
+    await expect(page).toHaveURL(/\/login$/);
     await login(page, 'operator@example.test');
+    await expect(page).toHaveURL(/\/app$/);
     await page.goto('/app/usuarios');
     await expect(page).toHaveURL(/\/app\?error=forbidden$/);
   });
@@ -295,6 +297,7 @@ test.describe('Auth funcional local', () => {
     // O usuário não deve ter sido alterado. Ele deve continuar como operator.
     await page.goto('/app');
     await page.getByRole('button', { name: 'Sair' }).click();
+    await expect(page).toHaveURL(/\/login$/);
     await login(page, email, 'TestOnly-Invite-789!');
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('Operador')).toBeVisible();
