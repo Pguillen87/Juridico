@@ -274,9 +274,9 @@ export type Database = {
       record_invite_audit_internal: {
         Args: {
           p_actor_user_id: string;
-          p_target_user_id: string;
           p_outcome: string;
           p_reason?: string;
+          p_target_user_id: string;
         };
         Returns: number;
       };
