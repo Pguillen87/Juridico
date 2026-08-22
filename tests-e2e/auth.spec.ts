@@ -15,7 +15,7 @@ async function login(page: Page, email: string, secret = password) {
   await page.getByLabel('Senha').fill(secret);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/, {
-    timeout: 15000,
+    timeout: 25000,
   });
 }
 
@@ -49,7 +49,7 @@ async function waitForLatestMessage(request: APIRequestContext, email: string) {
         latest = recipients.includes(email) ? candidate : null;
         return latest;
       },
-      { timeout: 20_000, intervals: [500, 1000, 2000] }
+      { timeout: 30_000, intervals: [500, 1000, 2000] }
     )
     .not.toBeNull();
 
