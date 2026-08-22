@@ -44,7 +44,7 @@ export function LoginForm() {
     );
 
     if (authError) {
-      setError('E-mail ou senha incorretos.');
+      setError(`Erro no Supabase: ${authError.message}`);
       setLoading(false);
       return;
     }
