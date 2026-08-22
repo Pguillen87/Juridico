@@ -54,6 +54,12 @@ export function LoginForm() {
     window.setTimeout(() => {
       router.replace('/app');
       router.refresh();
+      // Fallback robusto para CI caso o router.replace falhe ou trave
+      window.setTimeout(() => {
+        if (window.location.pathname === '/login') {
+          window.location.href = '/app';
+        }
+      }, 500);
     }, 100);
   }
 

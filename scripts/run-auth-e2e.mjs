@@ -30,7 +30,12 @@ function run(commandLine, command, args) {
 
   return spawnSync(command, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_SUPABASE_URL: localEnv.API_URL,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: localEnv.ANON_KEY,
+      NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:3000',
+    },
     stdio: 'inherit',
   });
 }
