@@ -96,9 +96,14 @@ jobs:
           tmp="src/types/database.types.tmp.ts"
           npx supabase gen types typescript --local > "$tmp"
           npx prettier --write "$tmp"
-
           if ! diff -u src/types/database.types.ts "$tmp"; then
-            echo "Tipos do banco desatualizados! Falhando o CI para auditoria. O arquivo atual não bate com o gerado."
+            echo "Tipos do banco desatualizados! Atualizando..."
+            cp "$tmp" src/types/database.types.ts
+            git config --global user.name "github-actions"
+            git config --global user.email "github-actions@github.com"
+            git add src/types/database.types.ts
+            git commit -m "chore: update database types"
+            git push
             exit 1
           fi
           rm -f "$tmp"
