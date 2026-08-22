@@ -54,7 +54,7 @@ export function LoginForm() {
     window.setTimeout(() => {
       router.replace('/app');
       router.refresh();
-    }, 1500);
+    }, 3000);
   }
 
   return (
