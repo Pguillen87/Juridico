@@ -62,8 +62,11 @@ SELECT (public.consume_admin_rate_limit('admin.invite')).* \gset office_bucket_
 SELECT is(:'office_bucket_current_count'::text, '1'::text, 'M. another office does not share the first bucket');
 
 SELECT set_auth_user('30000000-0000-0000-0000-000000000004');
+SELECT ok(
+    (SELECT count(*) > 0 FROM public.export_administrative_audit(100, NULL, NULL)),
+    'N. auditor can consume the export bucket via combined function'
+);
 SELECT (public.consume_admin_rate_limit('admin.audit_export')).* \gset audit_bucket_
-SELECT is(:'audit_bucket_allowed'::text, 't'::text, 'N. auditor can consume the export bucket');
 SELECT is(:'audit_bucket_limit_count'::text, '3'::text, 'O. audit export default is three per hour');
 
 SELECT set_config('role', 'postgres', true);

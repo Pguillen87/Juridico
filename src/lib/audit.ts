@@ -5,21 +5,60 @@ import { createClient } from './supabase/server';
 
 export type AdministrativeAuditEntry = Tables<'audit_log'>;
 
-export async function appendInviteAudit(
+import { createAdminClient } from './supabase/admin';
+
+export async function appendInviteAuditInternal(
+  actorUserId: string,
   targetUserId: string | null,
-  outcome: 'accepted' | 'rejected'
+  outcome: 'accepted' | 'rejected',
+  reason?: string
 ): Promise<number> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc('record_invite_audit', {
-    p_target_user_id: targetUserId,
-    p_outcome: outcome,
-  });
+  const adminSupabase = createAdminClient();
+  const { data, error } = await adminSupabase.rpc(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    'record_invite_audit_internal' as any,
+    {
+      p_actor_user_id: actorUserId,
+      p_target_user_id: targetUserId,
+      p_outcome: outcome,
+      p_reason: reason ?? null,
+    }
+  );
 
   if (error || data === null) {
     throw new Error('Não foi possível registrar a auditoria administrativa.');
   }
 
-  return data;
+  return data as unknown as number;
+}
+
+export async function appendRejectionAuditInternal(
+  actorUserId: string,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  reason: string
+): Promise<number> {
+  const adminSupabase = createAdminClient();
+  const { data, error } = await adminSupabase.rpc(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    'record_rejection_audit_internal' as any,
+    {
+      p_actor_user_id: actorUserId,
+      p_action: action,
+      p_entity_type: entityType,
+      p_entity_id: entityId,
+      p_reason: reason,
+    }
+  );
+
+  if (error || data === null) {
+    throw new Error(
+      'Não foi possível registrar a auditoria administrativa de rejeição.'
+    );
+  }
+
+  return data as unknown as number;
 }
 
 export async function listAdministrativeAudit(filters?: {

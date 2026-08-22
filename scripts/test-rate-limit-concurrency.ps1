@@ -1,5 +1,10 @@
 $ErrorActionPreference = 'Stop'
-$container = 'supabase_db_juridico-sync'
+
+$container = docker ps --filter "label=com.supabase.cli.project=juridico-sync" --filter "name=supabase_db" --format "{{.Names}}"
+if ([string]::IsNullOrWhiteSpace($container)) {
+    $container = 'supabase_db_juridico-sync'
+}
+
 $userId = '50000000-0000-0000-0000-000000000001'
 $officeId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
 

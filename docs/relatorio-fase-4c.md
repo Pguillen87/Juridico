@@ -69,10 +69,13 @@ O pacote pode ser executado localmente com o Supabase local e o compose existent
 
 A sequência validada foi: `supabase stop`, `supabase start`, `supabase db reset`, execução das suítes pgTAP, build standalone, fixtures Auth, Playwright e build/smoke Docker. A imagem gerada foi testada e o container temporário foi encerrado ao final.
 
-## 7. Publicação
+## 7. Auditoria Complementar e Publicação
 
-A implementação foi preparada localmente e publicada somente depois do pacote local completo, conforme o fluxo confirmado pelo usuário. O plano, este relatório, o código, as migrations e os testes estão na branch GitHub `phase-4c-admin-control-plane`, com HEAD `94ea5b434817ee393f38ffc4a844a6cf689947a5`.
+A implementação da Fase 4C original foi aprovada pela auditoria externa, mas exigiu um fechamento formal para três lacunas de integridade de auditoria e testes.
 
-O App CI final foi aprovado no run [32586231035](https://github.com/Pguillen87/Juridico/actions/runs/32586231035), cobrindo higiene do repositório, formatação, lint, typecheck, unitários, Supabase local, Auth/Admin E2E, PoC, pgTAP, concorrência do last-owner, rate limit e conferência dos tipos gerados. A branch está disponível em [Pguillen87/Juridico/tree/phase-4c-admin-control-plane](https://github.com/Pguillen87/Juridico/tree/phase-4c-admin-control-plane).
+- **Evidência de Execução CI**: Pode ser verificado dinamicamente no GitHub Actions pelo status `completed/success` no HEAD final desta branch `phase-4c-admin-control-plane`.
+- **Estratégia Escolhida para Last-Owner**: Action wrapper intercepta o erro P0001 da RPC e chama o writer `record_rejection_audit_internal` executado via `service_role`. Rejeições por chamada direta à RPC continuam não auditadas (limitação técnica aceita da transação PostgreSQL).
+- **Estratégia Escolhida para Auditoria/Rate Limit**: A migration incremental `20260822000003_phase_4c_audit_integrity.sql` revogou o acesso `authenticated` às RPCs de gravação de convite e exportação. Foi criada a `export_administrative_audit` combinada (leitura, rate limit e auditoria na mesma transação) e as funções de gravação `internal` foram restritas à `service_role`.
+- **Resultado do Teste de Concorrência Rate Limit**: Teste de concorrência adaptado para PowerShell no CI; verificado `allowed=5`, `blocked=1`, `final_count=5`.
 
-A sequência de commits foi: `05c6419` para a implementação completa, `fc1d7c8` para habilitar o App CI na branch 4C, `0e71edf` para formatar o workflow e `20b4308`/`94ea5b4` para isolar o estado entre cenários E2E. Nenhuma alteração foi feita em `main`, nenhum merge/release/force-push foi realizado e nenhum serviço remoto foi acessado.
+O código, as migrations incrementais e os testes foram validados localmente e publicados na branch GitHub `phase-4c-admin-control-plane`. Nenhuma alteração foi feita em `main` e nenhum serviço remoto de produção foi modificado.

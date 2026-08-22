@@ -194,22 +194,24 @@ SELECT is(
 );
 
 SELECT set_auth_user('10000000-0000-0000-0000-000000000001');
-SELECT ok(
-    public.record_invite_audit('10000000-0000-0000-0000-000000000004', 'accepted') > 0,
-    'X. owner can append an allowlisted invite audit event'
+SELECT throws_ok(
+    $$ SELECT public.record_invite_audit_internal('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000004', 'accepted', NULL) $$,
+    '42501',
+    NULL,
+    'X. authenticated owner cannot call internal invite audit directly'
 );
 SELECT set_auth_user('10000000-0000-0000-0000-000000000002');
 SELECT throws_ok(
-    $$ SELECT public.record_invite_audit('10000000-0000-0000-0000-000000000004', 'accepted') $$,
+    $$ SELECT public.record_invite_audit_internal('10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000004', 'accepted', NULL) $$,
     '42501',
     NULL,
-    'Y. non-owner cannot append administrative audit'
+    'Y. authenticated non-owner cannot call internal invite audit directly'
 );
 
 SELECT set_auth_user('10000000-0000-0000-0000-000000000008');
 SELECT ok(
-    public.record_audit_export() > 0,
-    'Z. auditor without owner can export administrative audit'
+    (SELECT count(*) > 0 FROM public.export_administrative_audit(100, NULL, NULL)),
+    'Z. auditor without owner can export administrative audit using combined function'
 );
 SELECT is(
     (SELECT metadata FROM public.get_administrative_audit(100, 'audit.export', 'audit_log') LIMIT 1),
@@ -218,7 +220,7 @@ SELECT is(
 );
 SELECT set_auth_user('10000000-0000-0000-0000-000000000002');
 SELECT throws_ok(
-    $$ SELECT public.record_audit_export() $$,
+    $$ SELECT * FROM public.export_administrative_audit(100, NULL, NULL) $$,
     '42501',
     NULL,
     'AB. non-owner lawyer cannot export administrative audit'

@@ -2,7 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { PermissionDeniedError, requirePermission } from '@/lib/auth/guards';
-import { appendInviteAudit } from '@/lib/audit';
+import {
+  appendInviteAuditInternal,
+  appendRejectionAuditInternal,
+} from '@/lib/audit';
 import {
   consumeAdminRateLimit,
   isRateLimitAllowed,
@@ -87,7 +90,12 @@ export async function inviteUserAction(
       await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
 
     if (authError || !authData.user) {
-      await appendInviteAudit(null, 'rejected');
+      await appendInviteAuditInternal(
+        profile.id,
+        null,
+        'rejected',
+        'auth_error'
+      );
       return {
         error:
           'Não foi possível convidar este usuário. Verifique se o e-mail já está em uso.',
@@ -105,14 +113,19 @@ export async function inviteUserAction(
 
     if (profileError) {
       await admin.auth.admin.deleteUser(authData.user.id);
-      await appendInviteAudit(null, 'rejected');
+      await appendInviteAuditInternal(
+        profile.id,
+        null,
+        'rejected',
+        'profile_error'
+      );
       return {
         error:
           'Erro ao registrar o perfil do usuário. O convite foi cancelado.',
       };
     }
 
-    await appendInviteAudit(authData.user.id, 'accepted');
+    await appendInviteAuditInternal(profile.id, authData.user.id, 'accepted');
     revalidatePath('/app/usuarios');
     return { success: true };
   } catch {
@@ -158,7 +171,9 @@ export async function setActiveAction(
   formData: FormData
 ): Promise<AdminActionResult> {
   try {
-    await requirePermission('set_active', { redirectOnDenied: false });
+    const { profile } = await requirePermission('set_active', {
+      redirectOnDenied: false,
+    });
     const rawValue = formData.get('isActive');
     const isActive =
       rawValue === 'true' ? true : rawValue === 'false' ? false : rawValue;
@@ -178,7 +193,22 @@ export async function setActiveAction(
       p_target_user_id: parsed.data.userId,
       p_is_active: parsed.data.isActive,
     });
-    if (error) return rpcErrorMessage(error);
+    if (error) {
+      if (error.code === '42501' && error.message.includes('last owner')) {
+        await appendRejectionAuditInternal(
+          profile.id,
+          'last_owner_blocked',
+          'user_profile',
+          parsed.data.userId,
+          'Cannot deactivate last active owner'
+        );
+        return {
+          error:
+            'Não é possível inativar o último administrador ativo do escritório.',
+        };
+      }
+      return rpcErrorMessage(error);
+    }
 
     revalidatePath('/app/usuarios');
     revalidatePath('/app');
@@ -196,7 +226,9 @@ export async function setOwnerAction(
   formData: FormData
 ): Promise<AdminActionResult> {
   try {
-    await requirePermission('set_owner', { redirectOnDenied: false });
+    const { profile } = await requirePermission('set_owner', {
+      redirectOnDenied: false,
+    });
     const rawValue = formData.get('isOwner');
     const isOwner =
       rawValue === 'true' ? true : rawValue === 'false' ? false : rawValue;
@@ -216,7 +248,22 @@ export async function setOwnerAction(
       p_target_user_id: parsed.data.userId,
       p_is_owner: parsed.data.isOwner,
     });
-    if (error) return rpcErrorMessage(error);
+    if (error) {
+      if (error.code === '42501' && error.message.includes('last owner')) {
+        await appendRejectionAuditInternal(
+          profile.id,
+          'last_owner_blocked',
+          'user_profile',
+          parsed.data.userId,
+          'Cannot revoke last active owner'
+        );
+        return {
+          error:
+            'Não é possível revogar o último administrador ativo do escritório.',
+        };
+      }
+      return rpcErrorMessage(error);
+    }
 
     revalidatePath('/app/usuarios');
     return { success: true };
