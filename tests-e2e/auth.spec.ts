@@ -69,6 +69,8 @@ function extractLink(message: MailpitMessage) {
 test.describe('Auth funcional local', () => {
   test.describe.configure({ mode: 'serial' });
 
+  const dynamicInviteEmail = `invited-operator-${Date.now()}@example.test`;
+
   test('A: anônimo em /app vai para login e credencial inválida é genérica', async ({
     page,
   }) => {
@@ -225,7 +227,7 @@ test.describe('Auth funcional local', () => {
     page,
     request,
   }) => {
-    const email = 'invited-operator@example.test';
+    const email = dynamicInviteEmail;
     await purgeMailbox(request);
     await page.goto('/login');
     await expect(page).toHaveURL(/\/login$/);
@@ -282,7 +284,7 @@ test.describe('Auth funcional local', () => {
     page,
     request,
   }) => {
-    const email = 'invited-operator@example.test'; // Mesmo e-mail do cenário V-W
+    const email = dynamicInviteEmail; // Mesmo e-mail do cenário V-W
     await purgeMailbox(request);
     await page.goto('/login');
     await expect(page).toHaveURL(/\/login$/);
