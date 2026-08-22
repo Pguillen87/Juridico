@@ -52,9 +52,7 @@ export default function ResetPasswordPage() {
     });
 
     if (updateError) {
-      setError(
-        'Não foi possível atualizar a senha. Solicite um novo link e tente novamente.'
-      );
+      setError(`Erro no Supabase ao atualizar senha: ${updateError.message}`);
       setLoading(false);
       return;
     }

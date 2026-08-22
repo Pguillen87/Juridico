@@ -147,7 +147,17 @@ test.describe('Auth funcional local', () => {
       .getByLabel('Confirmar nova senha')
       .fill('TestOnly-Recovery-456!');
     await page.getByRole('button', { name: 'Atualizar senha' }).click();
-    await expect(page.getByRole('status')).toContainText('Senha atualizada');
+    try {
+      await expect(page.getByRole('status')).toContainText('Senha atualizada');
+    } catch (e) {
+      const alert = page.locator('form [role="alert"]');
+      if (await alert.isVisible()) {
+        throw new Error(
+          `Reset de senha falhou com alerta: ${await alert.textContent()}`
+        );
+      }
+      throw e;
+    }
     await page.waitForURL(/\/login\?success=password-reset$/);
     await login(page, email, 'TestOnly-Recovery-456!');
     await expect(page).toHaveURL(/\/app$/);
@@ -228,7 +238,17 @@ test.describe('Auth funcional local', () => {
       .fill('TestOnly-Invite-789!');
     await page.getByLabel('Confirmar nova senha').fill('TestOnly-Invite-789!');
     await page.getByRole('button', { name: 'Atualizar senha' }).click();
-    await page.waitForURL(/\/login\?success=password-reset$/);
+    try {
+      await page.waitForURL(/\/login\?success=password-reset$/);
+    } catch (e) {
+      const alert = page.locator('form [role="alert"]');
+      if (await alert.isVisible()) {
+        throw new Error(
+          `Reset de senha do invite falhou com alerta: ${await alert.textContent()}`
+        );
+      }
+      throw e;
+    }
     await login(page, email, 'TestOnly-Invite-789!');
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('Operador')).toBeVisible();
