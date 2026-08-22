@@ -130,5 +130,15 @@ test.describe('Administração 4C local', () => {
     await page.getByRole('button', { name: 'Exportar CSV' }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('auditoria-administrativa.csv');
+
+    await page.getByRole('button', { name: 'Sair' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await login(page, 'owner@example.test');
+    await page.goto('/app/configuracoes');
+    await page.getByLabel('Nome do escritório').fill('Escritório E2E Teste');
+    await page.getByRole('button', { name: 'Salvar nome' }).click();
+    await expect(page.getByRole('status')).toContainText(
+      'Nome do escritório atualizado'
+    );
   });
 });
