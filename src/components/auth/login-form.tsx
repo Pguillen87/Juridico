@@ -49,8 +49,12 @@ export function LoginForm() {
       return;
     }
 
-    router.replace('/app');
-    router.refresh();
+    // No ambiente standalone (CI), o router.refresh() imediato pode preceder
+    // a persistência efetiva do cookie no browser. Um micro-delay resolve.
+    window.setTimeout(() => {
+      router.replace('/app');
+      router.refresh();
+    }, 100);
   }
 
   return (
