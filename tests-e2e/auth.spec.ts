@@ -70,6 +70,7 @@ test.describe('Auth funcional local', () => {
   test.describe.configure({ mode: 'serial' });
 
   const dynamicInviteEmail = `invited-operator-${Date.now()}@example.test`;
+  let dynamicInvitePassword = 'TestOnly-Invite-789!';
 
   test('A: anônimo em /app vai para login e credencial inválida é genérica', async ({
     page,
@@ -249,11 +250,11 @@ test.describe('Auth funcional local', () => {
       timeout: 15000,
     });
     await expect(page.locator('form')).toBeVisible();
-    const newInvitePassword = `TestOnly-Invite-${Date.now()}!`;
+    dynamicInvitePassword = `TestOnly-Invite-${Date.now()}!`;
     await page
       .getByLabel('Nova senha', { exact: true })
-      .fill(newInvitePassword);
-    await page.getByLabel('Confirmar nova senha').fill(newInvitePassword);
+      .fill(dynamicInvitePassword);
+    await page.getByLabel('Confirmar nova senha').fill(dynamicInvitePassword);
     await page.getByRole('button', { name: 'Atualizar senha' }).click();
 
     await Promise.race([
@@ -264,7 +265,7 @@ test.describe('Auth funcional local', () => {
       ),
     ]);
 
-    await login(page, email, newInvitePassword);
+    await login(page, email, dynamicInvitePassword);
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('Operador')).toBeVisible();
     await expect(page.getByText('Usuário')).toBeVisible();
@@ -307,7 +308,7 @@ test.describe('Auth funcional local', () => {
     await page.goto('/app');
     await page.getByRole('button', { name: 'Sair' }).click();
     await expect(page).toHaveURL(/\/login$/);
-    await login(page, email, 'TestOnly-Invite-789!');
+    await login(page, email, dynamicInvitePassword);
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('Operador')).toBeVisible();
     await expect(page.getByText('Usuário')).toBeVisible();
