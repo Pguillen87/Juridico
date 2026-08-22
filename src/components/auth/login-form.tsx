@@ -39,9 +39,11 @@ export function LoginForm() {
 
     setLoading(true);
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword(
+    console.log('Enviando requisição de login para o Supabase Auth...');
+    const { error: authError, data } = await supabase.auth.signInWithPassword(
       parsed.data
     );
+    console.log('Resposta do Supabase Auth:', { error: authError?.message, user: data?.user?.id });
 
     if (authError) {
       setError('E-mail ou senha incorretos.');
@@ -51,10 +53,12 @@ export function LoginForm() {
 
     // No ambiente standalone (CI), o router.refresh() imediato pode preceder
     // a persistência efetiva do cookie no browser. Um micro-delay resolve.
+    console.log('Login bem sucedido. Agendando redirecionamento para /app...');
     window.setTimeout(() => {
+      console.log('Executando redirecionamento para /app agora...');
       router.replace('/app');
       router.refresh();
-    }, 3000);
+    }, 100);
   }
 
   return (
