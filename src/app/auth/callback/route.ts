@@ -1,7 +1,7 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 import { safeInternalRedirect } from '@/lib/auth/guards';
-
+import { env } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 
 const allowedOtpTypes = new Set<EmailOtpType>(['email', 'invite', 'recovery']);
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const tokenHash = url.searchParams.get('token_hash');
   const rawType = url.searchParams.get('type');
   const next = safeInternalRedirect(url.searchParams.get('next'));
-  const redirectUrl = new URL(next, request.nextUrl.origin);
+  const redirectUrl = new URL(next, env.NEXT_PUBLIC_SITE_URL);
 
   if (
     !code &&
