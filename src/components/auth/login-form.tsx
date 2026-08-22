@@ -22,6 +22,7 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    console.log('Interceptou form submit! preventDefault foi chamado.');
     setError(null);
 
     const formData = new FormData(event.currentTarget);
