@@ -49,11 +49,9 @@ export function LoginForm() {
       return;
     }
 
-    // No ambiente standalone (CI), o router.refresh() imediato pode preceder
-    // a persistência efetiva do cookie no browser. Um micro-delay resolve.
-    window.setTimeout(() => {
-      window.location.href = '/app';
-    }, 100);
+    // O router.push() é o método mais robusto no App Router
+    // para navegar após uma mutação que altera cookies.
+    router.push('/app');
   }
 
   return (

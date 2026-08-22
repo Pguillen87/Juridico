@@ -91,6 +91,8 @@ test.describe('Auth funcional local', () => {
     await expect(page.locator('form [role="alert"]')).toHaveText(
       'E-mail ou senha incorretos.'
     );
+    // Limpa o form para o próximo teste serial
+    await page.getByLabel('Senha').fill('');
   });
 
   test('B-E: owner entra, vê contexto e mantém sessão no refresh', async ({
