@@ -138,7 +138,7 @@ test.describe('Auth funcional local', () => {
 
     const message = await waitForLatestMessage(request, email);
     const link = extractLink(message);
-    console.log(`Link de recovery extraído: ${link}`);
+    console.error(`\n\n[DEBUG] Link de recovery extraído: ${link}\n\n`);
     await page.goto(link);
     await expect(page).toHaveURL(/\/redefinir-senha/);
     await expect(page.getByText('Validando o link…')).not.toBeVisible({
@@ -236,7 +236,7 @@ test.describe('Auth funcional local', () => {
 
     const message = await waitForLatestMessage(request, email);
     const link = extractLink(message);
-    console.log(`Link de invite extraído: ${link}`);
+    console.error(`\n\n[DEBUG] Link de invite extraído: ${link}\n\n`);
     await page.goto(link);
     await expect(page).toHaveURL(/\/redefinir-senha/);
     await expect(page.getByText('Validando o link…')).not.toBeVisible({
