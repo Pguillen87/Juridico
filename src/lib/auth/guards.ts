@@ -12,21 +12,37 @@ export type AuthenticatedContext = {
 export async function requireAuthenticatedProfile(): Promise<AuthenticatedContext> {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) redirect('/login');
+  if (error || !data.user) {
+    console.log('requireAuthenticatedProfile getUser falhou:', {
+      error: error?.message,
+    });
+    redirect('/login');
+  }
 
   const { data: profiles, error: profileError } = await supabase.rpc(
     'get_auth_user_profile'
   );
   const profile = profiles?.[0];
-  if (profileError || !profile || !profile.is_active)
+  if (profileError || !profile || !profile.is_active) {
+    console.log('requireAuthenticatedProfile profile check falhou:', {
+      error: profileError?.message,
+      profile,
+    });
     redirect('/login?error=inactive');
+  }
 
   const { data: office, error: officeError } = await supabase
     .from('office')
     .select('*')
     .eq('id', profile.office_id)
     .maybeSingle();
-  if (officeError || !office?.is_active) redirect('/login?error=inactive');
+  if (officeError || !office?.is_active) {
+    console.log('requireAuthenticatedProfile office check falhou:', {
+      error: officeError?.message,
+      office,
+    });
+    redirect('/login?error=inactive');
+  }
 
   return { user: data.user, profile, office };
 }
