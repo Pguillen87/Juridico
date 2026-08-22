@@ -51,9 +51,6 @@ const envLocalContents = [
 writeFileSync(envLocalPath, envLocalContents, 'utf8');
 
 try {
-  process.env.NEXT_PUBLIC_SUPABASE_URL = localEnv.API_URL;
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = localEnv.ANON_KEY;
-  process.env.NEXT_PUBLIC_SITE_URL = 'http://127.0.0.1:3000';
   const buildRun = run('npm run build', 'npm', ['run', 'build']);
   if (buildRun.error) {
     process.stderr.write(

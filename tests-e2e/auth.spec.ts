@@ -13,23 +13,18 @@ async function login(page: Page, email: string, secret = password) {
   await page.goto('/login');
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(secret);
-  // Esperar a hidratação
-  await page.waitForTimeout(1000);
-  console.log(
-    `Estado do botão antes do clique:`,
-    await page.getByRole('button', { name: 'Entrar' }).evaluate((node) => ({
-      disabled: (node as HTMLButtonElement).disabled,
-      type: (node as HTMLButtonElement).type,
-    }))
-  );
+
   await page.getByRole('button', { name: 'Entrar' }).click();
-  // Aguarda um momento para o Supabase Auth responder antes de verificar a URL
-  await page.waitForTimeout(1000);
-  console.log(
-    `Verificando URL após login para ${email}... URL atual:`,
-    page.url()
-  );
-  await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/);
+  // O CI às vezes demora mais para propagar cookies no SSR do NextJS.
+  // Em vez de usar toHaveURL com o expect padrão, usamos waitForURL que aguarda a navegação de forma mais confiável.
+  if (
+    email === 'inactive@example.test' ||
+    email === 'office-inactive@example.test'
+  ) {
+    await page.waitForURL(/\/login\?error=inactive$/, { timeout: 15000 });
+  } else {
+    await page.waitForURL(/\/app$/, { timeout: 15000 });
+  }
 }
 
 async function purgeMailbox(request: APIRequestContext) {
@@ -107,7 +102,6 @@ test.describe('Auth funcional local', () => {
       console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText)
     );
     await login(page, 'owner@example.test');
-    await expect(page).toHaveURL(/\/app$/);
     await expect(
       page.getByRole('heading', { name: /Bem-vindo, Owner E2E/ })
     ).toBeVisible();
@@ -130,11 +124,9 @@ test.describe('Auth funcional local', () => {
     page,
   }) => {
     await login(page, 'inactive@example.test');
-    await expect(page).toHaveURL(/\/login\?error=inactive$/);
     await expect(page.locator('form [role="alert"]')).toContainText('inativo');
 
     await login(page, 'office-inactive@example.test');
-    await expect(page).toHaveURL(/\/login\?error=inactive$/);
   });
 
   test('J-M: recovery tem resposta genérica, mail local e reset funcional', async ({
@@ -164,7 +156,6 @@ test.describe('Auth funcional local', () => {
     await expect(page.getByRole('status')).toContainText('Senha atualizada');
     await page.waitForURL(/\/login\?success=password-reset$/);
     await login(page, email, 'TestOnly-Recovery-456!');
-    await expect(page).toHaveURL(/\/app$/);
   });
 
   test('N-O: owner acessa usuários e non-owner recebe deny server-side', async ({
@@ -244,7 +235,6 @@ test.describe('Auth funcional local', () => {
     await page.getByRole('button', { name: 'Atualizar senha' }).click();
     await page.waitForURL(/\/login\?success=password-reset$/);
     await login(page, email, 'TestOnly-Invite-789!');
-    await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('Operador')).toBeVisible();
     await expect(page.getByText('Usuário')).toBeVisible();
     await page.goto('/app/usuarios');
@@ -283,7 +273,6 @@ test.describe('Auth funcional local', () => {
     await page.goto('/app');
     await page.getByRole('button', { name: 'Sair' }).click();
     await login(page, email, 'TestOnly-Invite-789!');
-    await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('Operador')).toBeVisible();
     await expect(page.getByText('Usuário')).toBeVisible();
     await expect(page.getByText('Advogado')).not.toBeVisible();
