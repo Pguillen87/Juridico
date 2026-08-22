@@ -86,9 +86,11 @@ test.describe('Auth funcional local', () => {
   test('B-E: owner entra, vê contexto e mantém sessão no refresh', async ({
     page,
   }) => {
-    page.on('console', msg => console.log('PAGE CONSOLE:', msg.text()));
-    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
-    page.on('requestfailed', req => console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText));
+    page.on('console', (msg) => console.log('PAGE CONSOLE:', msg.text()));
+    page.on('pageerror', (err) => console.log('PAGE ERROR:', err.message));
+    page.on('requestfailed', (req) =>
+      console.log('REQUEST FAILED:', req.url(), req.failure()?.errorText)
+    );
     await login(page, 'owner@example.test');
     await expect(page).toHaveURL(/\/app$/);
     await expect(
