@@ -14,6 +14,8 @@ async function login(page: Page, email: string, secret = password) {
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(secret);
   await page.getByRole('button', { name: 'Entrar' }).click();
+  // Aguarda um momento para o Supabase Auth responder antes de verificar a URL
+  await page.waitForTimeout(1000);
   await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/);
 }
 
