@@ -71,4 +71,8 @@ A sequência validada foi: `supabase stop`, `supabase start`, `supabase db reset
 
 ## 7. Publicação
 
-A implementação foi preparada para o primeiro push somente depois do pacote local completo, conforme o fluxo confirmado pelo usuário. O relatório e o plano aprovados devem ser publicados junto com código, migrations e testes. Nenhuma alteração foi feita em `main`, nenhum merge/release/force-push foi realizado e nenhum serviço remoto foi acessado.
+A implementação foi preparada localmente e publicada somente depois do pacote local completo, conforme o fluxo confirmado pelo usuário. O plano, este relatório, o código, as migrations e os testes estão na branch GitHub `phase-4c-admin-control-plane`, com HEAD `94ea5b434817ee393f38ffc4a844a6cf689947a5`.
+
+O App CI final foi aprovado no run [32586231035](https://github.com/Pguillen87/Juridico/actions/runs/32586231035), cobrindo higiene do repositório, formatação, lint, typecheck, unitários, Supabase local, Auth/Admin E2E, PoC, pgTAP, concorrência do last-owner, rate limit e conferência dos tipos gerados. A branch está disponível em [Pguillen87/Juridico/tree/phase-4c-admin-control-plane](https://github.com/Pguillen87/Juridico/tree/phase-4c-admin-control-plane).
+
+A sequência de commits foi: `05c6419` para a implementação completa, `fc1d7c8` para habilitar o App CI na branch 4C, `0e71edf` para formatar o workflow e `20b4308`/`94ea5b4` para isolar o estado entre cenários E2E. Nenhuma alteração foi feita em `main`, nenhum merge/release/force-push foi realizado e nenhum serviço remoto foi acessado.
