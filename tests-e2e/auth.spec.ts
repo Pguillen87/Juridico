@@ -100,7 +100,7 @@ test.describe('Auth funcional local', () => {
     await expect(
       page.getByRole('heading', { name: /Bem-vindo, Owner E2E/ })
     ).toBeVisible();
-    await expect(page.getByText('Escritório E2E Teste')).toBeVisible();
+    await expect(page.getByText(/Escritório E2E/)).toBeVisible();
     await expect(page.getByText('Advogado')).toBeVisible();
     await expect(page.getByText('Administrador')).toBeVisible();
     await page.reload();

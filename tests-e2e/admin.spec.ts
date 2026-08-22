@@ -109,6 +109,20 @@ test.describe('Administração 4C local', () => {
       ownerRow.getByRole('button', { name: /owner/ })
     ).toBeDisabled();
     await expect(ownerRow.getByLabel('Alterar papel funcional')).toBeDisabled();
+
+    acceptNextConfirmation(page);
+    await lawyerRow
+      .getByLabel('Alterar papel funcional')
+      .selectOption('lawyer');
+    await expect(lawyerRow.getByText('Alteração salva.')).toBeVisible();
+
+    acceptNextConfirmation(page);
+    await reviewerRow.getByRole('button', { name: 'Ativar' }).click();
+    await expect(reviewerRow.getByText('Alteração salva.')).toBeVisible();
+
+    acceptNextConfirmation(page);
+    await auditorRow.getByRole('button', { name: 'Revogar owner' }).click();
+    await expect(auditorRow.getByText('Alteração salva.')).toBeVisible();
   });
 
   test('owner altera somente o nome do office e exporta audit com confirmação', async ({
@@ -131,6 +145,7 @@ test.describe('Administração 4C local', () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe('auditoria-administrativa.csv');
 
+    await page.goto('/app');
     await page.getByRole('button', { name: 'Sair' }).click();
     await expect(page).toHaveURL(/\/login$/);
     await login(page, 'owner@example.test');
