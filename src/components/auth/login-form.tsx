@@ -43,7 +43,10 @@ export function LoginForm() {
     const { error: authError, data } = await supabase.auth.signInWithPassword(
       parsed.data
     );
-    console.log('Resposta do Supabase Auth:', { error: authError?.message, user: data?.user?.id });
+    console.log('Resposta do Supabase Auth:', {
+      error: authError?.message,
+      user: data?.user?.id,
+    });
 
     if (authError) {
       setError('E-mail ou senha incorretos.');

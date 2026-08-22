@@ -16,7 +16,10 @@ async function login(page: Page, email: string, secret = password) {
   await page.getByRole('button', { name: 'Entrar' }).click();
   // Aguarda um momento para o Supabase Auth responder antes de verificar a URL
   await page.waitForTimeout(1000);
-  console.log(`Verificando URL após login para ${email}... URL atual:`, page.url());
+  console.log(
+    `Verificando URL após login para ${email}... URL atual:`,
+    page.url()
+  );
   await expect(page).toHaveURL(/\/app$|\/login\?error=inactive$/);
 }
 
