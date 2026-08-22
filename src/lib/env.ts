@@ -6,7 +6,7 @@ const envSchema = z.object({
     .default('development'),
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
-  NEXT_PUBLIC_SITE_URL: z.string().url().default('http://127.0.0.1:3000'),
+  NEXT_PUBLIC_SITE_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export const env = envSchema.parse({

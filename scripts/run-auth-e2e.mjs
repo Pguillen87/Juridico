@@ -43,7 +43,7 @@ const previousEnvLocal = hadEnvLocal
 const envLocalContents = [
   `NEXT_PUBLIC_SUPABASE_URL=${localEnv.API_URL}`,
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${localEnv.ANON_KEY}`,
-  'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000',
+  'NEXT_PUBLIC_SITE_URL=http://localhost:3000',
   `JURIDICO_E2E_PASSWORD=${process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!'}`,
   '',
 ].join('\n');
@@ -86,7 +86,7 @@ try {
       process.exitCode = fixtureRun.status ?? 1;
     } else {
       process.env.PLAYWRIGHT_START_COMMAND = 'node .next/standalone/server.js';
-      process.env.HOSTNAME = '127.0.0.1';
+      process.env.HOSTNAME = 'localhost';
       process.env.PORT = '3000';
       process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
       process.env.JURIDICO_E2E_PASSWORD =
