@@ -299,7 +299,7 @@ test.describe('Auth funcional local', () => {
     await page.getByRole('button', { name: 'Enviar convite' }).click();
 
     // A aplicação deve tratar a falha de forma segura sem expor enumeração
-    await expect(page.getByRole('alert')).toContainText(
+    await expect(page.locator('form [role="alert"]')).toContainText(
       'Não foi possível convidar este usuário'
     );
 
