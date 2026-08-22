@@ -90,12 +90,14 @@ export async function inviteUserAction(
       await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
 
     if (authError || !authData.user) {
-      await appendInviteAuditInternal(
-        profile.id,
-        null,
-        'rejected',
-        'auth_error'
-      );
+      if (profile && profile.id) {
+        await appendInviteAuditInternal(
+          profile.id,
+          null,
+          'rejected',
+          'auth_error'
+        );
+      }
       return {
         error:
           'Não foi possível convidar este usuário. Verifique se o e-mail já está em uso.',
@@ -113,19 +115,23 @@ export async function inviteUserAction(
 
     if (profileError) {
       await admin.auth.admin.deleteUser(authData.user.id);
-      await appendInviteAuditInternal(
-        profile.id,
-        null,
-        'rejected',
-        'profile_error'
-      );
+      if (profile && profile.id) {
+        await appendInviteAuditInternal(
+          profile.id,
+          null,
+          'rejected',
+          'profile_error'
+        );
+      }
       return {
         error:
           'Erro ao registrar o perfil do usuário. O convite foi cancelado.',
       };
     }
 
-    await appendInviteAuditInternal(profile.id, authData.user.id, 'accepted');
+    if (profile && profile.id) {
+      await appendInviteAuditInternal(profile.id, authData.user.id, 'accepted');
+    }
     revalidatePath('/app/usuarios');
     return { success: true };
   } catch {
