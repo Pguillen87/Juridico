@@ -2,7 +2,7 @@ name: App CI
 
 on:
   push:
-    branches: [main, phase-3-foundation, phase-4-auth-rls, phase-4b-auth-flows]
+    branches: [main, phase-3-foundation, phase-4-auth-rls, phase-4b-auth-flows, phase-4c-admin-control-plane]
   pull_request:
     branches: [main]
 
