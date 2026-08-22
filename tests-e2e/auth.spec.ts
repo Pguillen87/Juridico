@@ -140,6 +140,10 @@ test.describe('Auth funcional local', () => {
     const link = extractLink(message);
     await page.goto(link);
     await expect(page).toHaveURL(/\/redefinir-senha/);
+    await expect(page.getByText('Validando o link…')).not.toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.locator('form')).toBeVisible();
     await page
       .getByLabel('Nova senha', { exact: true })
       .fill('TestOnly-Recovery-456!');
@@ -233,6 +237,10 @@ test.describe('Auth funcional local', () => {
     const link = extractLink(message);
     await page.goto(link);
     await expect(page).toHaveURL(/\/redefinir-senha/);
+    await expect(page.getByText('Validando o link…')).not.toBeVisible({
+      timeout: 15000,
+    });
+    await expect(page.locator('form')).toBeVisible();
     await page
       .getByLabel('Nova senha', { exact: true })
       .fill('TestOnly-Invite-789!');
