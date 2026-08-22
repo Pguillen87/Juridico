@@ -49,9 +49,8 @@ export function LoginForm() {
       return;
     }
 
-    // O router.push() é o método mais robusto no App Router
-    // para navegar após uma mutação que altera cookies.
-    router.push('/app');
+    router.replace('/app');
+    router.refresh();
   }
 
   return (

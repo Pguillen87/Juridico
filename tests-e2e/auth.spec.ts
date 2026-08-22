@@ -15,15 +15,13 @@ async function login(page: Page, email: string, secret = password) {
   await page.getByLabel('Senha').fill(secret);
 
   await page.getByRole('button', { name: 'Entrar' }).click();
-  // O CI às vezes demora mais para propagar cookies no SSR do NextJS.
-  // Em vez de usar toHaveURL com o expect padrão, usamos waitForURL que aguarda a navegação de forma mais confiável.
   if (
     email === 'inactive@example.test' ||
     email === 'office-inactive@example.test'
   ) {
-    await page.waitForURL(/\/login\?error=inactive$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/login\?error=inactive$/);
   } else {
-    await page.waitForURL(/\/app$/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/app$/);
   }
 }
 

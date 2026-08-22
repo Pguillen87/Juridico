@@ -43,7 +43,6 @@ const previousEnvLocal = hadEnvLocal
 const envLocalContents = [
   `NEXT_PUBLIC_SUPABASE_URL=${localEnv.API_URL}`,
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${localEnv.ANON_KEY}`,
-  'NEXT_PUBLIC_SITE_URL=http://localhost:3000',
   `JURIDICO_E2E_PASSWORD=${process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!'}`,
   '',
 ].join('\n');
