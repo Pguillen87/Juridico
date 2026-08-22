@@ -17,12 +17,10 @@ async function login(page: Page, email: string, secret = password) {
   await page.waitForTimeout(1000);
   console.log(
     `Estado do botão antes do clique:`,
-    await page
-      .getByRole('button', { name: 'Entrar' })
-      .evaluate((node) => ({
-        disabled: (node as HTMLButtonElement).disabled,
-        type: (node as HTMLButtonElement).type,
-      }))
+    await page.getByRole('button', { name: 'Entrar' }).evaluate((node) => ({
+      disabled: (node as HTMLButtonElement).disabled,
+      type: (node as HTMLButtonElement).type,
+    }))
   );
   await page.getByRole('button', { name: 'Entrar' }).click();
   // Aguarda um momento para o Supabase Auth responder antes de verificar a URL
