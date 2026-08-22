@@ -40,12 +40,13 @@ const hadEnvLocal = existsSync(envLocalPath);
 const previousEnvLocal = hadEnvLocal
   ? readFileSync(envLocalPath, 'utf8')
   : null;
-const envLocalContents = [
-  `NEXT_PUBLIC_SUPABASE_URL=${localEnv.API_URL}`,
-  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${localEnv.ANON_KEY}`,
-  'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000',
-  '',
-].join('\n');
+  const envLocalContents = [
+    `NEXT_PUBLIC_SUPABASE_URL=${localEnv.API_URL}`,
+    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${localEnv.ANON_KEY}`,
+    'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000',
+    `JURIDICO_E2E_PASSWORD=${process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!'}`,
+    '',
+  ].join('\n');
 
 writeFileSync(envLocalPath, envLocalContents, 'utf8');
 
@@ -88,6 +89,7 @@ try {
       process.env.HOSTNAME = '127.0.0.1';
       process.env.PORT = '3000';
       process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
+      process.env.JURIDICO_E2E_PASSWORD = process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
       const e2eRun = run('npx --no-install playwright test', 'npx', [
         '--no-install',
         'playwright',
