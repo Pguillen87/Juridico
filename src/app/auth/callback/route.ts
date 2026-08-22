@@ -38,5 +38,21 @@ export async function GET(request: NextRequest) {
   }
 
   redirectUrl.search = '';
-  return NextResponse.redirect(redirectUrl);
+  const response = NextResponse.redirect(redirectUrl);
+
+  // Garantir que os cookies recém-setados no cookieStore sejam passados para o redirect
+  // Isso previne o bug "Auth session missing" no CI onde o Next.js pode perder cookies em redirecionamentos.
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+  cookieStore.getAll().forEach((cookie) => {
+    response.cookies.set(cookie.name, cookie.value, {
+      ...cookie,
+      secure:
+        process.env.NODE_ENV === 'production' &&
+        process.env.HOSTNAME !== '127.0.0.1',
+      sameSite: 'lax',
+    });
+  });
+
+  return response;
 }
