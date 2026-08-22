@@ -211,6 +211,27 @@ export type Database = {
           window_seconds: number;
         }[];
       };
+      export_administrative_audit: {
+        Args: { p_action?: string; p_entity_type?: string; p_limit?: number };
+        Returns: {
+          action: string;
+          actor_user_id: string | null;
+          audit_scope: string;
+          correlation_id: string;
+          created_at: string;
+          entity_id: string | null;
+          entity_type: string;
+          id: number;
+          metadata: Json;
+          office_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'audit_log';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       get_administrative_audit: {
         Args: { p_action?: string; p_entity_type?: string; p_limit?: number };
         Returns: {
@@ -250,9 +271,23 @@ export type Database = {
           isSetofReturn: true;
         };
       };
-      record_audit_export: { Args: never; Returns: number };
-      record_invite_audit: {
-        Args: { p_outcome: string; p_target_user_id: string };
+      record_invite_audit_internal: {
+        Args: {
+          p_actor_user_id: string;
+          p_target_user_id: string;
+          p_outcome: string;
+          p_reason?: string;
+        };
+        Returns: number;
+      };
+      record_rejection_audit_internal: {
+        Args: {
+          p_action: string;
+          p_actor_user_id: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_reason: string;
+        };
         Returns: number;
       };
       require_active_actor: {

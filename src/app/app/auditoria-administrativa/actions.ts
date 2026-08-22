@@ -22,15 +22,11 @@ export async function exportAdministrativeAuditAction(): Promise<AuditExportResu
     });
 
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      'export_administrative_audit' as any,
-      {
-        p_limit: 100,
-        p_action: null,
-        p_entity_type: null,
-      }
-    );
+    const { data, error } = await supabase.rpc('export_administrative_audit', {
+      p_limit: 100,
+      p_action: undefined,
+      p_entity_type: undefined,
+    });
     if (error) {
       if (error.code === '42900') {
         return {

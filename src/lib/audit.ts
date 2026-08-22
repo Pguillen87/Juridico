@@ -15,13 +15,12 @@ export async function appendInviteAuditInternal(
 ): Promise<number> {
   const adminSupabase = createAdminClient();
   const { data, error } = await adminSupabase.rpc(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    'record_invite_audit_internal' as any,
+    'record_invite_audit_internal',
     {
       p_actor_user_id: actorUserId,
-      p_target_user_id: targetUserId,
+      p_target_user_id: targetUserId!,
       p_outcome: outcome,
-      p_reason: reason ?? null,
+      p_reason: reason,
     }
   );
 
@@ -29,7 +28,7 @@ export async function appendInviteAuditInternal(
     throw new Error('Não foi possível registrar a auditoria administrativa.');
   }
 
-  return data as unknown as number;
+  return data;
 }
 
 export async function appendRejectionAuditInternal(
@@ -41,13 +40,12 @@ export async function appendRejectionAuditInternal(
 ): Promise<number> {
   const adminSupabase = createAdminClient();
   const { data, error } = await adminSupabase.rpc(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    'record_rejection_audit_internal' as any,
+    'record_rejection_audit_internal',
     {
       p_actor_user_id: actorUserId,
       p_action: action,
       p_entity_type: entityType,
-      p_entity_id: entityId,
+      p_entity_id: entityId!,
       p_reason: reason,
     }
   );
@@ -58,7 +56,7 @@ export async function appendRejectionAuditInternal(
     );
   }
 
-  return data as unknown as number;
+  return data;
 }
 
 export async function listAdministrativeAudit(filters?: {
