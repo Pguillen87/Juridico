@@ -8,7 +8,7 @@ on:
         phase-3-foundation,
         phase-4-auth-rls,
         phase-4b-auth-flows,
-        phase-4c-admin-control-plane,
+        phase-4c-admin-control-plane,`n        phase-5-clients-parties,
       ]
   pull_request:
     branches: [main]
