@@ -36,6 +36,10 @@ create trigger phase5_test_fail_audit before insert on public.audit_log
 for each row when (current_setting('phase5.test_pid', true) = pg_backend_pid()::text)
 execute function pg_temp.fail_phase5_audit();
 
+create temporary table phase5_audit_baseline as
+select coalesce(max(id), 0)::bigint as max_id
+from public.audit_log;
+
 select plan(9);
 select set_config('phase5.test_pid', pg_backend_pid()::text, false);
 
@@ -44,7 +48,13 @@ select set_config('request.jwt.claim.sub', '80000000-0000-4000-8000-000000000001
 select throws_ok($$select public.create_party('person', 'Rollback Created Party')$$, 'P0001', null, 'createParty fails when audit insert fails');
 reset role;
 select is((select count(*)::integer from public.party where display_name='Rollback Created Party'), 0, 'createParty domain row rolled back');
-select is((select count(*)::integer from public.audit_log where entity_type='party' and metadata @> '{"after":{"status":"active"}}'), 0, 'createParty leaves no partial audit');
+select is((select count(*)::integer
+            from public.audit_log l
+            where l.id > (select max_id from phase5_audit_baseline)
+              and l.entity_type='party'
+              and l.metadata @> '{"after":{"status":"active"}}'),
+           0,
+           'createParty leaves no partial audit');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '80000000-0000-4000-8000-000000000001', true);
