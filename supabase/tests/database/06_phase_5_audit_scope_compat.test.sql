@@ -1,0 +1,12 @@
+begin;
+select plan(8);
+select has_function('public','phase5_validate_audit_row',array[]::text[],'Phase 5 validator exists');
+select ok(position('IF NOT (NEW.action = ANY (phase5_actions)) THEN RETURN NEW' in pg_get_functiondef('public.phase5_validate_audit_row()'::regprocedure)) > 0, 'non-Phase-5 actions pass through');
+select ok(position('NEW.audit_scope IS DISTINCT FROM ''operational''' in pg_get_functiondef('public.phase5_validate_audit_row()'::regprocedure)) > 0, 'Phase 5 actions require operational scope');
+select ok(position('phase 5 audit action/entity mismatch' in pg_get_functiondef('public.phase5_validate_audit_row()'::regprocedure)) > 0, 'Phase 5 action/entity compatibility is enforced');
+select ok(position('allowed_metadata' in pg_get_functiondef('public.phase5_validate_audit_row()'::regprocedure)) > 0, 'Phase 5 metadata allowlist is enforced');
+select ok(exists (select 1 from pg_trigger where tgname='phase5_validate_audit_row' and tgrelid='public.audit_log'::regclass), 'Phase 5 validator trigger exists');
+select ok(exists (select 1 from pg_trigger where tgname='tr_audit_log_append_only' and tgrelid='public.audit_log'::regclass), 'canonical append-only trigger preserved');
+select ok(not has_function_privilege('authenticated','public.phase5_validate_audit_row()','EXECUTE'), 'validator execution is not public');
+select * from finish();
+rollback;

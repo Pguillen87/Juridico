@@ -1,9 +1,10 @@
-import { requireAuthenticatedProfile } from '@/lib/auth/guards';
+import { requirePermission } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
 import { createClientAction, createPartyAction } from './actions';
 
 export default async function ClientsPage() {
-  await requireAuthenticatedProfile();
+  const { profile } = await requirePermission('view_operational_data');
+  const canMutate = profile.role === 'lawyer' || profile.role === 'operator';
   const supabase = await createClient();
   const { data: clients, error } = await supabase
     .from('client')
@@ -43,9 +44,10 @@ export default async function ClientsPage() {
             registros distintos e nenhuma relação é confirmada automaticamente.
           </p>
         </header>
-        <section className="grid gap-6 lg:grid-cols-2">
+        <section className={canMutate ? 'grid gap-6 lg:grid-cols-2' : 'hidden'}>
           <form
             action={async (formData) => {
+              'use server';
               await createClientAction(formData);
             }}
             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
@@ -89,6 +91,7 @@ export default async function ClientsPage() {
           </form>
           <form
             action={async (formData) => {
+              'use server';
               await createPartyAction(formData);
             }}
             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"

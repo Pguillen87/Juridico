@@ -2,10 +2,11 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests-e2e',
-  fullyParallel: true,
+  // Auth fixtures and PostgreSQL rate-limit buckets are shared by the local suite.
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? [['list'], ['html']] : 'html',
   expect: {
     timeout: 15000,

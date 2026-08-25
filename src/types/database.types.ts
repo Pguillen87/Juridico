@@ -367,6 +367,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      can_view_operational_row: {
+        Args: { p_office_id: string };
+        Returns: boolean;
+      };
       change_user_role: {
         Args: {
           p_new_role: Database['public']['Enums']['user_role'];

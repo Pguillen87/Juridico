@@ -18,13 +18,13 @@
 | O-005 | RF-001 | US-001 | `user_profile` | Auth/API | 3 | T-001 login | Relatório E2E | Planned |
 | O-005 | RF-001 | US-002 | `user_profile` | Auth/E-mail | 3 | T-002 recovery | Evidência sandbox | Planned |
 | O-005 | RF-002 | US-003 | `user_profile`, `office` | Auth/RLS | 3–4 | T-003 roles | Matriz de permissão | Planned |
-| O-005 | RF-003 | US-004 | `party`, `client` | Cadastro/API | 5 | T-004 client | Registro auditado | Planned |
-| O-005 | RF-003 | US-005 | `party`, `client_related_party` | Cadastro/API | 5 | T-005 parties | Registro auditado | Planned |
+| O-005 | RF-003 | US-004 | `party`, `client` | Cadastro/API | 5 | T-004 client | RPC transacional, pgTAP, unit, E2E | Implemented/Tested |
+| O-005 | RF-003 | US-005 | `party`, `client_related_party` | Cadastro/API | 5 | T-005 parties | RPC transacional, RLS, pgTAP, E2E | Implemented/Tested |
 | O-001 | RF-004 | US-006 | `legal_process` | Processos/API | 6 | T-006 manual process | Teste CNJ | Planned |
 | O-001 | RF-005 | US-007 | `legal_process`, `process_party` | Importação | 6 | T-007 CSV | Prévia e auditoria | Planned |
 | O-001 | RF-004 | US-008 | `legal_process` | Validador | 6 | T-008 CNJ | Fixtures | Planned |
-| O-005 | RF-003 | US-009 | `process_party` | Vínculos/API | 5 | T-009 N:N | Teste cardinalidade | Planned |
-| O-005 | RF-003 | US-010 | `process_party`, `audit_log` | Vínculos | 5 | T-010 confirmation | Auditoria | Planned |
+| O-005 | RF-003 | US-009 | `process_party` | Vínculos/API | 6 | T-009 N:N | `process_party` não criado; decisão registrada | Deferred Phase 6 |
+| O-005 | RF-003 | US-010 | `process_party`, `audit_log` | Vínculos | 6 | T-010 confirmation | `process_party` não criado; decisão registrada | Deferred Phase 6 |
 | O-001 | RF-004 | US-011 | `monitoring_configuration` | Monitoramento | 6 | T-011 activation | Configuração | Planned |
 | O-001 | RF-006 | US-012 | `query_job` | Queue/API | 9 | T-012 manual query | Job idempotente | Planned |
 | O-001 | RF-006 | US-013 | `monitoring_schedule`, `query_job` | Scheduler | 9 | T-013 schedule | Relógio controlado | Planned |
@@ -62,7 +62,7 @@
 
 ## Cobertura Crítica
 
-As histórias `Must` possuem ao menos um teste associado. O status `Planned` significa que o teste está especificado, mas ainda não executado. A execução de testes, a PoC e o uso de processos reais estão fora desta etapa.
+As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. US-009 e US-010 permanecem diferidas para a Fase 6 porque `process_party` e `legal_process` não foram criados. A confirmação/rejeição de `client_related_party` foi implementada e testada nesta fase.
 
 ## Evidências Esperadas
 

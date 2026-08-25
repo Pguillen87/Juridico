@@ -92,6 +92,9 @@ jobs:
       - name: Concurrency Test (Admin Rate Limit)
         run: pwsh -File ./scripts/test-rate-limit-concurrency.ps1
 
+      - name: Concurrency Test (Phase 5 Confirmation)
+        run: pwsh -File ./scripts/test-phase5-confirm-concurrency.ps1
+
       - name: Supabase DB Types Check
         run: |
           tmp="src/types/database.types.tmp.ts"
