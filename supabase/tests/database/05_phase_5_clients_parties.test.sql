@@ -1,0 +1,17 @@
+begin;
+select plan(14);
+select has_table('public','party','party exists');
+select has_table('public','client','client exists');
+select has_table('public','client_related_party','relation exists');
+select has_function('public','create_client_with_party',array['text','text'],'create client rpc exists');
+select has_function('public','create_party',array['text','text'],'create party rpc exists');
+select has_function('public','create_client_related_party',array['uuid','uuid','text','text'],'create relation rpc exists');
+select has_function('public','confirm_client_related_party',array['uuid'],'confirm rpc exists');
+select has_function('public','reject_client_related_party',array['uuid'],'reject rpc exists');
+select has_function('public','deactivate_client',array['uuid'],'deactivate client rpc exists');
+select has_function('public','deactivate_party',array['uuid'],'deactivate party rpc exists');
+select has_function('public','deactivate_client_related_party',array['uuid'],'deactivate relation rpc exists');
+select ok((select relrowsecurity from pg_class where oid='public.party'::regclass),'party RLS enabled');
+select ok((select relrowsecurity from pg_class where oid='public.client'::regclass),'client RLS enabled');
+select ok((select relrowsecurity from pg_class where oid='public.client_related_party'::regclass),'relation RLS enabled');
+select * from finish(); rollback;

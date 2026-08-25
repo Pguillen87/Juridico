@@ -81,6 +81,142 @@ export type Database = {
           },
         ];
       };
+      client: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          office_id: string;
+          party_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          office_id: string;
+          party_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          office_id?: string;
+          party_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'client_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_office_id_party_id_fkey';
+            columns: ['office_id', 'party_id'];
+            isOneToOne: false;
+            referencedRelation: 'party';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      client_related_party: {
+        Row: {
+          client_id: string;
+          confirmation_status: string;
+          confirmed_at: string | null;
+          confirmed_by: string | null;
+          created_at: string;
+          created_by: string;
+          id: string;
+          notes: string | null;
+          office_id: string;
+          party_id: string;
+          relation_type: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          confirmation_status?: string;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          notes?: string | null;
+          office_id: string;
+          party_id: string;
+          relation_type: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          confirmation_status?: string;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          notes?: string | null;
+          office_id?: string;
+          party_id?: string;
+          relation_type?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'client_related_party_confirmed_by_fkey';
+            columns: ['confirmed_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_related_party_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_related_party_office_id_client_id_fkey';
+            columns: ['office_id', 'client_id'];
+            isOneToOne: false;
+            referencedRelation: 'client';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'client_related_party_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_related_party_office_id_party_id_fkey';
+            columns: ['office_id', 'party_id'];
+            isOneToOne: false;
+            referencedRelation: 'party';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
       office: {
         Row: {
           created_at: string;
@@ -101,6 +237,57 @@ export type Database = {
           name?: string;
         };
         Relationships: [];
+      };
+      party: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          display_name: string;
+          id: string;
+          normalized_name: string;
+          office_id: string;
+          party_type: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          display_name: string;
+          id?: string;
+          normalized_name: string;
+          office_id: string;
+          party_type: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          display_name?: string;
+          id?: string;
+          normalized_name?: string;
+          office_id?: string;
+          party_type?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'party_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'party_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       rate_limit_bucket: {
         Row: {
@@ -201,6 +388,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      confirm_client_related_party: {
+        Args: { p_relation_id: string };
+        Returns: undefined;
+      };
       consume_admin_rate_limit: {
         Args: { p_operation: string };
         Returns: {
@@ -211,6 +402,29 @@ export type Database = {
           window_seconds: number;
         }[];
       };
+      create_client_related_party: {
+        Args: {
+          p_client_id: string;
+          p_notes?: string;
+          p_party_id: string;
+          p_relation_type: string;
+        };
+        Returns: string;
+      };
+      create_client_with_party: {
+        Args: { p_display_name: string; p_party_type: string };
+        Returns: string;
+      };
+      create_party: {
+        Args: { p_display_name: string; p_party_type: string };
+        Returns: string;
+      };
+      deactivate_client: { Args: { p_id: string }; Returns: undefined };
+      deactivate_client_related_party: {
+        Args: { p_id: string };
+        Returns: undefined;
+      };
+      deactivate_party: { Args: { p_id: string }; Returns: undefined };
       export_administrative_audit: {
         Args: { p_action?: string; p_entity_type?: string; p_limit?: number };
         Returns: {
@@ -290,6 +504,10 @@ export type Database = {
         };
         Returns: number;
       };
+      reject_client_related_party: {
+        Args: { p_relation_id: string };
+        Returns: undefined;
+      };
       require_active_actor: {
         Args: never;
         Returns: {
@@ -344,6 +562,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      update_client: {
+        Args: { p_id: string; p_status?: string };
+        Returns: undefined;
+      };
       update_office_name: {
         Args: { p_name: string };
         Returns: {
@@ -359,7 +581,20 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      update_party: {
+        Args: { p_display_name: string; p_id: string; p_party_type?: string };
+        Returns: undefined;
+      };
       write_admin_audit: {
+        Args: {
+          p_action: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_metadata?: Json;
+        };
+        Returns: number;
+      };
+      write_operational_audit: {
         Args: {
           p_action: string;
           p_entity_id: string;
