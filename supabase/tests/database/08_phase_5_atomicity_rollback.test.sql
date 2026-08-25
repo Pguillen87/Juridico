@@ -33,7 +33,8 @@ begin
 end;
 $$;
 create trigger phase5_test_fail_audit before insert on public.audit_log
-for each row execute function pg_temp.fail_phase5_audit();
+for each row when (current_setting('phase5.test_pid', true) = pg_backend_pid()::text)
+execute function pg_temp.fail_phase5_audit();
 
 select plan(9);
 select set_config('phase5.test_pid', pg_backend_pid()::text, false);
