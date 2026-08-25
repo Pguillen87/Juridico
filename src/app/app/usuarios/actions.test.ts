@@ -190,4 +190,194 @@ describe('Server Actions administrativas', () => {
       'accepted'
     );
   });
+
+  it('reconhece P0001 do last-owner em set_active e audita com código de máquina', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      error: {
+        code: 'P0001',
+        message:
+          'Cannot remove or deactivate the last active owner of an office',
+      },
+    });
+    mocks.requirePermission.mockResolvedValue({
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
+    });
+    mocks.createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      setActiveAction(
+        userPayload({
+          userId: '00000000-0000-4000-8000-000000000004',
+          isActive: 'false',
+        })
+      )
+    ).resolves.toEqual({
+      error:
+        'Não é possível inativar o último administrador ativo do escritório.',
+    });
+    expect(mocks.appendRejectionAuditInternal).toHaveBeenCalledWith(
+      'user-owner-id',
+      'last_owner_blocked',
+      'user_profile',
+      '00000000-0000-4000-8000-000000000004',
+      'deactivate_last_active_owner'
+    );
+  });
+
+  it('reconhece P0001 do last-owner em set_owner e audita com código de máquina', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      error: {
+        code: 'P0001',
+        message:
+          'Cannot remove or deactivate the last active owner of an office',
+      },
+    });
+    mocks.requirePermission.mockResolvedValue({
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
+    });
+    mocks.createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      setOwnerAction(
+        userPayload({
+          userId: '00000000-0000-4000-8000-000000000004',
+          isOwner: 'false',
+        })
+      )
+    ).resolves.toEqual({
+      error:
+        'Não é possível revogar o último administrador ativo do escritório.',
+    });
+    expect(mocks.appendRejectionAuditInternal).toHaveBeenCalledWith(
+      'user-owner-id',
+      'last_owner_blocked',
+      'user_profile',
+      '00000000-0000-4000-8000-000000000004',
+      'revoke_last_active_owner'
+    );
+  });
+
+  it('não confunde 42501 genérico com bloqueio de last-owner', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      error: { code: '42501', message: 'row-level security policy violation' },
+    });
+    mocks.requirePermission.mockResolvedValue({
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
+    });
+    mocks.createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      setActiveAction(
+        userPayload({
+          userId: '00000000-0000-4000-8000-000000000004',
+          isActive: 'false',
+        })
+      )
+    ).resolves.toEqual({
+      error: 'Você não tem autorização para esta operação.',
+    });
+    expect(mocks.appendRejectionAuditInternal).not.toHaveBeenCalled();
+  });
+
+  it('P0001 em operação não degradante não é tratado como last-owner', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      error: {
+        code: 'P0001',
+        message:
+          'Cannot remove or deactivate the last active owner of an office',
+      },
+    });
+    mocks.requirePermission.mockResolvedValue({
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
+    });
+    mocks.createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      setActiveAction(
+        userPayload({
+          userId: '00000000-0000-4000-8000-000000000004',
+          isActive: 'true',
+        })
+      )
+    ).resolves.toEqual({
+      error:
+        'Operação bloqueada: o escritório precisa manter um administrador ativo.',
+    });
+    expect(mocks.appendRejectionAuditInternal).not.toHaveBeenCalled();
+  });
+
+  it('compensa invite quando o audit accepted falha: remove profile e auth user recém-criados', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const del = vi.fn().mockReturnValue({ eq });
+    const deleteUser = vi.fn().mockResolvedValue({ error: null, data: {} });
+    const admin = {
+      auth: {
+        admin: {
+          inviteUserByEmail: vi.fn().mockResolvedValue({
+            data: { user: { id: 'auth-user-1' } },
+            error: null,
+          }),
+          deleteUser,
+        },
+      },
+      from: vi.fn().mockReturnValue({ insert, delete: del }),
+    };
+    mocks.requirePermission.mockResolvedValue({
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
+    });
+    mocks.createAdminClient.mockReturnValue(admin);
+    mocks.appendInviteAuditInternal.mockRejectedValueOnce(
+      new Error('audit down')
+    );
+
+    const result = await inviteUserAction(payload());
+    expect(result.success).toBeUndefined();
+    expect(result.error).toBeDefined();
+    // Compensação atua somente sobre o usuário criado nesta operação
+    expect(del).toHaveBeenCalledWith();
+    expect(eq).toHaveBeenCalledWith('id', 'auth-user-1');
+    expect(deleteUser).toHaveBeenCalledWith('auth-user-1');
+    // Registra rejeição com código audit_error
+    expect(mocks.appendInviteAuditInternal).toHaveBeenCalledWith(
+      'user-owner-id',
+      null,
+      'rejected',
+      'audit_error'
+    );
+  });
+
+  it('reporta estado parcial quando a compensação do invite também falha', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const del = vi.fn().mockReturnValue({ eq });
+    const deleteUser = vi.fn().mockResolvedValue({
+      error: { message: 'boom' },
+      data: null,
+    });
+    const admin = {
+      auth: {
+        admin: {
+          inviteUserByEmail: vi.fn().mockResolvedValue({
+            data: { user: { id: 'auth-user-1' } },
+            error: null,
+          }),
+          deleteUser,
+        },
+      },
+      from: vi.fn().mockReturnValue({ insert, delete: del }),
+    };
+    mocks.requirePermission.mockResolvedValue({
+      profile: { id: 'user-owner-id', office_id: 'office-owner' },
+    });
+    mocks.createAdminClient.mockReturnValue(admin);
+    mocks.appendInviteAuditInternal.mockRejectedValueOnce(
+      new Error('audit down')
+    );
+
+    const result = await inviteUserAction(payload());
+    expect(result.success).toBeUndefined();
+    expect(result.error).toContain('reversão ficou incompleta');
+    expect(deleteUser).toHaveBeenCalledWith('auth-user-1');
+  });
 });

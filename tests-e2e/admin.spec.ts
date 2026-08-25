@@ -138,7 +138,9 @@ test.describe('Administração 4C local', () => {
     );
 
     await page.goto('/app/auditoria-administrativa');
-    await expect(page.getByText('office.rename')).toBeVisible();
+    await expect(
+      page.getByRole('row').filter({ hasText: 'office.rename' }).first()
+    ).toBeVisible();
     acceptNextConfirmation(page);
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exportar CSV' }).click();

@@ -79,3 +79,16 @@ A implementação da Fase 4C original foi aprovada pela auditoria externa, mas e
 - **Resultado do Teste de Concorrência Rate Limit**: Teste de concorrência adaptado para PowerShell no CI; verificado `allowed=5`, `blocked=1`, `final_count=5`.
 
 O código, as migrations incrementais e os testes foram validados localmente e publicados na branch GitHub `phase-4c-admin-control-plane`. Nenhuma alteração foi feita em `main` e nenhum serviço remoto de produção foi modificado.
+
+## Atualização da execução autorizada — 25/08/2026
+
+Os gates foram reexecutados no workspace recuperado. O baseline terminou com format:check, lint, typecheck, 43 testes unitários aprovados e build aprovado. O banco local passou por db reset e db lint; o pgTAP registrou 100 testes e 0 falhas. Os tipos gerados pelo Supabase foram comparados ao arquivo versionado e ficaram iguais.
+
+As fixtures Auth foram preparadas para oito combinações role/owner, recovery e usuário inativo. O Auth/Admin E2E passou com 16 cenários aprovados e 0 falhas, após um reset limpo do banco. O teste de rate limit passou com allowed=5, blocked=1 e final_count=5. O script existente de concorrência last-owner terminou com sucesso, confirmando uma operação vencedora, uma rejeitada e exatamente um owner ativo ao final. A regressão da PoC passou com 29/29 testes.
+
+
+O Docker web foi constru�do com sucesso. O smoke test iniciou o servi�o, recebeu HTTP 200 em /api/health com corpo {"status":"ok"} e confirmou nextjs como usu�rio de runtime n�o-root. O servi�o foi removido com docker compose down; o Supabase local permaneceu separado.
+
+A auditoria Production Stack, limitada � Fase 4C, n�o identificou bloqueadores CRITICAL ou HIGH no c�digo, migrations, autoriza��o, auditoria, rate limit, compensa��o de convite ou CI. Foram mantidas como melhorias futuras MEDIUM/LOW a pinagem de imagens por digest, HEALTHCHECK nativo no Dockerfile, limites de recursos no Compose, observabilidade ampliada e scan Trivy. O workflow CI foi confirmado como read-only, sem comandos de git add, commit, push, reset, restore, checkout ou clean.
+
+O plano docs/plano-fase-4c.md foi preservado. N�o inserir SHA final ou Run ID neste relat�rio. A publica��o deve ocorrer somente na branch phase-4c-admin-control-plane, sem alterar main, sem merge, sem force-push e sem iniciar a Fase 5; ap�s o novo App CI, a execu��o deve parar para auditoria externa.

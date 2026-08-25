@@ -53,6 +53,42 @@ async function rpcErrorMessage(error: { code?: string; message?: string }) {
   return { error: mapAdminError(error) };
 }
 
+// O trigger protect_last_active_owner() usa RAISE EXCEPTION sem ERRCODE
+// explícito, portanto o SQLSTATE real é P0001 (raise_exception), não 42501.
+// O reconhecimento combina SQLSTATE + operação de degradação em curso +
+// marcador estável da mensagem do trigger; nunca confia em um único sinal.
+function isLastOwnerBlock(
+  error: { code?: string; message?: string },
+  degradingOperation: boolean
+): boolean {
+  return (
+    degradingOperation &&
+    error.code === 'P0001' &&
+    (error.message ?? '').includes('last active owner')
+  );
+}
+
+// Compensação do invite quando o audit "accepted" falha: atua SOMENTE sobre o
+// usuário criado nesta operação corrente. Retorna true se a compensação
+// concluiu, false se ficou em estado parcial (reportado ao chamador).
+async function compensateInvite(
+  admin: ReturnType<typeof createAdminClient>,
+  createdUserId: string
+): Promise<boolean> {
+  let compensated = true;
+  const { error: profileDeleteError } = await admin
+    .from('user_profile')
+    .delete()
+    .eq('id', createdUserId);
+  if (profileDeleteError) compensated = false;
+
+  const { error: authDeleteError } =
+    await admin.auth.admin.deleteUser(createdUserId);
+  if (authDeleteError) compensated = false;
+
+  return compensated;
+}
+
 async function rateLimitResult(
   operation: AdminRateLimitOperation
 ): Promise<AdminActionResult | null> {
@@ -130,7 +166,37 @@ export async function inviteUserAction(
     }
 
     if (profile && profile.id) {
-      await appendInviteAuditInternal(profile.id, authData.user.id, 'accepted');
+      try {
+        await appendInviteAuditInternal(
+          profile.id,
+          authData.user.id,
+          'accepted'
+        );
+      } catch {
+        // Auth user + profile já criados, mas o audit obrigatório falhou:
+        // não retornar success e compensar SOMENTE o usuário desta operação.
+        const compensated = await compensateInvite(admin, authData.user.id);
+        // Best-effort: registrar a rejeição por falha de auditoria.
+        try {
+          await appendInviteAuditInternal(
+            profile.id,
+            null,
+            'rejected',
+            'audit_error'
+          );
+        } catch {
+          // Auditoria indisponível; a compensação acima é a salvaguarda.
+        }
+        return compensated
+          ? {
+              error:
+                'Não foi possível concluir o convite. A operação foi revertida.',
+            }
+          : {
+              error:
+                'Falha ao registrar auditoria do convite e a reversão ficou incompleta. Verifique a lista de usuários antes de repetir.',
+            };
+      }
     }
     revalidatePath('/app/usuarios');
     return { success: true };
@@ -200,13 +266,16 @@ export async function setActiveAction(
       p_is_active: parsed.data.isActive,
     });
     if (error) {
-      if (error.code === '42501' && error.message.includes('last owner')) {
+      if (
+        isLastOwnerBlock(error, parsed.data.isActive === false) &&
+        profile?.id
+      ) {
         await appendRejectionAuditInternal(
           profile.id,
           'last_owner_blocked',
           'user_profile',
           parsed.data.userId,
-          'Cannot deactivate last active owner'
+          'deactivate_last_active_owner'
         );
         return {
           error:
@@ -255,13 +324,16 @@ export async function setOwnerAction(
       p_is_owner: parsed.data.isOwner,
     });
     if (error) {
-      if (error.code === '42501' && error.message.includes('last owner')) {
+      if (
+        isLastOwnerBlock(error, parsed.data.isOwner === false) &&
+        profile?.id
+      ) {
         await appendRejectionAuditInternal(
           profile.id,
           'last_owner_blocked',
           'user_profile',
           parsed.data.userId,
-          'Cannot revoke last active owner'
+          'revoke_last_active_owner'
         );
         return {
           error:
