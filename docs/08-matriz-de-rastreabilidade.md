@@ -18,8 +18,8 @@
 | O-005 | RF-001 | US-001 | `user_profile` | Auth/API | 3 | T-001 login | Relatório E2E | Planned |
 | O-005 | RF-001 | US-002 | `user_profile` | Auth/E-mail | 3 | T-002 recovery | Evidência sandbox | Planned |
 | O-005 | RF-002 | US-003 | `user_profile`, `office` | Auth/RLS | 3–4 | T-003 roles | Matriz de permissão | Planned |
-| O-005 | RF-003 | US-004 | `party`, `client` | Cadastro/API | 5 | T-004 client | RPC transacional, pgTAP, unit, E2E | Implemented/Tested |
-| O-005 | RF-003 | US-005 | `party`, `client_related_party` | Cadastro/API | 5 | T-005 parties | RPC transacional, RLS, pgTAP, E2E | Implemented/Tested |
+| O-005 | RF-003 | US-004 | `party`, `client` | Cadastro/API/UI | 5 | T-004 client | RPC transacional, pgTAP, unit, E2E real: criar/listar cliente, parte principal, editar/desativar | Implemented/Tested |
+| O-005 | RF-003 | US-005 | `party`, `client_related_party` | Cadastro/API/UI | 5 | T-005 parties | RPC transacional, RLS, pgTAP, unit e E2E real: relação pending, confirmação/rejeição, roles, homônimos e isolamento | Implemented/Tested |
 | O-001 | RF-004 | US-006 | `legal_process` | Processos/API | 6 | T-006 manual process | Teste CNJ | Planned |
 | O-001 | RF-005 | US-007 | `legal_process`, `process_party` | Importação | 6 | T-007 CSV | Prévia e auditoria | Planned |
 | O-001 | RF-004 | US-008 | `legal_process` | Validador | 6 | T-008 CNJ | Fixtures | Planned |
@@ -63,6 +63,10 @@
 ## Cobertura Crítica
 
 As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. US-009 e US-010 permanecem diferidas para a Fase 6 porque `process_party` e `legal_process` não foram criados. A confirmação/rejeição de `client_related_party` foi implementada e testada nesta fase.
+
+## Aceite funcional adicional da Fase 5
+
+A UI `/app/clientes` lista clientes, parties e vínculos relacionados. Parties homônimas são exibidas com referência curta derivada do ID, tipo e status; a seleção de uma party ocorre por ID, nunca por nome. O fluxo E2E real cobre lawyer criando cliente/party, criando relação `pending`, confirmando uma relação e rejeitando outra; operator cria, mas não confirma/rejeita; reviewer lê sem controles; auditor recebe DENY. `legal_process` e `process_party` permanecem inexistentes e US-009/US-010 continuam `Deferred Phase 6`.
 
 ## Evidências Esperadas
 

@@ -52,6 +52,10 @@ A chave de duplicidade usa IDs de office, client, party e relation type, não no
 
 A configuração Playwright usa um worker e execução não paralela porque fixtures autenticadas compartilham estado de rate limit. A concorrência de domínio foi verificada separadamente no PostgreSQL, não mascarada pela configuração E2E.
 
+## Evidências funcionais da UI
+
+A página `/app/clientes` agora lista clientes, parties do office e vínculos relacionados. A UI apresenta referência curta derivada do ID, `party_type` e status para distinguir homônimos sem usar nome como identidade. O fluxo de lawyer cria cliente e party, escolhe explicitamente uma party por ID, cria a relação em `pending`, confirma uma relação e rejeita outra; os estados `confirmed` e `rejected` permanecem visíveis. Operator consegue criar relação, mas não recebe controles de confirmação/rejeição. Reviewer permanece em leitura e auditor não acessa o fluxo operacional. O E2E real da Fase 5 cobre esses fluxos, além da separação de parties homônimas.
+
 ## Rastreabilidade
 
 US-004 e US-005 estão implementadas e testadas. A confirmação/rejeição de `client_related_party` está implementada e testada na Fase 5. US-009 e US-010, dependentes de `process_party`, estão `DEFERRED` para a Fase 6. `legal_process` e `process_party` não foram criados.
@@ -62,4 +66,4 @@ A revisão local cobriu segurança, PostgreSQL, Docker e revisão de código. N�
 
 ## Estado de publicação
 
-Este relatório não contém SHA final nem Run ID. A Fase 6 não foi iniciada. O commit e o push somente devem ocorrer depois da regressão final completa, higiene do working tree e confirmação de todos os gates.
+Este relatório não contém SHA final nem Run ID. A publicação ocorreu somente após a regressão final completa e a higiene do working tree. A Fase 6 não foi iniciada.
