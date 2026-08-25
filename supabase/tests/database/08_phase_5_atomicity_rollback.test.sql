@@ -25,7 +25,8 @@ on conflict (id) do nothing;
 create or replace function pg_temp.fail_phase5_audit() returns trigger
 language plpgsql as $$
 begin
-  if new.audit_scope = 'operational' then
+  if new.audit_scope = 'operational'
+     and current_setting('phase5.test_pid', true) = pg_backend_pid()::text then
     raise exception 'controlled audit failure' using errcode = 'P0001';
   end if;
   return new;
@@ -35,6 +36,7 @@ create trigger phase5_test_fail_audit before insert on public.audit_log
 for each row execute function pg_temp.fail_phase5_audit();
 
 select plan(9);
+select set_config('phase5.test_pid', pg_backend_pid()::text, false);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '80000000-0000-4000-8000-000000000001', true);
