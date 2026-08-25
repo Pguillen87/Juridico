@@ -19,7 +19,8 @@ insert into public.client_related_party(id,office_id,client_id,party_id,relation
 "
 $confirmSql = "begin; set local role authenticated; select set_config('request.jwt.claim.sub','$lawyer',true); select pg_sleep(0.2); select public.confirm_client_related_party('$relation'); commit;"
 $rejectSql = "begin; set local role authenticated; select set_config('request.jwt.claim.sub','$lawyer2',true); select public.reject_client_related_party('$relation'); commit;"
-$confirmFile = Join-Path $env:TEMP 'phase5-confirm.sql'; $rejectFile = Join-Path $env:TEMP 'phase5-reject.sql'
+$tempRoot = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { [System.IO.Path]::GetTempPath() }
+$confirmFile = Join-Path $tempRoot 'phase5-confirm.sql'; $rejectFile = Join-Path $tempRoot 'phase5-reject.sql'
 Set-Content -Path $confirmFile -Value $confirmSql -Encoding UTF8
 Set-Content -Path $rejectFile -Value $rejectSql -Encoding UTF8
 $confirmJob = Start-Job -ScriptBlock { param($db,$file) Get-Content $file | docker exec -i $db psql -qAt -U postgres -d postgres 2>&1 } -ArgumentList $db,$confirmFile
