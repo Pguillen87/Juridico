@@ -48,7 +48,7 @@ VALUES
   ('81000000-0000-4000-c000-000000000003', '81000000-0000-4000-9000-000000000002', '81000000-0000-4000-b000-000000000002', '81000000000000000003', 'TJ-SYNTHETIC', 'Sandbox', true, 'paused', 'active', '81000000-0000-4000-8000-000000000001')
 ON CONFLICT (id) DO NOTHING;
 
-SELECT plan(36);
+SELECT plan(57);
 
 SELECT ok(has_table_privilege('authenticated', 'public.provider_exchange', 'SELECT'), 'authenticated can SELECT provider exchange through RLS');
 SELECT ok(not has_table_privilege('authenticated', 'public.provider_exchange', 'INSERT'), 'authenticated cannot INSERT provider exchange directly');
@@ -56,15 +56,46 @@ SELECT ok(not has_table_privilege('authenticated', 'public.provider_exchange', '
 SELECT ok(not has_table_privilege('authenticated', 'public.provider_exchange', 'DELETE'), 'authenticated cannot DELETE provider exchange directly');
 SELECT ok(not has_table_privilege('authenticated', 'public.raw_provider_payload', 'SELECT'), 'authenticated cannot SELECT raw payload directly');
 SELECT ok(not has_table_privilege('authenticated', 'public.raw_provider_payload', 'INSERT'), 'authenticated cannot INSERT raw payload directly');
-SELECT ok(has_function_privilege('authenticated', 'public.record_provider_exchange(uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'authenticated can execute controlled provider writer');
-SELECT ok(has_function_privilege('authenticated', 'public.get_provider_raw_payload(uuid)'::regprocedure, 'EXECUTE'), 'authenticated can execute protected raw reader');
+SELECT ok(not has_function_privilege('authenticated', 'public.record_provider_exchange(uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'authenticated cannot execute the public provider writer');
+SELECT ok(not has_function_privilege('anon', 'public.record_provider_exchange(uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'anon cannot execute the public provider writer');
+SELECT ok(not has_function_privilege('public', 'public.record_provider_exchange(uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'PUBLIC cannot execute the public provider writer');
+SELECT ok(not has_function_privilege('authenticated', 'public.get_provider_raw_payload(uuid)'::regprocedure, 'EXECUTE'), 'authenticated cannot execute the public raw reader');
+SELECT ok(not has_function_privilege('anon', 'public.get_provider_raw_payload(uuid)'::regprocedure, 'EXECUTE'), 'anon cannot execute the public raw reader');
+SELECT ok(not has_function_privilege('public', 'public.get_provider_raw_payload(uuid)'::regprocedure, 'EXECUTE'), 'PUBLIC cannot execute the public raw reader');
+SELECT ok(not has_function_privilege('service_role', 'public.record_provider_exchange(uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'service_role cannot execute the public provider writer');
+SELECT ok(not has_function_privilege('service_role', 'public.get_provider_raw_payload(uuid)'::regprocedure, 'EXECUTE'), 'service_role cannot execute the public raw reader');
+SELECT ok(has_function_privilege('service_role', 'public.record_provider_exchange_internal(uuid,uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'service_role can execute only the private provider writer');
+SELECT ok(has_function_privilege('service_role', 'public.get_provider_raw_payload_internal(uuid,uuid)'::regprocedure, 'EXECUTE'), 'service_role can execute only the private raw reader');
+SELECT ok(not has_function_privilege('authenticated', 'public.record_provider_exchange_internal(uuid,uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'authenticated cannot execute the private provider writer');
+SELECT ok(not has_function_privilege('anon', 'public.record_provider_exchange_internal(uuid,uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'anon cannot execute the private provider writer');
+SELECT ok(not has_function_privilege('public', 'public.record_provider_exchange_internal(uuid,uuid,text,text,integer,text,text,text,text,text,text,jsonb,jsonb,text,timestamptz)'::regprocedure, 'EXECUTE'), 'PUBLIC cannot execute the private provider writer');
+SELECT ok(not has_function_privilege('authenticated', 'public.get_provider_raw_payload_internal(uuid,uuid)'::regprocedure, 'EXECUTE'), 'authenticated cannot execute the private raw reader');
+SELECT ok(not has_function_privilege('anon', 'public.get_provider_raw_payload_internal(uuid,uuid)'::regprocedure, 'EXECUTE'), 'anon cannot execute the private raw reader');
+SELECT ok(not has_function_privilege('public', 'public.get_provider_raw_payload_internal(uuid,uuid)'::regprocedure, 'EXECUTE'), 'PUBLIC cannot execute the private raw reader');
 SELECT ok(not has_function_privilege('authenticated', 'public.write_provider_audit(text,text,uuid,jsonb)'::regprocedure, 'EXECUTE'), 'authenticated cannot execute internal provider audit helper');
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000001', true);
 
+SELECT throws_ok($$
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
+    '81000000-0000-4000-c000-000000000001',
+    'datajud_sandbox', 'datajud', 1,
+    '81000000000000000001', '81000000-0000-4000-a100-000000000000',
+    'synthetic-browser-fingerprint-000', 'observation', 'observed', NULL,
+    '{"kind":"observation","data":{"processRef":"81000000000000000001"}}'::jsonb,
+    '{"outcome":"observation","processRef":"81000000000000000001"}'::jsonb,
+    'provider-payload-v1', '2026-01-01T00:00:00Z'
+  )
+$$, '42501', NULL, 'authenticated cannot fabricate a provider exchange through the public RPC');
+
+RESET ROLE;
+SET LOCAL ROLE service_role;
+
 SELECT lives_ok($$
-  SELECT public.record_provider_exchange(
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
     '81000000-0000-4000-c000-000000000001',
     'datajud_sandbox', 'datajud', 1,
     '81000000000000000001', '81000000-0000-4000-a100-000000000001',
@@ -75,18 +106,24 @@ SELECT lives_ok($$
   )
 $$, 'lawyer records a synthetic public DataJud exchange and payload');
 
+RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), 1, 'one provider exchange is persisted');
 
-RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), 1, 'one raw payload is persisted');
 SELECT is((SELECT payload_hash FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), encode(extensions.digest(convert_to((SELECT payload::text FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), 'UTF8'), 'sha256'), 'hex'), 'raw payload hash matches stored bytes');
 SELECT is((SELECT payload_bytes FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), octet_length(convert_to((SELECT payload::text FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), 'UTF8')), 'raw payload byte length is consistent');
 SELECT is((SELECT count(*)::integer FROM public.audit_log WHERE action IN ('provider.exchange.recorded', 'provider.payload.recorded') AND entity_id IN ((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), (SELECT id FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))), 2, 'provider exchange and payload audit rows are both present');
 
+RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000001', true);
+SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'authenticated cannot read raw payload through the public RPC');
+SELECT throws_ok($$INSERT INTO public.raw_provider_payload(provider_exchange_id, office_id, process_id, provider_id, source, correlation_id, sanitization_version, payload, payload_hash, payload_bytes, received_at) VALUES (NULL, NULL, NULL, 'datajud_sandbox', 'datajud', 'browser-direct', 'provider-payload-v1', '{}'::jsonb, repeat('0', 64), 2, now())$$, '42501', NULL, 'authenticated cannot insert raw payload directly');
+RESET ROLE;
+SET LOCAL ROLE service_role;
 SELECT lives_ok($$
-  SELECT public.record_provider_exchange(
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
     '81000000-0000-4000-c000-000000000001',
     'datajud_sandbox', 'datajud', 1,
     '81000000000000000001', '81000000-0000-4000-a100-000000000001',
@@ -96,10 +133,13 @@ SELECT lives_ok($$
     'provider-payload-v1', '2026-01-01T00:00:00Z'
   )
 $$, 'identical replay is idempotent');
+RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'), 1, 'identical replay does not create a second exchange');
+SET LOCAL ROLE service_role;
 
 SELECT throws_ok($$
-  SELECT public.record_provider_exchange(
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
     '81000000-0000-4000-c000-000000000001', 'datajud_sandbox', 'datajud', 1,
     '99999999999999999999', '81000000-0000-4000-a100-000000000002',
     'synthetic-request-fingerprint-002', 'observation', 'observed', NULL,
@@ -109,7 +149,8 @@ SELECT throws_ok($$
   )
 $$, '23514', NULL, 'processRef mismatch is rejected');
 SELECT throws_ok($$
-  SELECT public.record_provider_exchange(
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
     '81000000-0000-4000-c000-000000000001', 'manual_observation', 'manual', 1,
     '81000000000000000001', '81000000-0000-4000-a100-000000000009',
     'synthetic-request-fingerprint-009', 'observation', 'observed', NULL,
@@ -120,8 +161,10 @@ SELECT throws_ok($$
 $$, '42501', NULL, 'manual provider entry remains blocked without D-022 action');
 
 SELECT throws_ok($$
-  SELECT public.record_provider_exchange(
-    '81000000-0000-4000-c000-000000000002', 'datajud_sandbox', 'datajud', 1,
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
+    '81000000-0000-4000-c000-000000000002',
+ 'datajud_sandbox', 'datajud', 1,
     '81000000000000000002', '81000000-0000-4000-a100-000000000003',
     'synthetic-request-fingerprint-003', 'observation', 'observed', NULL,
     '{"kind":"observation","changed":true}'::jsonb,
@@ -130,7 +173,8 @@ SELECT throws_ok($$
   )
 $$, '42501', NULL, 'sealed process is blocked before persistence');
 SELECT throws_ok($$
-  SELECT public.record_provider_exchange(
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
     '81000000-0000-4000-c000-000000000001', 'datajud_sandbox', 'datajud', 1,
     '81000000000000000001', '81000000-0000-4000-a100-000000000004',
     'synthetic-request-fingerprint-004', 'observation', 'observed', NULL,
@@ -140,7 +184,8 @@ SELECT throws_ok($$
   )
 $$, '22023', NULL, 'comparison or sensitive raw payload is rejected');
 SELECT throws_ok($$
-  SELECT public.record_provider_exchange(
+  SELECT public.record_provider_exchange_internal(
+    '81000000-0000-4000-8000-000000000001',
     '81000000-0000-4000-c000-000000000001', 'datajud_sandbox', 'datajud', 1,
     '81000000000000000001', '81000000-0000-4000-a100-000000000005',
     'synthetic-request-fingerprint-005', 'observation', 'observed', NULL,
@@ -150,42 +195,57 @@ SELECT throws_ok($$
   )
 $$, '22023', NULL, 'oversized raw payload is rejected');
 
-SELECT is((SELECT count(*)::integer FROM public.get_provider_raw_payload((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))), 1, 'lawyer can read raw payload through protected RPC');
+RESET ROLE;
+SELECT id AS phase8_exchange_id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001' \gset
+SET LOCAL ROLE service_role;
+SELECT is((SELECT count(*)::integer FROM public.get_provider_raw_payload_internal('81000000-0000-4000-8000-000000000001', :'phase8_exchange_id')), 1, 'backend lawyer can read raw payload through private RPC');
 
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000002', true);
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange WHERE office_id = '81000000-0000-4000-9000-000000000001'), 1, 'operator can view same-office exchange rows');
-SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'operator cannot read raw payload');
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload_internal('81000000-0000-4000-8000-000000000002', (SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'operator cannot read raw payload through backend RPC');
 
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000003', true);
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange), 1, 'reviewer sees same-office exchange but not cross-office');
-SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'reviewer cannot read raw payload');
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload_internal('81000000-0000-4000-8000-000000000003', (SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'reviewer cannot read raw payload through backend RPC');
 
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000004', true);
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange), 0, 'auditor has no operational exchange access');
-SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'auditor cannot read raw payload');
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload_internal('81000000-0000-4000-8000-000000000004', (SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'auditor cannot read raw payload through backend RPC');
 
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000005', true);
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange), 0, 'owner-auditor does not gain operational exchange access');
-SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload((SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'owner-auditor cannot read raw payload');
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT * FROM public.get_provider_raw_payload_internal('81000000-0000-4000-8000-000000000005', (SELECT id FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000001'))$$, '42501', NULL, 'owner-auditor cannot read raw payload through backend RPC');
 
 RESET ROLE;
-SET LOCAL ROLE authenticated;
-SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000006', true);
-SELECT throws_ok($$SELECT public.record_provider_exchange('81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000006','synthetic-request-fingerprint-006','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'inactive user cannot record exchange');
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000006','81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000006','synthetic-request-fingerprint-006','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'inactive user cannot record exchange');
 
 RESET ROLE;
-SET LOCAL ROLE authenticated;
-SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000007', true);
-SELECT throws_ok($$SELECT public.record_provider_exchange('81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000007','synthetic-request-fingerprint-007','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'inactive office user cannot record exchange');
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000007','81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000007','synthetic-request-fingerprint-007','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'inactive office user cannot record exchange');
 
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000001','81000000-0000-4000-c000-000000000003','datajud_sandbox','datajud',1,'81000000000000000003','81000000-0000-4000-a100-000000000010','synthetic-request-fingerprint-010','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'cross-office process is denied by backend RPC');
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000003','81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000011','synthetic-request-fingerprint-011','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'reviewer cannot write provider exchange');
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000004','81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000012','synthetic-request-fingerprint-012','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'auditor cannot write provider exchange');
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000005','81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000013','synthetic-request-fingerprint-013','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, '42501', NULL, 'owner-auditor cannot write provider exchange');
 RESET ROLE;
 
 CREATE OR REPLACE FUNCTION public.phase8_force_provider_audit_failure()
@@ -203,9 +263,9 @@ CREATE TRIGGER phase8_force_provider_audit_failure_trigger
 BEFORE INSERT ON public.audit_log
 FOR EACH ROW EXECUTE FUNCTION public.phase8_force_provider_audit_failure();
 
-SET LOCAL ROLE authenticated;
-SELECT set_config('request.jwt.claim.sub', '81000000-0000-4000-8000-000000000001', true);
-SELECT throws_ok($$SELECT public.record_provider_exchange('81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000008','synthetic-request-fingerprint-008','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, 'P0001', NULL, 'provider exchange rolls back when audit insert fails');
+SET LOCAL ROLE service_role;
+SELECT throws_ok($$SELECT public.record_provider_exchange_internal('81000000-0000-4000-8000-000000000001','81000000-0000-4000-c000-000000000001','datajud_sandbox','datajud',1,'81000000000000000001','81000000-0000-4000-a100-000000000008','synthetic-request-fingerprint-008','failure','not_found','datajud_not_found',NULL,NULL,NULL,'2026-01-01T00:00:00Z')$$, 'P0001', NULL, 'provider exchange rolls back when audit insert fails');
+RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.provider_exchange WHERE correlation_id = '81000000-0000-4000-a100-000000000008'), 0, 'audit failure leaves no provider exchange row');
 RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.raw_provider_payload WHERE correlation_id = '81000000-0000-4000-a100-000000000008'), 0, 'audit failure leaves no raw payload row');

@@ -2,9 +2,9 @@
 
 ## 1. Identificação e baseline
 
-A implementação foi realizada em workspace isolado, na branch `phase-8-datajud-manual`, derivada exclusivamente do HEAD final aprovado da Fase 7: `7cf007aed354b95efc1af547e0490be3bc7d0880`, branch `phase-7-provider-abstraction`. A branch `main` não foi usada como baseline nem modificada.
+A implementação foi realizada em workspace isolado, na branch `phase-8-datajud-manual`, derivada exclusivamente do HEAD final aprovado da Fase 7: `7cf007aed354b95efc1af547e0490be3bc7d0880`, branch `phase-7-provider-abstraction`. A branch `main` não foi usada como baseline nem modificada. O hardening incremental permanece nesta mesma branch e tem como parent o commit publicado da Fase 8 `e51849cc30033810aa62b74cfc486ac7a4aca370`.
 
-A Fase 8 foi deliberadamente limitada a **sandbox sintético**. Não foram usados processo real, número CNJ real, credencial real, chamada real ao DataJud, provider pago, processo sigiloso, produção, piloto, scheduler, fila, worker, snapshot ou comparação.
+A Fase 8 foi deliberadamente limitada a **sandbox sintético**. Não foram usados processo real, número CNJ real, credencial real, chamada real ao DataJud, provider pago, processo sigiloso, produção, piloto, scheduler, fila, worker, snapshot ou comparação. O caminho privilegiado é exclusivamente server-only: sessão real obtida no backend, actor derivado de `auth.getUser()`, `createAdminClient()` apenas no backend e RPC interna com `service_role`; nenhum segredo ou cliente administrativo é exposto ao browser.
 
 ## 2. Resultado funcional
 
@@ -22,13 +22,13 @@ A RPC repete a proteção no mesmo fluxo transacional, deriva ator e escritório
 
 ## 4. Persistência privada e auditoria
 
-Foi criada a migration incremental `20260826000009_phase_8_provider_payload.sql`, com as tabelas `provider_exchange` e `raw_provider_payload`. A troca persiste o contrato, status, código de erro, fingerprint de request, correlação, processo e escritório. O payload bruto é opcional e representa somente o payload sanitizado, não o body original recebido do transporte.
+A migration `20260826000009_phase_8_provider_payload.sql` criou as tabelas `provider_exchange` e `raw_provider_payload`; o corretivo incremental foi isolado em `20260826000010_phase_8_provider_backend_only.sql`, sem editar a migration publicada. A troca persiste o contrato, status, código de erro, fingerprint de request, correlação, processo e escritório. O payload bruto é opcional e representa somente o payload sanitizado, não o body original recebido do transporte.
 
 O sanitizador remove chaves sensíveis, rejeita valores com aparência de segredo, limita profundidade, quantidade de chaves e tamanho serializado, e calcula SHA-256 do JSON canônico. A tabela mantém `payload_hash`, `payload_bytes`, versão de sanitização e relação explícita com troca, processo e escritório. Triggers impedem alteração ou exclusão física; a política efetiva é append-only.
 
 O acesso direto de `authenticated`, `anon` e `PUBLIC` a INSERT, UPDATE e DELETE é revogado. SELECT de troca depende de RLS; payload bruto não é selecionável diretamente. A leitura bruta ocorre somente pela RPC protegida para advogado ativo do mesmo escritório. Operador, reviewer, auditor e owner sem role de advogado não recebem acesso operacional ao payload bruto.
 
-A RPC grava troca, payload e eventos `provider.exchange.recorded`/`provider.payload.recorded` no mesmo contexto transacional. Se a auditoria falha, toda a mutação é revertida. O helper `write_provider_audit` é fechado, allowlisted e sem EXECUTE direto para usuários autenticados.
+A RPC grava troca, payload e eventos `provider.exchange.recorded`/`provider.payload.recorded` no mesmo contexto transacional. Se a auditoria falha, toda a mutação é revertida. O helper `write_provider_audit` é fechado, allowlisted e sem EXECUTE direto para usuários autenticados. Na migration 00010, as RPCs públicas originais de persistência/leitura (`record_provider_exchange`, `get_provider_raw_payload` e preflight) perdem EXECUTE de `PUBLIC`, `anon`, `authenticated` e `service_role`; wrappers internas `*_internal` recebem EXECUTE somente de `service_role`, revalidam o actor no banco e reutilizam as validações transacionais existentes.
 
 A idempotência é garantida pela combinação de escritório, processo, provider, correlação e fingerprint. Replay idêntico devolve a troca existente sem duplicar payload ou auditoria; conflito de correlação com conteúdo diferente é rejeitado.
 
@@ -48,19 +48,19 @@ A validação local do workspace isolado passou nos seguintes gates:
 | TypeScript | Passou |
 | ESLint | Passou sem warnings pendentes nos arquivos da Fase 8 |
 | Prettier | Passou |
-| Vitest | 95 testes em 16 arquivos, todos passaram |
+| Vitest | 98 testes em 17 arquivos, todos passaram |
 | Next build | Passou com Next.js 16.3.1 |
 | Supabase DB lint | Passou sem erros de schema |
-| pgTAP da Fase 8 | 36 assertions, todas passaram |
+| pgTAP da Fase 8 | 57 assertions, todas passaram (`Files=1, Tests=57, Result: PASS`) |
 | Regressão pgTAP 01–10 | Arquivos executados individualmente e todos passaram |
 | Conferência de grants/RLS/atomicidade | Coberta no teste pgTAP da Fase 8 |
 | Conferência de segredo | Coberta por testes do sanitizador/configuração e assertions SQL |
 
-O runner agrupado de todos os arquivos pgTAP apresentou comportamento de espera no ambiente temporário; para não mascarar resultado, os arquivos legados e o arquivo da Fase 8 foram executados individualmente. Os testes concluídos individualmente passaram, incluindo os testes históricos 01 a 10 e a nova suíte 11.
+O runner agrupado de todos os arquivos pgTAP passou no ambiente temporário com exit code 0; a suíte 11 também foi executada isoladamente e registrou `Files=1, Tests=57, Result: PASS`. Os arquivos históricos 01 a 10 passaram na regressão cumulativa.
 
 ## 7. CI, rollback e parada
 
-O allowlist de push do App CI foi atualizado para incluir `phase-8-datajud-manual`. A migration é incremental e não altera migrations publicadas das Fases 5 ou 6. Rollback operacional consiste em impedir chamadas ao writer, desabilitar o modo de transporte e reverter a migration somente mediante migration reversa revisada; não há chamadas externas para interromper nem dados reais para remover nesta fase.
+O allowlist de push do App CI foi atualizado para incluir `phase-8-datajud-manual`. A migration 00010 é incremental, não altera migrations publicadas das Fases 5, 6 ou 00009 e não concede DML direto ao `service_role`; o privilégio backend fica restrito ao EXECUTE das wrappers internas. Rollback operacional consiste em impedir chamadas ao writer, desabilitar o modo de transporte e reverter a migration somente mediante migration reversa revisada; não há chamadas externas para interromper nem dados reais para remover nesta fase.
 
 A Fase 8 deve parar imediatamente antes de qualquer tentativa de: usar credencial real; consultar DataJud real; consultar processo ou carteira real; acessar processo sigiloso; ativar produção ou piloto; criar scheduler, fila, worker ou snapshot; implementar comparação; ou autorizar entrada manual sem ação explícita da D-022.
 

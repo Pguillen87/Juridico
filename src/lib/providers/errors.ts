@@ -25,6 +25,8 @@ export const PROVIDER_ERROR_CODES = [
   'datajud_process_not_eligible',
   'datajud_payload_sanitization_failed',
   'provider_persistence_failed',
+  'provider_backend_unauthorized',
+  'provider_backend_unavailable',
 ] as const;
 export type ProviderErrorCode = (typeof PROVIDER_ERROR_CODES)[number];
 

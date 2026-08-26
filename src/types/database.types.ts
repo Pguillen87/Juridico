@@ -901,6 +901,24 @@ export type Database = {
           source: string;
         }[];
       };
+      get_provider_raw_payload_internal: {
+        Args: { p_actor_user_id: string; p_exchange_id: string };
+        Returns: {
+          correlation_id: string;
+          created_at: string;
+          id: string;
+          office_id: string;
+          payload: Json;
+          payload_bytes: number;
+          payload_hash: string;
+          process_id: string;
+          provider_exchange_id: string;
+          provider_id: string;
+          received_at: string;
+          sanitization_version: string;
+          source: string;
+        }[];
+      };
       normalize_cnj: { Args: { p_cnj: string }; Returns: string };
       phase6_validate_import_rows: {
         Args: { p_office_id: string; p_rows: Json };
@@ -955,6 +973,26 @@ export type Database = {
         };
         Returns: string;
       };
+      record_provider_exchange_internal: {
+        Args: {
+          p_actor_user_id: string;
+          p_contract_version: number;
+          p_correlation_id: string;
+          p_error_code?: string;
+          p_normalized_result?: Json;
+          p_process_id: string;
+          p_provider_id: string;
+          p_raw_payload?: Json;
+          p_received_at?: string;
+          p_request_fingerprint: string;
+          p_result_kind: string;
+          p_result_status: string;
+          p_sanitization_version?: string;
+          p_source: string;
+          p_subject_ref: string;
+        };
+        Returns: string;
+      };
       record_rejection_audit_internal: {
         Args: {
           p_action: string;
@@ -991,8 +1029,21 @@ export type Database = {
           actor_role: Database['public']['Enums']['user_role'];
         }[];
       };
+      require_provider_actor: {
+        Args: { p_actor_user_id: string };
+        Returns: {
+          actor_id: string;
+          actor_is_owner: boolean;
+          actor_office_id: string;
+          actor_role: Database['public']['Enums']['user_role'];
+        }[];
+      };
       require_provider_process_eligible: {
         Args: { p_process_id: string };
+        Returns: undefined;
+      };
+      require_provider_process_eligible_internal: {
+        Args: { p_actor_user_id: string; p_process_id: string };
         Returns: undefined;
       };
       set_user_active: {

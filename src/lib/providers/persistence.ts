@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 import {
   createDataJudProvider,
@@ -65,12 +66,52 @@ type ProviderExchangeRpcArgs = {
 type RpcClient = {
   rpc: (
     functionName: string,
-    args:
-      | ProviderExchangeRpcArgs
-      | { p_exchange_id: string }
-      | { p_process_id: string }
+    args: Record<string, unknown>
   ) => Promise<{ data: unknown; error: { message: string } | null }>;
 };
+
+async function getAuthenticatedActorId(): Promise<string | null> {
+  try {
+    const sessionClient = await createClient();
+    const { data, error } = await sessionClient.auth.getUser();
+    if (error || !data.user?.id) return null;
+    return data.user.id;
+  } catch {
+    return null;
+  }
+}
+
+function backendFailure(
+  request: ProviderRequestV1,
+  provider: ReturnType<typeof createDataJudProvider>,
+  errorCode: 'provider_backend_unauthorized' | 'provider_backend_unavailable'
+): ProviderFailureV1 {
+  return {
+    kind: 'failure',
+    status: 'technical_failure',
+    provider: {
+      providerId: provider.descriptor.providerId,
+      providerKind: provider.descriptor.providerKind,
+      adapterVersion: provider.descriptor.adapterVersion,
+      contractVersion: provider.descriptor.contractVersion,
+    },
+    source: 'datajud',
+    contractVersion: PROVIDER_CONTRACT_VERSION,
+    capability: request.capability,
+    errorCode,
+    message: sanitizeProviderMessage('technical_failure'),
+    ...failurePolicy('technical_failure'),
+    sourceMetadata: {
+      sourceType: 'datajud',
+      providerId: provider.descriptor.providerId,
+      adapterVersion: provider.descriptor.adapterVersion,
+      contractVersion: PROVIDER_CONTRACT_VERSION,
+      observedAt: request.requestedAt,
+      durationMs: 0,
+    },
+    correlationId: request.correlationId,
+  };
+}
 
 function resultRpcArgs(
   processId: string,
@@ -103,15 +144,19 @@ function resultRpcArgs(
 }
 
 async function persistExecution(
+  supabase: RpcClient,
+  actorUserId: string,
   processId: string,
   request: ProviderRequestV1,
   execution: DataJudExecution,
   sanitizedPayload: ReturnType<typeof sanitizeRawProviderPayload> | null
 ): Promise<{ exchangeId: string } | { failure: ProviderFailureV1 }> {
-  const supabase = (await createClient()) as unknown as RpcClient;
   const { data, error } = await supabase.rpc(
-    'record_provider_exchange',
-    resultRpcArgs(processId, request, execution, sanitizedPayload)
+    'record_provider_exchange_internal',
+    {
+      p_actor_user_id: actorUserId,
+      ...resultRpcArgs(processId, request, execution, sanitizedPayload),
+    }
   );
   if (error || typeof data !== 'string') {
     return {
@@ -134,10 +179,29 @@ export async function observeDataJudAndPersist(
   readonly result: ProviderResultV1;
 }> {
   const provider = createDataJudProvider(transport);
-  const supabase = (await createClient()) as unknown as RpcClient;
+  const actorUserId = await getAuthenticatedActorId();
+  if (!actorUserId) {
+    return {
+      result: backendFailure(
+        request,
+        provider,
+        'provider_backend_unauthorized'
+      ),
+    };
+  }
+
+  let supabase: RpcClient;
+  try {
+    supabase = createAdminClient() as unknown as RpcClient;
+  } catch {
+    return {
+      result: backendFailure(request, provider, 'provider_backend_unavailable'),
+    };
+  }
+
   const { error: preflightError } = await supabase.rpc(
-    'require_provider_process_eligible',
-    { p_process_id: processId }
+    'require_provider_process_eligible_internal',
+    { p_actor_user_id: actorUserId, p_process_id: processId }
   );
   if (preflightError) {
     return {
@@ -183,6 +247,8 @@ export async function observeDataJudAndPersist(
         result: sanitizationFailure,
       };
       const fallback = await persistExecution(
+        supabase,
+        actorUserId,
         processId,
         request,
         fallbackExecution,
@@ -194,6 +260,8 @@ export async function observeDataJudAndPersist(
   }
 
   const persisted = await persistExecution(
+    supabase,
+    actorUserId,
     processId,
     request,
     execution,
@@ -206,10 +274,23 @@ export async function observeDataJudAndPersist(
 export async function getProviderRawPayload(
   exchangeId: string
 ): Promise<unknown> {
-  const supabase = (await createClient()) as unknown as RpcClient;
-  const { data, error } = await supabase.rpc('get_provider_raw_payload', {
-    p_exchange_id: exchangeId,
-  });
+  const actorUserId = await getAuthenticatedActorId();
+  if (!actorUserId) {
+    throw new Error('Não foi possível acessar a evidência bruta autorizada.');
+  }
+  let supabase: RpcClient;
+  try {
+    supabase = createAdminClient() as unknown as RpcClient;
+  } catch {
+    throw new Error('Não foi possível acessar a evidência bruta autorizada.');
+  }
+  const { data, error } = await supabase.rpc(
+    'get_provider_raw_payload_internal',
+    {
+      p_actor_user_id: actorUserId,
+      p_exchange_id: exchangeId,
+    }
+  );
   if (error) {
     throw new Error('Não foi possível acessar a evidência bruta autorizada.');
   }
