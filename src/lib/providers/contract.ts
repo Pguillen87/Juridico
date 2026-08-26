@@ -37,12 +37,22 @@ export type ProviderOperation = 'observe_process';
 
 export type ProviderRole = 'lawyer' | 'operator' | 'reviewer' | 'auditor';
 
-export interface ProviderExecutionContext {
-  readonly actorUserId: string;
-  readonly officeId: string;
-  readonly role: ProviderRole;
-  readonly isOwner: boolean;
-}
+export type ProviderExecutionContext =
+  | {
+      readonly kind: 'user';
+      readonly actorUserId: string;
+      readonly officeId: string;
+      readonly role: ProviderRole;
+      readonly isOwner: boolean;
+    }
+  | {
+      readonly kind: 'system';
+      readonly actorUserId: null;
+      readonly officeId: string;
+      readonly role: null;
+      readonly isOwner: false;
+      readonly workerId: string;
+    };
 
 export interface ProviderRequestV1 {
   readonly contractVersion: typeof PROVIDER_CONTRACT_VERSION;

@@ -80,6 +80,27 @@ export class ProviderRegistry {
   }
 }
 
+export type ProviderExecutionWithPayload = {
+  readonly result: ProviderResultV1;
+  readonly rawPayload?: unknown;
+};
+
+type PayloadCapableProvider = ProviderAdapter & {
+  observeWithPayload(
+    request: ProviderRequestV1,
+    input?: unknown
+  ): Promise<ProviderExecutionWithPayload>;
+};
+
+function supportsPayload(
+  provider: ProviderAdapter
+): provider is PayloadCapableProvider {
+  return (
+    'observeWithPayload' in provider &&
+    typeof provider.observeWithPayload === 'function'
+  );
+}
+
 export class ProviderGateway {
   constructor(private readonly registry: ProviderRegistry) {}
 
@@ -117,5 +138,60 @@ export class ProviderGateway {
       request,
       provider.descriptor
     );
+  }
+
+  async observeWithPayload(
+    providerId: string,
+    request: ProviderRequestV1,
+    input?: unknown
+  ): Promise<ProviderExecutionWithPayload> {
+    const provider = this.registry.getProvider(providerId);
+    if (!provider) {
+      return {
+        result: providerFailure(
+          {
+            providerId: 'unknown',
+            providerKind: 'unknown',
+            displayName: 'Provider não registrado',
+            adapterVersion: 'unknown',
+            contractVersion: PROVIDER_CONTRACT_VERSION,
+            capabilities: [],
+          },
+          request,
+          'not_supported',
+          'provider_not_registered'
+        ),
+      };
+    }
+    if (!provider.descriptor.capabilities.includes(request.capability)) {
+      return {
+        result: providerFailure(
+          provider.descriptor,
+          request,
+          'not_supported',
+          'capability_not_supported'
+        ),
+      };
+    }
+    if (!supportsPayload(provider)) {
+      return {
+        result: assertProviderResult(
+          await provider.observe(request, input),
+          request,
+          provider.descriptor
+        ),
+      };
+    }
+    const execution = await provider.observeWithPayload(request, input);
+    return {
+      result: assertProviderResult(
+        execution.result,
+        request,
+        provider.descriptor
+      ),
+      ...(execution.rawPayload !== undefined
+        ? { rawPayload: execution.rawPayload }
+        : {}),
+    };
   }
 }

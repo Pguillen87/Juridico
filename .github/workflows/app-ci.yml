@@ -13,6 +13,7 @@ on:
         phase-6-processes-csv,
         phase-7-provider-abstraction,
         phase-8-datajud-manual,
+        phase-9-scheduler-queue-snapshots,
       ]
   pull_request:
     branches: [main]

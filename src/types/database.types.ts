@@ -284,6 +284,105 @@ export type Database = {
           },
         ];
       };
+      monitoring_configuration: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          office_id: string;
+          timezone: string;
+          updated_at: string;
+          version: number;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          office_id: string;
+          timezone: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          office_id?: string;
+          timezone?: string;
+          updated_at?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'monitoring_configuration_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'monitoring_configuration_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      monitoring_schedule: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          days_of_week: number[];
+          id: string;
+          local_time: string;
+          monitoring_configuration_id: string;
+          office_id: string;
+          timezone: string;
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          days_of_week: number[];
+          id?: string;
+          local_time: string;
+          monitoring_configuration_id: string;
+          office_id: string;
+          timezone: string;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          days_of_week?: number[];
+          id?: string;
+          local_time?: string;
+          monitoring_configuration_id?: string;
+          office_id?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'monitoring_schedule_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'monitoring_schedule_office_id_monitoring_configuration_id_fkey';
+            columns: ['office_id', 'monitoring_configuration_id'];
+            isOneToOne: false;
+            referencedRelation: 'monitoring_configuration';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
       office: {
         Row: {
           created_at: string;
@@ -503,6 +602,73 @@ export type Database = {
           },
         ];
       };
+      process_snapshot: {
+        Row: {
+          created_at: string;
+          evidence_ref: string | null;
+          id: string;
+          missing_fields: Json;
+          normalized_data: Json;
+          normalizer_version: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          query_execution_id: string;
+          snapshot_hash: string;
+          source: string;
+        };
+        Insert: {
+          created_at?: string;
+          evidence_ref?: string | null;
+          id?: string;
+          missing_fields?: Json;
+          normalized_data: Json;
+          normalizer_version: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          query_execution_id: string;
+          snapshot_hash: string;
+          source: string;
+        };
+        Update: {
+          created_at?: string;
+          evidence_ref?: string | null;
+          id?: string;
+          missing_fields?: Json;
+          normalized_data?: Json;
+          normalizer_version?: string;
+          office_id?: string;
+          process_id?: string;
+          provider_id?: string;
+          query_execution_id?: string;
+          snapshot_hash?: string;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_snapshot_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_snapshot_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_snapshot_office_id_query_execution_id_fkey';
+            columns: ['office_id', 'query_execution_id'];
+            isOneToOne: true;
+            referencedRelation: 'query_execution';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
       provider_exchange: {
         Row: {
           contract_version: number;
@@ -562,6 +728,195 @@ export type Database = {
           },
           {
             foreignKeyName: 'provider_exchange_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      query_execution: {
+        Row: {
+          attempt_number: number;
+          capability: string;
+          correlation_id: string;
+          created_at: string;
+          duration_ms: number | null;
+          error_code: string | null;
+          error_message_sanitized: string | null;
+          finished_at: string | null;
+          http_status: number | null;
+          id: string;
+          office_id: string;
+          process_id: string;
+          provider_exchange_id: string | null;
+          provider_id: string;
+          query_job_id: string;
+          started_at: string;
+          status: string;
+        };
+        Insert: {
+          attempt_number: number;
+          capability: string;
+          correlation_id: string;
+          created_at?: string;
+          duration_ms?: number | null;
+          error_code?: string | null;
+          error_message_sanitized?: string | null;
+          finished_at?: string | null;
+          http_status?: number | null;
+          id?: string;
+          office_id: string;
+          process_id: string;
+          provider_exchange_id?: string | null;
+          provider_id: string;
+          query_job_id: string;
+          started_at?: string;
+          status?: string;
+        };
+        Update: {
+          attempt_number?: number;
+          capability?: string;
+          correlation_id?: string;
+          created_at?: string;
+          duration_ms?: number | null;
+          error_code?: string | null;
+          error_message_sanitized?: string | null;
+          finished_at?: string | null;
+          http_status?: number | null;
+          id?: string;
+          office_id?: string;
+          process_id?: string;
+          provider_exchange_id?: string | null;
+          provider_id?: string;
+          query_job_id?: string;
+          started_at?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'query_execution_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'query_execution_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'query_execution_office_id_provider_exchange_id_fkey';
+            columns: ['office_id', 'provider_exchange_id'];
+            isOneToOne: false;
+            referencedRelation: 'provider_exchange';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'query_execution_office_id_query_job_id_fkey';
+            columns: ['office_id', 'query_job_id'];
+            isOneToOne: false;
+            referencedRelation: 'query_job';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      query_job: {
+        Row: {
+          attempt_count: number;
+          available_at: string;
+          capability: string;
+          correlation_id: string;
+          created_at: string;
+          created_by: string | null;
+          finished_at: string | null;
+          id: string;
+          idempotency_key: string;
+          job_kind: string;
+          last_error_code: string | null;
+          last_error_message: string | null;
+          lease_expires_at: string | null;
+          lease_token: string | null;
+          locked_by: string | null;
+          max_attempts: number;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          scheduled_window_utc: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          attempt_count?: number;
+          available_at?: string;
+          capability: string;
+          correlation_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          idempotency_key: string;
+          job_kind: string;
+          last_error_code?: string | null;
+          last_error_message?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          locked_by?: string | null;
+          max_attempts?: number;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          scheduled_window_utc?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          attempt_count?: number;
+          available_at?: string;
+          capability?: string;
+          correlation_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          job_kind?: string;
+          last_error_code?: string | null;
+          last_error_message?: string | null;
+          lease_expires_at?: string | null;
+          lease_token?: string | null;
+          locked_by?: string | null;
+          max_attempts?: number;
+          office_id?: string;
+          process_id?: string;
+          provider_id?: string;
+          request_fingerprint?: string;
+          scheduled_window_utc?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'query_job_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'query_job_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'query_job_office_id_process_id_fkey';
             columns: ['office_id', 'process_id'];
             isOneToOne: false;
             referencedRelation: 'legal_process';
@@ -923,6 +1278,118 @@ export type Database = {
       phase6_validate_import_rows: {
         Args: { p_office_id: string; p_rows: Json };
         Returns: undefined;
+      };
+      phase9_claim_query_job: {
+        Args: { p_lease_duration_ms?: number; p_worker_id: string };
+        Returns: {
+          attempt_number: number;
+          capability: string;
+          correlation_id: string;
+          execution_id: string;
+          job_id: string;
+          job_kind: string;
+          lease_expires_at: string;
+          lease_token: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          subject_ref: string;
+        }[];
+      };
+      phase9_complete_query_execution: {
+        Args: {
+          p_duration_ms?: number;
+          p_error_code?: string;
+          p_execution_id: string;
+          p_http_status?: number;
+          p_job_id: string;
+          p_lease_token: string;
+          p_normalized_result?: Json;
+          p_raw_payload?: Json;
+          p_received_at?: string;
+          p_result_kind: string;
+          p_result_status: string;
+          p_retry_after_ms?: number;
+          p_sanitization_version?: string;
+        };
+        Returns: {
+          exchange_id: string;
+          execution_id: string;
+          job_id: string;
+          job_status: string;
+          next_attempt_at: string;
+          snapshot_id: string;
+        }[];
+      };
+      phase9_recover_expired_query_jobs: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      phase9_renew_query_job_lease: {
+        Args: {
+          p_execution_id: string;
+          p_job_id: string;
+          p_lease_duration_ms?: number;
+          p_lease_token: string;
+        };
+        Returns: boolean;
+      };
+      phase9_request_manual_reprocess: {
+        Args: { p_failed_job_id: string; p_idempotency_key: string };
+        Returns: string;
+      };
+      phase9_scheduler_tick: {
+        Args: { p_as_of: string; p_window_tolerance_seconds?: number };
+        Returns: number;
+      };
+      phase9_set_process_monitoring_status: {
+        Args: { p_process_id: string; p_status: string };
+        Returns: undefined;
+      };
+      phase9_timezone_is_valid: {
+        Args: { p_timezone: string };
+        Returns: boolean;
+      };
+      phase9_upsert_monitoring_configuration: {
+        Args: {
+          p_active: boolean;
+          p_office_id: string;
+          p_timezone: string;
+          p_version: number;
+        };
+        Returns: string;
+      };
+      phase9_upsert_monitoring_schedule: {
+        Args: {
+          p_active: boolean;
+          p_configuration_id: string;
+          p_days_of_week: number[];
+          p_local_time: string;
+          p_timezone: string;
+        };
+        Returns: string;
+      };
+      phase9_write_system_audit: {
+        Args: {
+          p_action: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_metadata: Json;
+          p_office_id: string;
+          p_origin: string;
+          p_worker_id?: string;
+        };
+        Returns: number;
+      };
+      phase9_write_user_audit: {
+        Args: {
+          p_action: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_metadata?: Json;
+        };
+        Returns: number;
       };
       preview_process_import: {
         Args: {

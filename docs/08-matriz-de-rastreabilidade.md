@@ -25,25 +25,25 @@
 | O-001 | RF-004 | US-008 | `legal_process` | Validador/API/UI | 6 | T-008 CNJ | Validador universal, dígitos verificadores, CNJ canônico, unit, pgTAP e E2E | Implemented/Tested |
 | O-005 | RF-003 | US-009 | `process_party` | Vínculos/API/UI | 6 | T-009 N:N | Relação N:N real, sempre pending na criação, IDs/RLS, pgTAP e E2E | Implemented/Tested |
 | O-005 | RF-003 | US-010 | `process_party`, `audit_log` | Vínculos/API/UI | 6 | T-010 confirmation | Confirm/reject somente lawyer, transição terminal, auditoria atômica, pgTAP, concorrência e E2E | Implemented/Tested |
-| O-001 | RF-004 | US-011 | `legal_process.monitoring_status` | Monitoramento | 6 | T-011 activation | Estado estrutural `paused`, UI transparente, sem provider/scheduler/job | Partial/Deferred |
-| O-001 | RF-006 | US-012 | `query_job` | Queue/API | 9 | T-012 manual query | Job idempotente | Planned |
-| O-001 | RF-006 | US-013 | `monitoring_schedule`, `query_job` | Scheduler | 9 | T-013 schedule | Relógio controlado | Planned |
-| O-002 | RF-006 | US-014 | `provider`, `query_execution` | DataJudProvider | 1,7–8 | T-014 contract | Fixture/PoC | Planned |
-| O-002 | RF-006 | US-015 | `provider`, `query_execution` | ManualProvider | 7–8 | T-015 manual provider | Registro de fonte | Planned |
-| O-002 | RF-007 | US-016 | `raw_provider_payload` | Storage | 8–9 | T-016 raw payload | Hash/sanitização | Planned |
-| O-002 | RF-007 | US-017 | `process_snapshot` | Normalizador | 7–10 | T-017 normalize | Fixtures | Planned |
-| O-002 | RF-007 | US-018 | `process_snapshot` | Snapshot | 9 | T-018 snapshot | Hash estável | Planned |
+| O-001 | RF-004 | US-011 | `legal_process.monitoring_status` | Monitoramento | 6,9 | T-011 activation | RPC `manage_monitoring`, processo público/ativo, auditoria e sandbox sem seed ativo | Implemented/Tested — sandbox only |
+| O-001 | RF-006 | US-012 | `query_job` | Queue/API | 9 | T-012 manual query | Infraestrutura de job existe, mas não há endpoint browser de consulta manual | Partial/Deferred — US-012 requer decisão específica |
+| O-001 | RF-006 | US-013 | `monitoring_schedule`, `query_job` | Scheduler | 9 | T-013 schedule | Tick determinístico, timezone IANA, janela UTC e idempotência | Implemented/Tested — sandbox only |
+| O-002 | RF-006 | US-014 | `provider`, `query_execution` | DataJudProvider | 1,7–9 | T-014 contract | Provider fake, gateway com payload, worker sandbox e falhas classificadas | Implemented/Tested — sem transporte real |
+| O-002 | RF-006 | US-015 | `provider`, `query_execution` | ManualProvider | 7–9 | T-015 manual provider | Fonte manual distinta, sem fallback automático ou entrada de resultado | Partial/Deferred — D-022 não autoriza `manual_provider_entry` |
+| O-002 | RF-007 | US-016 | `raw_provider_payload` | Storage | 8–9 | T-016 raw payload | Hash/sanitização, relação indireta por execution e atomicidade | Implemented/Tested — storage privado |
+| O-002 | RF-007 | US-017 | `process_snapshot` | Normalizador | 7–9 | T-017 normalize | Dados normalizados, missing fields e snapshot somente de observation | Implemented/Tested — comparação futura fora |
+| O-002 | RF-007 | US-018 | `process_snapshot` | Snapshot | 9 | T-018 snapshot | Um snapshot imutável por execução, hash canônico e provenance | Implemented/Tested — sandbox only |
 | O-002 | RF-007 | US-019 | `process_snapshot` | Comparador | 10 | T-019 baseline | Resultado esperado | Planned |
 | O-003 | RF-008 | US-020 | `process_movement` | Deduplicação | 10 | T-020 dedupe movement | Constraint/hash | Planned |
 | O-002 | RF-008 | US-021 | `detected_change` | Comparador | 10 | T-021 change | Fingerprint | Planned |
 | O-003 | RF-008 | US-022 | `query_execution` | Comparador/UI | 10 | T-022 unchanged | Estado exibido | Planned |
-| O-003 | RF-009 | US-023 | `query_execution` | Failure center | 9,11 | T-023 source unavailable | Estado e ação | Planned |
-| O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker | 9,11 | T-024 timeout | Lock liberado | Planned |
-| O-003 | RF-009 | US-025 | `query_job` | Retry | 9,11 | T-025 rate limit | Backoff | Planned |
-| O-003 | RF-009 | US-026 | `query_execution` | Failure center | 8,11 | T-026 not found | Relatório | Planned |
-| O-003 | RF-009 | US-027 | `provider_capability` | Provider | 7,11 | T-027 unsupported | Sem consulta | Planned |
-| O-003 | RF-009 | US-028 | `query_execution` | Failure center | 11 | T-028 failure center | Filtros | Planned |
-| O-003 | RF-009 | US-029 | `query_job` | Queue/API | 9,11 | T-029 reprocess | Auditoria | Planned |
+| O-003 | RF-009 | US-023 | `query_execution` | Failure center | 9,11 | T-023 source unavailable | `source_unavailable` persistido, retry limitado e mensagem sanitizada | Implemented/Tested — central UI futura |
+| O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker | 9,11 | T-024 timeout | Claim, lease, recovery, token anti-stale e conclusão server-only | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-025 | `query_job` | Retry | 9,11 | T-025 rate limit | Máximo de três tentativas, backoff/teto e terminalização | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-026 | `query_execution` | Failure center | 8,11 | T-026 not found | `not_found` terminal explícito, sem snapshot e sem `unchanged` | Implemented/Tested — persistência sandbox; UI futura |
+| O-003 | RF-009 | US-027 | `provider_capability` | Provider | 7,9,11 | T-027 unsupported | Capability/provider allowlisted; incompatibilidade não chama provider | Implemented/Tested — sandbox |
+| O-003 | RF-009 | US-028 | `query_execution` | Failure center | 11 | T-028 failure center | Estados e códigos persistidos para futura central, sem UI nova nesta fase | Partial/Deferred — UI futura |
+| O-003 | RF-009 | US-029 | `query_job` | Queue/API | 9,11 | T-029 reprocess | RPC permanece sem EXECUTE público enquanto a autorização específica não estiver fechada | Partial/Deferred — sem endpoint |
 | O-004 | RF-010 | US-030 | `notification` | EmailProvider | 11 | T-030 email sandbox | Mensagem | Planned |
 | O-004 | RF-008 | US-031 | `notification` | Idempotência | 11 | T-031 dedupe notification | Chave única | Planned |
 | O-004 | RF-011 | US-032 | `weekly_report` | Scheduler/Reports | 12 | T-032 weekly | Período | Planned |
@@ -128,7 +128,24 @@ O backend realiza preflight DB-side para impedir consulta automática quando o p
 
 A configuração de segredo registra apenas estado `absent`/`present`; nenhum valor de credencial é retornado, persistido ou incluído em logs, erros ou fixtures. A sanitização remove chaves sensíveis, rejeita valores de segredo, limita tamanho/profundidade e calcula SHA-256 sobre JSON canônico. O armazenamento de `raw_provider_payload` é privado, referenciado por `office_id`, protegido por hash/bytes, trigger de integridade e triggers append-only. O `service_role` não recebe DML direto nas tabelas; atua somente via EXECUTE mínimo das wrappers internas, com `search_path` fixo e revalidação DB-side do actor.
 
-Não foram criados `query_job`, `query_execution`, scheduler, fila, worker, snapshot, comparação, `detected_change`, UI de entrada manual ou integração real. A entrada manual operacional continua bloqueada até que a D-022 possua uma ação explícita e uma decisão humana aprovada.
+Na Fase 8 não foram criados `query_job`, `query_execution`, scheduler, fila, worker, snapshot, comparação, `detected_change`, UI de entrada manual ou integração real. A entrada manual operacional continua bloqueada até que a D-022 possua uma ação explícita e uma decisão humana aprovada.
+
+## Evidência da Fase 9 — Scheduler, fila, worker e snapshots
+
+A Fase 9 foi implementada somente em sandbox sintético a partir do commit `9246583b799a2d5a6e207e3fc7b9944a64a019be` da branch `phase-8-datajud-manual`. A branch de implementação é `phase-9-scheduler-queue-snapshots`; nenhuma alteração foi feita em `main`. A infraestrutura usa fila PostgreSQL/Supabase, RPCs internas com `SECURITY DEFINER`, `search_path` fixo e `EXECUTE` somente para `service_role`; o navegador não cria jobs privilegiados, não reivindica leases e não executa worker.
+
+| Objetivo | Componente | Evidência | Status |
+|---|---|---|---|
+| Monitoramento autorizado | `phase9_set_process_monitoring_status` e `manage_monitoring` | Processo público/ativo, actor/office/role revalidados no banco, auditoria atômica; nenhum seed ativo | Implemented/Tested |
+| Scheduler | `monitoring_configuration`, `monitoring_schedule`, `phase9_scheduler_tick` | Tick UTC controlado, timezone IANA, janela `08:00/13:00/18:00` em fixtures e chave idempotente | Implemented/Tested |
+| Fila e claim | `query_job`, `phase9_claim_query_job`, leases | `FOR UPDATE SKIP LOCKED`, tentativa única por claim, lease expirável e token anti-stale | Implemented/Tested |
+| Execução | `query_execution`, `phase9_complete_query_execution` | Uma linha por tentativa, revalidação de processo público/ativo e conclusão curta/transacional | Implemented/Tested |
+| Snapshot | `process_snapshot` | Snapshot somente para observation, hash canônico, vínculo obrigatório a execution e triggers de imutabilidade | Implemented/Tested |
+| Falhas e retry | worker/recovery e classificação SQL | 429/timeout/source unavailable retryáveis até três tentativas; `not_found`/`not_supported`/schema inválido terminais | Implemented/Tested |
+| Auditoria sistêmica | `phase9_write_system_audit` | `actor_user_id=NULL`, origem allowlisted `system_scheduler`/`system_worker`, `worker_id` opaco, metadata allowlisted | Implemented/Tested |
+| ManualProvider | registry existente | Sem fallback automático e sem `manual_provider_entry`; US-012/US-029 não ganham endpoint novo | Bloqueado/Deferred |
+
+A suíte `12_phase_9_scheduler_queue_snapshots.test.sql` cobre 36 assertions de grants, RLS, ativação D-022, scheduler idempotente, claim, concorrência de lease, conclusão com exchange/payload/snapshot, recovery, stale worker e retry terminal. Comparação, `changed`, `unchanged`, notificações e produção permanecem fora da Fase 9.
 
 ## Fechamento factual da Fase 8
 

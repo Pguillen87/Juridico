@@ -7,6 +7,7 @@ import {
   createProcessPartyAction,
   deactivateProcessPartyAction,
   rejectProcessPartyAction,
+  setProcessMonitoringStatusAction,
 } from './actions';
 import { ImportCsvForm } from './import-csv-form';
 
@@ -37,6 +38,8 @@ export default async function ProcessesPage() {
   const { profile } = await requirePermission('view_operational_data');
   const canMutate = profile.role === 'lawyer' || profile.role === 'operator';
   const canConfirm = profile.role === 'lawyer';
+  const canManageMonitoring =
+    profile.role === 'lawyer' || profile.role === 'operator';
   const supabase = await createClient();
   const [
     { data: clients, error: clientsError },
@@ -112,8 +115,9 @@ export default async function ProcessesPage() {
           </h1>
           <p className="mt-2 max-w-3xl text-slate-600">
             Cadastre processos com CNJ canônico, associe partes por ID e revise
-            vínculos pendentes. Nesta fase, monitoramento permanece pausado;
-            nenhuma consulta externa é executada.
+            vínculos pendentes. O monitoramento sandbox só pode ser ativado por
+            lawyer/operator para processos públicos e ativos; nenhuma consulta
+            externa é executada.
           </p>
         </header>
 
@@ -207,9 +211,11 @@ export default async function ProcessesPage() {
         ) : null}
 
         <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
-          <strong>Monitoramento nesta fase:</strong> processos são criados com
-          estado <code>paused</code>. Não há provider, scheduler, fila ou ação
-          de ativação real. A US-011 permanece parcial/deferida.
+          <strong>Monitoramento sandbox:</strong> processos são criados com
+          estado <code>paused</code>. A ativação só é permitida para processos
+          públicos e ativos, é revalidada no PostgreSQL e apenas agenda a fila
+          sintética; o provider e o worker continuam server-only e nenhum
+          endpoint externo é chamado.
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -254,6 +260,44 @@ export default async function ProcessesPage() {
                       <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
                         Monitoramento: {process.monitoring_status}
                       </p>
+                      {canManageMonitoring && process.status === 'active' ? (
+                        <form
+                          action={async (formData) => {
+                            'use server';
+                            await setProcessMonitoringStatusAction(formData);
+                          }}
+                          className="mt-3 flex flex-wrap items-center gap-2"
+                        >
+                          <input
+                            type="hidden"
+                            name="processId"
+                            value={process.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="status"
+                            value={
+                              process.monitoring_status === 'active'
+                                ? 'paused'
+                                : 'active'
+                            }
+                          />
+                          <button
+                            className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            type="submit"
+                            disabled={
+                              process.monitoring_status !== 'active' &&
+                              !process.is_public
+                            }
+                          >
+                            {process.monitoring_status === 'active'
+                              ? 'Pausar monitoramento'
+                              : process.is_public
+                                ? 'Ativar monitoramento sandbox'
+                                : 'Ativação bloqueada: processo sigiloso'}
+                          </button>
+                        </form>
+                      ) : null}
                     </div>
                   </div>
 

@@ -32,6 +32,7 @@ function request(): ProviderRequestV1 {
     correlationId: 'synthetic-correlation-backend-001',
     requestedAt: '2026-01-01T00:00:00.000Z',
     executionContext: {
+      kind: 'user',
       actorUserId: 'synthetic-actor-001',
       officeId: 'synthetic-office-001',
       role: 'lawyer',

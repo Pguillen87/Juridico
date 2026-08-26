@@ -31,6 +31,7 @@ function request(
     correlationId: 'synthetic-datajud-correlation-001',
     requestedAt: '2026-01-01T00:00:00.000Z',
     executionContext: {
+      kind: 'user',
       actorUserId: 'synthetic-user-001',
       officeId: 'synthetic-office-001',
       role: 'lawyer',

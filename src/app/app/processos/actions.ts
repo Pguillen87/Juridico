@@ -20,6 +20,11 @@ const processSchema = z.object({
   isPublic: z.enum(['public', 'private']),
 });
 
+const monitoringStatusSchema = z.object({
+  processId: z.string().uuid(),
+  status: z.enum(['paused', 'active']),
+});
+
 const relationSchema = z.object({
   processId: z.string().uuid(),
   partyId: z.string().uuid(),
@@ -71,6 +76,35 @@ export async function createProcessAction(formData: FormData) {
     if (error) return { error: safeError(error.message) };
     revalidatePath('/app/processos');
     return { success: true, processId: data };
+  } catch (error) {
+    return {
+      error: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+export async function setProcessMonitoringStatusAction(formData: FormData) {
+  try {
+    await requirePermission('manage_monitoring', { redirectOnDenied: false });
+    const parsed = monitoringStatusSchema.safeParse({
+      processId: formData.get('processId'),
+      status: formData.get('status'),
+    });
+    if (!parsed.success)
+      return {
+        error: 'Informe um processo e um status de monitoramento válidos.',
+      };
+    const supabase = await createClient();
+    const { error } = await supabase.rpc(
+      'phase9_set_process_monitoring_status',
+      {
+        p_process_id: parsed.data.processId,
+        p_status: parsed.data.status,
+      }
+    );
+    if (error) return { error: safeError(error.message) };
+    revalidatePath('/app/processos');
+    return { success: true };
   } catch (error) {
     return {
       error: safeError(error instanceof Error ? error.message : undefined),
