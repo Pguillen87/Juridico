@@ -12,6 +12,7 @@ on:
         phase-5-clients-parties,
         phase-6-processes-csv,
         phase-7-provider-abstraction,
+        phase-8-datajud-manual,
       ]
   pull_request:
     branches: [main]

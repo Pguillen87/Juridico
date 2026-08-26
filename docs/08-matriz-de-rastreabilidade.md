@@ -110,3 +110,34 @@ O corretivo não amplia D-022, não cria entrada manual operacional, não altera
 | Regressão | 72 unit, 214 pgTAP, 25 E2E, 29 PoC, concorrências e Docker | verde |
 
 A mudança é corretiva e localizada na Fase 7. Não há antecipação da Fase 8, alteração de D-022, migration, RLS, grant, RPC ou integração externa.
+
+## Evidência da Fase 8 — DataJud sandbox e persistência privada
+
+A Fase 8 foi implementada na branch `phase-8-datajud-manual`, derivada do HEAD aprovado da Fase 7 `7cf007aed354b95efc1af547e0490be3bc7d0880`. O `DataJudProvider` desta fase usa exclusivamente transporte fake injetável e fixtures sintéticas; o modo de transporte real permanece explicitamente desabilitado, sem CNJ real, processo real, credencial real, chamada externa, produção ou piloto.
+
+| Objetivo | Requisito | História | Componente | Teste | Status |
+|---|---|---|---|---|---|
+| O-002 | RF-006 | US-014 | `DataJudProvider` sandbox | `datajud.test.ts`: observação, timeout, 429, 5xx, network/DNS, not found, schema inválido, mismatch e capability | Implemented/Tested — transporte real desabilitado |
+| O-002 | RF-007 | US-016 | `provider_exchange`, `raw_provider_payload` | `11_phase_8_provider_payload.test.sql`: hash, bytes, sanitização, RLS, grants e acesso bruto protegido | Implemented/Tested — storage privado e append-only |
+| O-002 | RF-007 | US-017 | Normalização DataJud → `ProviderResultV1` | `datajud.test.ts` e `providers.test.ts`: somente `observation` ou `failure`, sem `changed`/`unchanged` | Implemented/Tested |
+| O-003 | RF-009 | US-026/US-027 | Taxonomia de falhas | testes sintéticos para `not_found`, `not_supported`, `source_unavailable`, `technical_failure`, timeout e rate limit | Implemented/Tested — comparação permanece na Fase 10 |
+| O-005 | RF-013 | US-041/US-043 | Auditoria e retenção privada | pgTAP: auditoria atômica, rollback quando audit falha, imutabilidade e ausência de DML direto | Implemented/Tested |
+| O-002 | RF-006 | US-015 | `ManualProvider` operacional | `providers.test.ts` e pgTAP: `manual_provider_entry` ausente e RPC DataJud rejeita `manual_observation` | Partial/Deferred — decisão humana D-022 pendente |
+
+O backend realiza preflight DB-side para impedir consulta automática quando o processo não existe no escritório do ator, está inativo ou possui `is_public=false`; a RPC repete a verificação antes da persistência. O writer deriva ator e escritório de `auth.uid()`, limita roles a `lawyer`/`operator` para o fluxo DataJud sandbox, revoga DML direto e grava troca, payload opcional e auditoria na mesma transação. A leitura de payload bruto ocorre somente pela RPC protegida para `lawyer`; `operator`, `reviewer`, `auditor` e `is_owner` sem `role=lawyer` permanecem sem esse acesso.
+
+A configuração de segredo registra apenas estado `absent`/`present`; nenhum valor de credencial é retornado, persistido ou incluído em logs, erros ou fixtures. A sanitização remove chaves sensíveis, rejeita valores de segredo, limita tamanho/profundidade e calcula SHA-256 sobre JSON canônico. O armazenamento de `raw_provider_payload` é privado, referenciado por `office_id`, protegido por hash/bytes, trigger de integridade e triggers append-only.
+
+Não foram criados `query_job`, `query_execution`, scheduler, fila, worker, snapshot, comparação, `detected_change`, UI de entrada manual ou integração real. A entrada manual operacional continua bloqueada até que a D-022 possua uma ação explícita e uma decisão humana aprovada.
+
+## Fechamento factual da Fase 8
+
+| Critério | Evidência | Resultado |
+|---|---|---|
+| Baseline correta | branch sandbox `phase-8-datajud-manual` baseada em `7cf007...` | atendido |
+| Transporte sem chamada externa | fake transport injetável e modo real desabilitado | atendido |
+| Processo sigiloso bloqueado antes da consulta | preflight server-only e `require_provider_process_eligible` DB-side | atendido |
+| Resultado sem comparação | validator V1 e migration rejeitam `changed`/`unchanged` | atendido |
+| Persistência segura | RLS, grants mínimos, RPC SECURITY DEFINER, hash, sanitização e append-only | atendido |
+| ManualProvider | observação sintética preservada; entrada operacional não inventada | bloqueado por decisão D-022 pendente |
+| Fases futuras | scheduler/fila/worker/snapshot na Fase 9 e comparação na Fase 10 | não antecipadas |

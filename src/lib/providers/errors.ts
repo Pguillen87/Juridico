@@ -11,6 +11,20 @@ export const PROVIDER_ERROR_CODES = [
   'manual_evidence_missing',
   'manual_process_mismatch',
   'timeout',
+  'datajud_input_schema_invalid',
+  'datajud_timeout',
+  'datajud_dns_failure',
+  'datajud_network_failure',
+  'datajud_rate_limited',
+  'datajud_source_unavailable',
+  'datajud_not_found',
+  'datajud_http_failure',
+  'datajud_payload_too_large',
+  'datajud_schema_invalid',
+  'datajud_process_mismatch',
+  'datajud_process_not_eligible',
+  'datajud_payload_sanitization_failed',
+  'provider_persistence_failed',
 ] as const;
 export type ProviderErrorCode = (typeof PROVIDER_ERROR_CODES)[number];
 

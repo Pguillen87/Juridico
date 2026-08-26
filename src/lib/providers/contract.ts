@@ -2,7 +2,12 @@ import type { Json } from '@/types/database.types';
 
 export const PROVIDER_CONTRACT_VERSION = 1 as const;
 
-export const PROVIDER_KINDS = ['manual', 'synthetic', 'unknown'] as const;
+export const PROVIDER_KINDS = [
+  'datajud',
+  'manual',
+  'synthetic',
+  'unknown',
+] as const;
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];
 
 export const PROVIDER_CAPABILITIES = [

@@ -10,7 +10,6 @@ import {
 } from './contract';
 import { failurePolicy, sanitizeProviderMessage } from './errors';
 import { assertProviderResult } from './normalize';
-import { createManualProvider } from './adapters/manual';
 
 function providerIdentity(provider: ProviderDescriptor): ProviderIdentity {
   return {
@@ -119,12 +118,4 @@ export class ProviderGateway {
       provider.descriptor
     );
   }
-}
-
-export function createDefaultProviderRegistry(): ProviderRegistry {
-  return new ProviderRegistry([createManualProvider()]);
-}
-
-export function createDefaultProviderGateway(): ProviderGateway {
-  return new ProviderGateway(createDefaultProviderRegistry());
 }

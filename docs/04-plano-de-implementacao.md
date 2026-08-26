@@ -125,18 +125,18 @@ Este plano descreve a sequência autorizável do MVP. A prova de conceito técni
 
 | Item | Plano |
 |---|---|
-| Objetivo | Implementar o conector DataJud somente após PoC aprovada e manter fallback manual. |
-| Pré-requisitos | Fases 1, 4 e 7; contrato e credenciais aprovados. |
-| Alterações autorizadas | Adapter, sanitização, payload, normalização e configuração segura. |
-| Arquivos prováveis | `providers/datajud/`, `providers/manual/`, testes de contrato. |
-| Entregas | Consulta autorizada, resposta bruta, capabilities e estados. |
-| Testes | Sucesso, schema incompleto, timeout, 429, 5xx e not found simulados. |
-| Validações manuais | Conferir logs sem segredo e evidência por processo. |
-| Riscos | Mudança de contrato, indisponibilidade, dados incompletos. |
-| Dependências | Fornecedor e credencial externa. |
-| Critério de conclusão | DataJud e manual classificados corretamente em homologação. |
-| Definição de pronto | Nenhum processo sigiloso é consultado automaticamente. |
-| Autorização | Consulta real, credencial e uso de dados reais. |
+| Objetivo | Implementar o `DataJudProvider` em sandbox sintético, com transporte fake injetável, persistência privada opcional e normalização compatível com `ProviderContractV1`; manter o ManualProvider no limite autorizado pela D-022. |
+| Pré-requisitos | Fases 1, 4, 6 e 7; fixtures sintéticas; nenhum processo sigiloso; nenhum número CNJ real; nenhuma credencial real; nenhuma chamada externa. |
+| Alterações autorizadas | Adapter server-only, transporte mockado, classificação de timeout/429/5xx/network/DNS/schema/not found, sanitização, hash, persistência privada mínima, RLS/RPC/grants e testes. |
+| Arquivos prováveis | `src/lib/providers/`, migration incremental de `provider_exchange`/`raw_provider_payload`, testes unitários e pgTAP, documentação da fase. |
+| Entregas | Observação ou falha normalizada, preflight backend de processo público, troca idempotente, payload sanitizado opcional e auditoria atômica. `changed`/`unchanged`, snapshots, jobs e filas permanecem fora. |
+| Testes | Sucesso, campos incompletos, timeout, 429, 5xx, network/DNS, not found, not supported, schema inválido, payload grande, mismatch, segredo, hash, RLS, grants, imutabilidade, atomicidade e replay. |
+| Validações manuais | Conferir que nenhum log, resposta, fixture, tipo ou payload contém segredo; confirmar que processo `is_public=false` é bloqueado antes do transporte. |
+| Riscos | Mudança futura do contrato externo, indisponibilidade, payload sensível, retenção indevida, autorização manual não definida e confusão entre falha e ausência de alteração. |
+| Dependências | Apenas Supabase local/Docker e fixtures sintéticas nesta fase. Credencial, fornecedor e transporte real estão explicitamente adiados. |
+| Critério de conclusão | O sandbox classifica deterministicamente as respostas, persiste somente dados permitidos e passa os gates; o ManualProvider operacional continua bloqueado se a D-022 não possuir `manual_provider_entry`. |
+| Definição de pronto | Nenhuma consulta real, processo sigiloso, produção, piloto, scheduler, fila, worker, snapshot ou comparação; provider retorna apenas `observation` ou `failure`. |
+| Autorização | Qualquer chamada DataJud real, credencial real, processo real ou entrada manual operacional exige nova aprovação humana e revisão da D-022. |
 
 ## Fase 9 — Scheduler, Fila e Snapshots
 

@@ -503,6 +503,72 @@ export type Database = {
           },
         ];
       };
+      provider_exchange: {
+        Row: {
+          contract_version: number;
+          correlation_id: string;
+          created_at: string;
+          error_code: string | null;
+          id: string;
+          normalized_result: Json | null;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          result_kind: string;
+          result_status: string;
+          source: string;
+          subject_ref: string;
+        };
+        Insert: {
+          contract_version: number;
+          correlation_id: string;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          normalized_result?: Json | null;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          result_kind: string;
+          result_status: string;
+          source: string;
+          subject_ref: string;
+        };
+        Update: {
+          contract_version?: number;
+          correlation_id?: string;
+          created_at?: string;
+          error_code?: string | null;
+          id?: string;
+          normalized_result?: Json | null;
+          office_id?: string;
+          process_id?: string;
+          provider_id?: string;
+          request_fingerprint?: string;
+          result_kind?: string;
+          result_status?: string;
+          source?: string;
+          subject_ref?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'provider_exchange_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'provider_exchange_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
       rate_limit_bucket: {
         Row: {
           actor_user_id: string;
@@ -535,6 +601,76 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'office';
             referencedColumns: ['id'];
+          },
+        ];
+      };
+      raw_provider_payload: {
+        Row: {
+          correlation_id: string;
+          created_at: string;
+          id: string;
+          office_id: string;
+          payload: Json;
+          payload_bytes: number;
+          payload_hash: string;
+          process_id: string;
+          provider_exchange_id: string;
+          provider_id: string;
+          received_at: string;
+          sanitization_version: string;
+          source: string;
+        };
+        Insert: {
+          correlation_id: string;
+          created_at?: string;
+          id?: string;
+          office_id: string;
+          payload: Json;
+          payload_bytes: number;
+          payload_hash: string;
+          process_id: string;
+          provider_exchange_id: string;
+          provider_id: string;
+          received_at: string;
+          sanitization_version: string;
+          source: string;
+        };
+        Update: {
+          correlation_id?: string;
+          created_at?: string;
+          id?: string;
+          office_id?: string;
+          payload?: Json;
+          payload_bytes?: number;
+          payload_hash?: string;
+          process_id?: string;
+          provider_exchange_id?: string;
+          provider_id?: string;
+          received_at?: string;
+          sanitization_version?: string;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'raw_provider_payload_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'raw_provider_payload_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'raw_provider_payload_office_id_provider_exchange_id_fkey';
+            columns: ['office_id', 'provider_exchange_id'];
+            isOneToOne: false;
+            referencedRelation: 'provider_exchange';
+            referencedColumns: ['office_id', 'id'];
           },
         ];
       };
@@ -747,6 +883,24 @@ export type Database = {
           summary: Json;
         }[];
       };
+      get_provider_raw_payload: {
+        Args: { p_exchange_id: string };
+        Returns: {
+          correlation_id: string;
+          created_at: string;
+          id: string;
+          office_id: string;
+          payload: Json;
+          payload_bytes: number;
+          payload_hash: string;
+          process_id: string;
+          provider_exchange_id: string;
+          provider_id: string;
+          received_at: string;
+          sanitization_version: string;
+          source: string;
+        }[];
+      };
       normalize_cnj: { Args: { p_cnj: string }; Returns: string };
       phase6_validate_import_rows: {
         Args: { p_office_id: string; p_rows: Json };
@@ -765,6 +919,14 @@ export type Database = {
           summary: Json;
         }[];
       };
+      provider_json_has_comparison: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
+      provider_payload_has_sensitive_key: {
+        Args: { p_value: Json };
+        Returns: boolean;
+      };
       record_invite_audit_internal: {
         Args: {
           p_actor_user_id: string;
@@ -773,6 +935,25 @@ export type Database = {
           p_target_user_id: string;
         };
         Returns: number;
+      };
+      record_provider_exchange: {
+        Args: {
+          p_contract_version: number;
+          p_correlation_id: string;
+          p_error_code?: string;
+          p_normalized_result?: Json;
+          p_process_id: string;
+          p_provider_id: string;
+          p_raw_payload?: Json;
+          p_received_at?: string;
+          p_request_fingerprint: string;
+          p_result_kind: string;
+          p_result_status: string;
+          p_sanitization_version?: string;
+          p_source: string;
+          p_subject_ref: string;
+        };
+        Returns: string;
       };
       record_rejection_audit_internal: {
         Args: {
@@ -809,6 +990,10 @@ export type Database = {
           actor_office_id: string;
           actor_role: Database['public']['Enums']['user_role'];
         }[];
+      };
+      require_provider_process_eligible: {
+        Args: { p_process_id: string };
+        Returns: undefined;
       };
       set_user_active: {
         Args: { p_is_active: boolean; p_target_user_id: string };
@@ -889,6 +1074,15 @@ export type Database = {
         Returns: number;
       };
       write_operational_audit: {
+        Args: {
+          p_action: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_metadata?: Json;
+        };
+        Returns: number;
+      };
+      write_provider_audit: {
         Args: {
           p_action: string;
           p_entity_id: string;

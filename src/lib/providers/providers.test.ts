@@ -4,11 +4,11 @@ import { SYNTHETIC_MANUAL_OBSERVATION } from '@/lib/providers/fixtures';
 import {
   PROVIDER_CONTRACT_VERSION,
   assertProviderResult,
-  createDefaultProviderGateway,
   createManualProvider,
   providerFingerprint,
   type ProviderRequestV1,
 } from '@/lib/providers';
+import { createTestProviderGateway } from '@/lib/providers/registry-test';
 
 const MANUAL_IDENTITY = {
   providerId: 'manual_observation',
@@ -136,7 +136,7 @@ describe('ProviderContractV1', () => {
   });
 
   it('returns not_supported for an unregistered provider', async () => {
-    const gateway = createDefaultProviderGateway();
+    const gateway = createTestProviderGateway();
     const result = await gateway.observe(
       'provider-that-does-not-exist',
       request()
@@ -150,7 +150,7 @@ describe('ProviderContractV1', () => {
   });
 
   it('returns not_supported when the capability is absent', async () => {
-    const gateway = createDefaultProviderGateway();
+    const gateway = createTestProviderGateway();
     const result = await gateway.observe(
       'manual_observation',
       request({ capability: 'movements' }),
