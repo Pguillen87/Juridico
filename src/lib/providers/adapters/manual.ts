@@ -30,6 +30,13 @@ const descriptor: ProviderDescriptor = {
   capabilities: ['process_observation'],
 };
 
+const providerIdentity = {
+  providerId: descriptor.providerId,
+  providerKind: descriptor.providerKind,
+  adapterVersion: descriptor.adapterVersion,
+  contractVersion: descriptor.contractVersion,
+} as const;
+
 function failure(
   request: ProviderRequestV1,
   code: ProviderFailureV1['status'],
@@ -38,7 +45,7 @@ function failure(
   return {
     kind: 'failure',
     status: code,
-    provider: descriptor,
+    provider: providerIdentity,
     source: 'manual',
     contractVersion: PROVIDER_CONTRACT_VERSION,
     capability: request.capability,
@@ -91,6 +98,13 @@ export function createManualProvider(): ProviderAdapter {
         );
       }
       const manual = input as ManualObservationInput;
+      if (manual.processRef !== request.subjectRef.value) {
+        return failure(
+          request,
+          'manual_review_required',
+          'manual_process_mismatch'
+        );
+      }
       const movements = manual.movements?.map((movement) => ({
         movementRef: movement.movementRef,
         ...(movement.date ? { date: movement.date } : {}),
@@ -114,7 +128,7 @@ export function createManualProvider(): ProviderAdapter {
       return {
         kind: 'observation',
         status: 'observed',
-        provider: descriptor,
+        provider: providerIdentity,
         source: 'manual',
         contractVersion: PROVIDER_CONTRACT_VERSION,
         capability: request.capability,

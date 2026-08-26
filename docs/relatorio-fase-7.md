@@ -60,3 +60,21 @@ O risco residual da produção permanece fora do escopo desta fase: provider ext
 ## Critérios de parada preservados
 
 A implementação deverá parar antes de qualquer expansão se houver necessidade de entrada manual operacional sem decisão humana, provider externo, DataJud real, segredo, consulta de processo real/sigiloso, persistência nova, migration, mudança de D-022, scheduler, fila, worker ou comparação. O contrato não pode receber `changed`/`unchanged` nesta fase e nenhuma falha pode ser reinterpretada como `unchanged`.
+
+## Corretivo incremental de integridade e validação runtime
+
+A auditoria identificou que o `ManualProvider` recebia a referência solicitada e a referência observada, mas não comparava os valores. O corretivo agora exige correspondência exata entre `ManualObservationInput.processRef` e `ProviderRequestV1.subjectRef.value`. Em caso de divergência, o provider retorna `kind=failure`, `status=manual_review_required`, `errorCode=manual_process_mismatch`, `source=manual` e mensagem sanitizada; não retorna observação, `not_found`, `unchanged` ou qualquer mutação.
+
+O validator runtime de `ProviderResultV1` foi fortalecido sem redesign: recebe `unknown`, rejeita chaves extras e campos proibidos, valida contractVersion, identidade e descriptor, capability e source allowlisted, ramo de observação, ramo de falha, errorCode, política de retry, `returnedFields`/`missingFields`, estruturas normalizadas, metadata mínima, evidência, correlationId e coerência do `processRef` com a request. Observação e falha permanecem ramos mutuamente exclusivos.
+
+O código não cria migration, grant, RLS, RPC, endpoint, provider externo, DataJud, scheduler, fila, worker, snapshot ou comparação. A D-022 não foi alterada e nenhuma permissão de entrada manual operacional foi inventada.
+
+Os testes do pacote passaram a cobrir aceitação do mesmo processo, rejeição de processo divergente, ausência de `observation`, ausência de `unchanged`/`not_found`, falha sanitizada, resultado runtime válido, resultado estruturalmente incoerente e ausência de campos proibidos. Todas as fixtures continuam sintéticas.
+
+## Resultado final do corretivo
+
+O corretivo foi validado localmente e está pronto para publicação incremental. A suíte unitária cumulativa terminou com **72 testes aprovados em 13 arquivos**, incluindo **15 testes do pacote de providers**. O pgTAP permaneceu em **214 testes aprovados em 10 arquivos**, o Auth E2E em **25 testes aprovados**, e a PoC sintética em **29 testes aprovados em 4 arquivos**.
+
+A decisão de taxonomia para divergência de processo foi usar o status existente `manual_review_required`, com o novo `errorCode` descritivo `manual_process_mismatch`. Essa escolha preserva `source=manual`, evita inventar estado, não converte a divergência em `not_found` nem em `unchanged`, e exige revisão antes de qualquer decisão.
+
+O validator runtime aceitou resultado válido e rejeitou resultado estruturalmente incoerente, incluindo campos proibidos e incompatibilidade de contrato. Não houve migration, alteração de RLS/grants/RPC, provider externo, DataJud real, dado real ou início da Fase 8.

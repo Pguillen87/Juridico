@@ -88,3 +88,25 @@ A Fase 7 adiciona a abstração interna `ProviderContractV1` em `src/lib/provide
 | O-003 | RF-009 | US-027 | Registry/Gateway | provider ou capability ausente retorna `not_supported` | Implemented/Tested |
 
 A D-022 canônica (`docs/10-matriz-papeis-e-autorizacao.md`) possui `manual_reprocess` para lawyer/operator, mas não possui ação `manual_provider_entry`. Nenhuma role foi inventada para entrada manual operacional; essa expansão permanece decisão humana pendente e critério de parada. Nenhum provider real, DataJud, credencial, scheduler, fila, worker, snapshot ou comparador foi adicionado.
+
+## Evidência do corretivo da Fase 7 — integridade e validação runtime
+
+| Objetivo | Requisito | História | Componente | Teste | Status |
+|---|---|---|---|---|---|
+| O-002 | RF-007 | US-017 | `ManualProvider` exige `processRef` observado igual ao `subjectRef` solicitado | `providers.test.ts`: mesmo processo é aceito; processo divergente retorna `manual_review_required/manual_process_mismatch` | Implemented/Tested |
+| O-002 | RF-007 | US-017 | Falha de integridade permanece `source=manual` e não vira `not_found` ou `unchanged` | assertions de ramo, status, mensagem sanitizada e ausência de estados de comparação | Implemented/Tested |
+| O-003 | RF-009 | US-027 | Validator runtime fecha o contrato por allowlists e coerência | `providers.test.ts`: resultado válido aceito e resultado estruturalmente incoerente rejeitado | Implemented/Tested |
+
+O corretivo não amplia D-022, não cria entrada manual operacional, não altera banco e não antecipa Fase 8 ou Fase 10.
+
+## Fechamento do corretivo da Fase 7
+
+| Critério | Evidência | Resultado |
+|---|---|---|
+| Processo solicitado igual ao observado | `ManualProvider` compara `subjectRef.value` com `ManualObservationInput.processRef` | observação aceita quando igual |
+| Processo solicitado diferente do observado | retorno `manual_review_required` com `manual_process_mismatch` e `source=manual` | falha explícita, sanitizada e sem `not_found`/`unchanged` |
+| Resultado runtime válido | validator valida contrato, descriptor, capability, source, metadata, campos normalizados e request | aceito |
+| Resultado runtime incoerente | validator rejeita chaves extras, campos proibidos, estados de comparação e allowlists inválidas | rejeitado |
+| Regressão | 72 unit, 214 pgTAP, 25 E2E, 29 PoC, concorrências e Docker | verde |
+
+A mudança é corretiva e localizada na Fase 7. Não há antecipação da Fase 8, alteração de D-022, migration, RLS, grant, RPC ou integração externa.

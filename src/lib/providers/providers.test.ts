@@ -10,6 +10,13 @@ import {
   type ProviderRequestV1,
 } from '@/lib/providers';
 
+const MANUAL_IDENTITY = {
+  providerId: 'manual_observation',
+  providerKind: 'manual',
+  adapterVersion: '1.0.0',
+  contractVersion: PROVIDER_CONTRACT_VERSION,
+} as const;
+
 function request(
   overrides: Partial<ProviderRequestV1> = {}
 ): ProviderRequestV1 {
@@ -52,6 +59,39 @@ describe('ProviderContractV1', () => {
     expect(result.evidence?.evidenceType).toBe('manual_note');
     expect('changed' in result).toBe(false);
     expect('unchanged' in result).toBe(false);
+  });
+
+  it('accepts an observation for the exact requested process', async () => {
+    const provider = createManualProvider();
+    const result = await provider.observe(
+      request(),
+      SYNTHETIC_MANUAL_OBSERVATION
+    );
+
+    expect(result.kind).toBe('observation');
+    if (result.kind !== 'observation') throw new Error('Observação esperada.');
+    expect(result.data.processRef).toBe('synthetic-process-001');
+  });
+
+  it('rejects an observation for a different process', async () => {
+    const provider = createManualProvider();
+    const result = await provider.observe(request(), {
+      ...SYNTHETIC_MANUAL_OBSERVATION,
+      processRef: 'synthetic-process-999',
+    });
+
+    expect(result).toMatchObject({
+      kind: 'failure',
+      status: 'manual_review_required',
+      errorCode: 'manual_process_mismatch',
+      source: 'manual',
+    });
+    expect(JSON.stringify(result)).not.toContain('unchanged');
+    expect(JSON.stringify(result)).not.toContain('not_found');
+    if (result.kind !== 'failure') throw new Error('Falha esperada.');
+    expect(result.message).toBe(
+      'A observação exige revisão manual antes de qualquer decisão.'
+    );
   });
 
   it('keeps incomplete manual evidence as an explicit failure', async () => {
@@ -152,12 +192,12 @@ describe('ProviderContractV1', () => {
       assertProviderResult({
         kind: 'failure',
         status: 'timeout',
-        provider: createManualProvider().descriptor,
+        provider: MANUAL_IDENTITY,
         source: 'manual',
         contractVersion: PROVIDER_CONTRACT_VERSION,
         capability: 'process_observation',
         errorCode: 'timeout',
-        message: 'safe',
+        message: 'A fonte não respondeu dentro do tempo permitido.',
         retryable: true,
         retryAfterMs: -1,
         sourceMetadata: {
@@ -191,12 +231,49 @@ describe('ProviderContractV1', () => {
     ).toBe(true);
   });
 
+  it('accepts a structurally valid observation at runtime', async () => {
+    const provider = createManualProvider();
+    const result = await provider.observe(
+      request(),
+      SYNTHETIC_MANUAL_OBSERVATION
+    );
+
+    expect(
+      assertProviderResult(result, request(), provider.descriptor)
+    ).toEqual(result);
+  });
+
+  it('rejects a structurally incoherent observation at runtime', () => {
+    expect(() =>
+      assertProviderResult({
+        kind: 'observation',
+        status: 'observed',
+        provider: MANUAL_IDENTITY,
+        source: 'manual',
+        contractVersion: PROVIDER_CONTRACT_VERSION,
+        capability: 'process_observation',
+        data: { processRef: 'synthetic-process-001' },
+        returnedFields: ['processRef', 'tribunal'],
+        missingFields: [],
+        sourceMetadata: {
+          sourceType: 'manual',
+          providerId: 'manual_observation',
+          adapterVersion: '1.0.0',
+          contractVersion: PROVIDER_CONTRACT_VERSION,
+          observedAt: '2026-01-01T00:00:00.000Z',
+        },
+        correlationId: 'synthetic-correlation-001',
+        changed: true,
+      })
+    ).toThrow('Resultado de provider não pode conter estados de comparação.');
+  });
+
   it('rejects a result with an incompatible contract version', () => {
     expect(() =>
       assertProviderResult({
         kind: 'observation',
         status: 'observed',
-        provider: createManualProvider().descriptor,
+        provider: MANUAL_IDENTITY,
         source: 'manual',
         contractVersion: 99,
         capability: 'process_observation',

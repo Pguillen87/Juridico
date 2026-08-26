@@ -4,6 +4,16 @@ import {
   type ProviderKind,
 } from './contract';
 
+export const PROVIDER_ERROR_CODES = [
+  'provider_not_registered',
+  'capability_not_supported',
+  'operation_not_supported',
+  'manual_evidence_missing',
+  'manual_process_mismatch',
+  'timeout',
+] as const;
+export type ProviderErrorCode = (typeof PROVIDER_ERROR_CODES)[number];
+
 export const RETRYABLE_FAILURES: ReadonlySet<ProviderFailureCode> = new Set([
   'source_unavailable',
   'rate_limited',
@@ -14,6 +24,10 @@ export function isProviderFailureCode(
   value: string
 ): value is ProviderFailureCode {
   return (PROVIDER_FAILURE_CODES as readonly string[]).includes(value);
+}
+
+export function isProviderErrorCode(value: string): value is ProviderErrorCode {
+  return (PROVIDER_ERROR_CODES as readonly string[]).includes(value);
 }
 
 export function sanitizeProviderMessage(code: ProviderFailureCode): string {

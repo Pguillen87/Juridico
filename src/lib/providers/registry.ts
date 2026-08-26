@@ -4,12 +4,22 @@ import {
   type ProviderCapability,
   type ProviderDescriptor,
   type ProviderFailureV1,
+  type ProviderIdentity,
   type ProviderRequestV1,
   type ProviderResultV1,
 } from './contract';
 import { failurePolicy, sanitizeProviderMessage } from './errors';
 import { assertProviderResult } from './normalize';
 import { createManualProvider } from './adapters/manual';
+
+function providerIdentity(provider: ProviderDescriptor): ProviderIdentity {
+  return {
+    providerId: provider.providerId,
+    providerKind: provider.providerKind,
+    adapterVersion: provider.adapterVersion,
+    contractVersion: provider.contractVersion,
+  };
+}
 
 function providerFailure(
   provider: ProviderDescriptor,
@@ -21,7 +31,7 @@ function providerFailure(
   return {
     kind: 'failure',
     status: code,
-    provider,
+    provider: providerIdentity(provider),
     source: provider.providerKind,
     contractVersion: PROVIDER_CONTRACT_VERSION,
     capability: request.capability,
@@ -103,7 +113,11 @@ export class ProviderGateway {
         'capability_not_supported'
       );
     }
-    return assertProviderResult(await provider.observe(request, input));
+    return assertProviderResult(
+      await provider.observe(request, input),
+      request,
+      provider.descriptor
+    );
   }
 }
 
