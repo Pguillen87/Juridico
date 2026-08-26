@@ -20,7 +20,7 @@ async function openClients(page: Page) {
 test.describe('Clientes e vínculos — fluxos reais Phase 5', () => {
   test.describe.configure({ mode: 'serial' });
 
-  test('lawyer cria cliente, party, relação pending, confirma e rejeita outra', async ({
+  test('lawyer cria cliente, party, relação family_member pending, confirma e rejeita outra', async ({
     page,
   }) => {
     const suffix = Date.now().toString();
@@ -56,9 +56,25 @@ test.describe('Clientes e vínculos — fluxos reais Phase 5', () => {
     await clientArticle
       .getByLabel('Parte relacionada')
       .selectOption((await partyOption.getAttribute('value')) as string);
+    const relationType = clientArticle.getByLabel('Tipo');
+    await expect(
+      relationType.locator('option[value="family_member"]')
+    ).toHaveCount(1);
+    await expect(relationType.locator('option[value="contact"]')).toHaveCount(
+      0
+    );
+    await expect(relationType.locator('option[value="witness"]')).toHaveCount(
+      0
+    );
+    await relationType.selectOption('family_member');
     await clientArticle
       .getByRole('button', { name: 'Criar relação pendente' })
       .click();
+    await expect(
+      clientArticle
+        .locator('p')
+        .filter({ hasText: /^family_member · Ativo · confirmação:/ })
+    ).toBeVisible();
     await expect(
       clientArticle.getByText('confirmação: Pendente')
     ).toBeVisible();
@@ -92,21 +108,60 @@ test.describe('Clientes e vínculos — fluxos reais Phase 5', () => {
     ).toBeVisible();
   });
 
-  test('operator pode criar relação mas não recebe confirmação/rejeição', async ({
+  test('operator cria relação family_member pending sem controles de confirmação', async ({
     page,
   }) => {
+    const suffix = Date.now().toString();
+    const clientName = `Operator Cliente E2E ${suffix}`;
+    const partyName = `Operator Parte E2E ${suffix}`;
     await login(page, 'operator@example.test');
     await openClients(page);
+
+    await page.getByRole('button', { name: 'Criar cliente' }).click();
+    await page.getByLabel('Nome').first().fill(clientName);
+    await page.getByLabel('Tipo').first().selectOption('person');
+    await page.getByRole('button', { name: 'Criar cliente' }).click();
+    const clientArticle = page
+      .locator('article')
+      .filter({ hasText: clientName })
+      .first();
+    const clientId = await clientArticle
+      .locator('input[name="clientId"]')
+      .getAttribute('value');
+    expect(clientId).toMatch(/^[0-9a-f-]{36}$/i);
+
+    await page.getByRole('button', { name: 'Criar parte' }).click();
+    await page.getByLabel('Nome').nth(1).fill(partyName);
+    await page.getByLabel('Tipo').nth(1).selectOption('person');
+    await page.getByRole('button', { name: 'Criar parte' }).click();
+    await expect(page.getByText(partyName, { exact: true })).toBeVisible();
+
+    const partyOption = clientArticle
+      .getByLabel('Parte relacionada')
+      .locator('option')
+      .filter({ hasText: partyName })
+      .first();
+    const partyId = await partyOption.getAttribute('value');
+    expect(partyId).toMatch(/^[0-9a-f-]{36}$/i);
+    await clientArticle
+      .getByLabel('Parte relacionada')
+      .selectOption(partyId as string);
+    await clientArticle.getByLabel('Tipo').selectOption('family_member');
+    await clientArticle
+      .getByRole('button', { name: 'Criar relação pendente' })
+      .click();
+
+    const relation = clientArticle.locator('div.rounded-lg.border').filter({
+      hasText: partyName,
+    });
+    await expect(relation.getByText('family_member')).toBeVisible();
+    await expect(relation.getByText('confirmação: Pendente')).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Criar cliente' })
-    ).toBeVisible();
+      relation.getByRole('button', { name: 'Confirmar' })
+    ).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: 'Criar relação pendente' }).first()
-    ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Confirmar' })).toHaveCount(
-      0
-    );
-    await expect(page.getByRole('button', { name: 'Rejeitar' })).toHaveCount(0);
+      relation.getByRole('button', { name: 'Rejeitar' })
+    ).toHaveCount(0);
   });
 
   test('reviewer lê dados mas não possui controles de mutação', async ({

@@ -13,7 +13,13 @@ import {
   updatePartyAction,
 } from './actions';
 
-const relationTypes = ['representative', 'contact', 'witness', 'other'];
+const relationTypes = [
+  'subsidiary',
+  'family_member',
+  'dependent',
+  'representative',
+  'other',
+] as const;
 
 function shortId(id: string) {
   return id.slice(0, 8);
