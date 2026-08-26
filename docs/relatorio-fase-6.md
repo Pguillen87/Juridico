@@ -47,7 +47,7 @@ O componente de importação CSV mostra erros por linha, avisos, tabela de todas
 
 A regressão local foi executada separando os resultados por gate. O Vitest aprovou **57 testes em 12 arquivos**, incluindo os testes puros de CNJ e parser CSV. O build Next.js e o typecheck foram aprovados, e o `format:check` e o lint foram executados sem erro após a estabilização do spec Playwright.
 
-O reset do Supabase aplicou todas as migrations da baseline, as migrations da Fase 5 e as quatro migrations da Fase 6. O `db:lint` terminou com **No schema errors found**. A geração dos tipos Supabase foi executada e formatada. O `db:test` aprovou a suíte existente de 4C/5, o arquivo `09_phase_6_processes_csv.test.sql` com 43 asserções e o arquivo `10_phase_6_rls_read_hardening.test.sql` com 12 asserções, totalizando **214 asserções pgTAP** no pacote.
+O reset do Supabase aplicou todas as migrations da baseline, as migrations da Fase 5 e as três migrations da Fase 6. O `db:lint` terminou com **No schema errors found**. A geração dos tipos Supabase foi executada e formatada. O `db:test` aprovou a suíte existente de 4C/5, o arquivo `09_phase_6_processes_csv.test.sql` com 43 asserções e o arquivo `10_phase_6_rls_read_hardening.test.sql` com 12 asserções, totalizando **214 asserções pgTAP** no pacote.
 
 | Gate | Resultado local |
 |---|---|
@@ -76,7 +76,7 @@ O script bash de concorrência da proteção de último owner e os gates que dep
 
 O workflow do App CI inclui `phase-6-processes-csv` no trigger de push, preserva os gates da baseline e executa `scripts/test-phase6-concurrency.ps1` após as concorrências existentes da Fase 5. O workflow continua read-only: não contém `git add`, `git commit` ou `git push`. O smoke gate Docker foi executado localmente porque o ambiente suporta Docker Compose; não foi duplicado no CI nesta correção. Se o ambiente de validação não possuir Docker no futuro, o gate deverá executar build, up, health, non-root e down com `if: always()` antes de declarar sucesso.
 
-O pacote corretivo será publicado somente após `git diff --check`, working tree limpo, ausência de artefatos proibidos e presença somente dos arquivos intencionais. O encerramento formal permanece condicionado à auditoria externa do HEAD publicado e ao CI correspondente.
+O pacote corretivo foi publicado somente após `git diff --check`, working tree limpo, ausência de artefatos proibidos e confirmação de que o delta continha apenas os arquivos intencionais. O encerramento formal permanece condicionado à auditoria externa do HEAD publicado e ao CI correspondente.
 
 ## 8. Reviews de produção e Docker
 
