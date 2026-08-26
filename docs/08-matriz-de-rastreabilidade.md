@@ -68,6 +68,10 @@ As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US
 
 A UI `/app/clientes` lista clientes, parties e vínculos relacionados. Parties homônimas são exibidas com referência curta derivada do ID, tipo e status; a seleção de uma party ocorre por ID, nunca por nome. O módulo `/app/processos` lista processos com CNJ canônico, client/party por ID e referência curta, vínculos pendentes/terminais, importação CSV com preview, erros por linha e confirmação explícita. O fluxo E2E cobre lawyer, operator, reviewer e auditor conforme D-022; monitoramento permanece transparente e pausado. `legal_process` e `process_party` foram implementados na Fase 6; US-011 permanece `Partial/Deferred`.
 
+## Evidência adicional de RLS da Fase 6
+
+O teste `10_phase_6_rls_read_hardening.test.sql` prova diretamente no PostgreSQL, com role `authenticated` e JWT sintético, que reviewer lê somente o próprio office; auditor não lê `legal_process` nem `process_party`; `is_owner=true` não amplia o acesso operacional; usuário ativo de office inativo não lê as tabelas; e dados de outro office permanecem invisíveis. O mesmo teste comprova que o preview expirado é rejeitado e permanece `pending` porque o `UPDATE` seguido de `RAISE EXCEPTION` sofre rollback. A suíte completa passou com 214 asserções.
+
 ## Evidências Esperadas
 
 As evidências incluem testes unitários, testes E2E, fixtures, resultados de sandbox, logs sanitizados, hashes, registros de auditoria, testes RLS, fichas por processo da PoC, relatórios de backup/restauração e revisão manual do advogado. Nenhuma evidência poderá incluir segredo ou processo não autorizado.
