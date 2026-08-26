@@ -217,6 +217,73 @@ export type Database = {
           },
         ];
       };
+      legal_process: {
+        Row: {
+          client_id: string;
+          cnj_number: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          is_public: boolean;
+          monitoring_status: string;
+          office_id: string;
+          status: string;
+          system: string | null;
+          tribunal: string;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          cnj_number: string;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          is_public?: boolean;
+          monitoring_status?: string;
+          office_id: string;
+          status?: string;
+          system?: string | null;
+          tribunal: string;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          cnj_number?: string;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          is_public?: boolean;
+          monitoring_status?: string;
+          office_id?: string;
+          status?: string;
+          system?: string | null;
+          tribunal?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'legal_process_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'legal_process_office_id_client_id_fkey';
+            columns: ['office_id', 'client_id'];
+            isOneToOne: false;
+            referencedRelation: 'client';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'legal_process_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       office: {
         Row: {
           created_at: string;
@@ -286,6 +353,153 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'office';
             referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_import_preview: {
+        Row: {
+          consumed_at: string | null;
+          consumed_summary: Json | null;
+          content_hash: string;
+          created_at: string;
+          created_by: string;
+          expires_at: string;
+          id: string;
+          normalized_rows: Json;
+          office_id: string;
+          parser_version: string;
+          status: string;
+          summary: Json;
+        };
+        Insert: {
+          consumed_at?: string | null;
+          consumed_summary?: Json | null;
+          content_hash: string;
+          created_at?: string;
+          created_by: string;
+          expires_at?: string;
+          id?: string;
+          normalized_rows: Json;
+          office_id: string;
+          parser_version: string;
+          status?: string;
+          summary?: Json;
+        };
+        Update: {
+          consumed_at?: string | null;
+          consumed_summary?: Json | null;
+          content_hash?: string;
+          created_at?: string;
+          created_by?: string;
+          expires_at?: string;
+          id?: string;
+          normalized_rows?: Json;
+          office_id?: string;
+          parser_version?: string;
+          status?: string;
+          summary?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_import_preview_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_import_preview_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_party: {
+        Row: {
+          confirmation_status: string;
+          confirmed_at: string | null;
+          confirmed_by: string | null;
+          created_at: string;
+          created_by: string;
+          id: string;
+          notes: string | null;
+          office_id: string;
+          party_id: string;
+          process_id: string;
+          role_in_process: string;
+          source: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          confirmation_status?: string;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          notes?: string | null;
+          office_id: string;
+          party_id: string;
+          process_id: string;
+          role_in_process: string;
+          source: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          confirmation_status?: string;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          notes?: string | null;
+          office_id?: string;
+          party_id?: string;
+          process_id?: string;
+          role_in_process?: string;
+          source?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_party_confirmed_by_fkey';
+            columns: ['confirmed_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_party_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_party_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_party_office_id_party_id_fkey';
+            columns: ['office_id', 'party_id'];
+            isOneToOne: false;
+            referencedRelation: 'party';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_party_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
           },
         ];
       };
@@ -396,6 +610,11 @@ export type Database = {
         Args: { p_relation_id: string };
         Returns: undefined;
       };
+      confirm_process_import: { Args: { p_preview_id: string }; Returns: Json };
+      confirm_process_party: {
+        Args: { p_relation_id: string };
+        Returns: undefined;
+      };
       consume_admin_rate_limit: {
         Args: { p_operation: string };
         Returns: {
@@ -419,8 +638,28 @@ export type Database = {
         Args: { p_display_name: string; p_party_type: string };
         Returns: string;
       };
+      create_legal_process: {
+        Args: {
+          p_client_id: string;
+          p_cnj_number: string;
+          p_is_public?: boolean;
+          p_system?: string;
+          p_tribunal: string;
+        };
+        Returns: string;
+      };
       create_party: {
         Args: { p_display_name: string; p_party_type: string };
+        Returns: string;
+      };
+      create_process_party: {
+        Args: {
+          p_notes?: string;
+          p_party_id: string;
+          p_process_id: string;
+          p_role_in_process: string;
+          p_source?: string;
+        };
         Returns: string;
       };
       deactivate_client: { Args: { p_id: string }; Returns: undefined };
@@ -428,7 +667,12 @@ export type Database = {
         Args: { p_id: string };
         Returns: undefined;
       };
+      deactivate_legal_process: { Args: { p_id: string }; Returns: undefined };
       deactivate_party: { Args: { p_id: string }; Returns: undefined };
+      deactivate_process_party: {
+        Args: { p_relation_id: string };
+        Returns: undefined;
+      };
       export_administrative_audit: {
         Args: { p_action?: string; p_entity_type?: string; p_limit?: number };
         Returns: {
@@ -489,6 +733,38 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      get_process_import_preview: {
+        Args: { p_preview_id: string };
+        Returns: {
+          consumed_at: string;
+          consumed_summary: Json;
+          content_hash: string;
+          expires_at: string;
+          normalized_rows: Json;
+          parser_version: string;
+          preview_id: string;
+          status: string;
+          summary: Json;
+        }[];
+      };
+      normalize_cnj: { Args: { p_cnj: string }; Returns: string };
+      phase6_validate_import_rows: {
+        Args: { p_office_id: string; p_rows: Json };
+        Returns: undefined;
+      };
+      preview_process_import: {
+        Args: {
+          p_content_hash: string;
+          p_normalized_rows: Json;
+          p_parser_version: string;
+          p_summary?: Json;
+        };
+        Returns: {
+          expires_at: string;
+          preview_id: string;
+          summary: Json;
+        }[];
+      };
       record_invite_audit_internal: {
         Args: {
           p_actor_user_id: string;
@@ -509,6 +785,10 @@ export type Database = {
         Returns: number;
       };
       reject_client_related_party: {
+        Args: { p_relation_id: string };
+        Returns: undefined;
+      };
+      reject_process_party: {
         Args: { p_relation_id: string };
         Returns: undefined;
       };
@@ -568,6 +848,16 @@ export type Database = {
       };
       update_client: {
         Args: { p_id: string; p_status?: string };
+        Returns: undefined;
+      };
+      update_legal_process: {
+        Args: {
+          p_cnj_number: string;
+          p_id: string;
+          p_is_public?: boolean;
+          p_system?: string;
+          p_tribunal: string;
+        };
         Returns: undefined;
       };
       update_office_name: {

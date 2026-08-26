@@ -57,6 +57,24 @@ export default async function AppPage() {
           </div>
         </div>
 
+        {profile.role !== 'auditor' ? (
+          <div className="mt-8 rounded-xl border border-sky-200 bg-sky-50 p-6">
+            <h2 className="text-lg font-semibold text-slate-950">
+              Operação de processos
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Cadastre processos, revise vínculos pendentes e importe um CSV com
+              prévia transacional.
+            </p>
+            <Link
+              className="mt-5 inline-flex rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
+              href="/app/processos"
+            >
+              Abrir processos
+            </Link>
+          </div>
+        ) : null}
+
         {profile.is_owner || profile.role === 'auditor' ? (
           <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">

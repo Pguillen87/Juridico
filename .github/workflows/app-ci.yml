@@ -10,6 +10,7 @@ on:
         phase-4b-auth-flows,
         phase-4c-admin-control-plane,
         phase-5-clients-parties,
+        phase-6-processes-csv,
       ]
   pull_request:
     branches: [main]
@@ -94,6 +95,9 @@ jobs:
 
       - name: Concurrency Test (Phase 5 Confirmation)
         run: pwsh -File ./scripts/test-phase5-confirm-concurrency.ps1
+
+      - name: Concurrency Test (Phase 6 Processes and CSV)
+        run: pwsh -File ./scripts/test-phase6-concurrency.ps1
 
       - name: Supabase DB Types Check
         run: |

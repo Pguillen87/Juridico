@@ -20,12 +20,12 @@
 | O-005 | RF-002 | US-003 | `user_profile`, `office` | Auth/RLS | 3–4 | T-003 roles | Matriz de permissão | Planned |
 | O-005 | RF-003 | US-004 | `party`, `client` | Cadastro/API/UI | 5 | T-004 client | RPC transacional, pgTAP, unit, E2E real: criar/listar cliente, parte principal, editar/desativar | Implemented/Tested |
 | O-005 | RF-003 | US-005 | `party`, `client_related_party` | Cadastro/API/UI | 5 | T-005 parties | RPC transacional, RLS, pgTAP, unit e E2E real: relação pending, confirmação/rejeição, roles, homônimos e isolamento | Implemented/Tested |
-| O-001 | RF-004 | US-006 | `legal_process` | Processos/API | 6 | T-006 manual process | Teste CNJ | Planned |
-| O-001 | RF-005 | US-007 | `legal_process`, `process_party` | Importação | 6 | T-007 CSV | Prévia e auditoria | Planned |
-| O-001 | RF-004 | US-008 | `legal_process` | Validador | 6 | T-008 CNJ | Fixtures | Planned |
-| O-005 | RF-003 | US-009 | `process_party` | Vínculos/API | 6 | T-009 N:N | `process_party` não criado; decisão registrada | Deferred Phase 6 |
-| O-005 | RF-003 | US-010 | `process_party`, `audit_log` | Vínculos | 6 | T-010 confirmation | `process_party` não criado; decisão registrada | Deferred Phase 6 |
-| O-001 | RF-004 | US-011 | `monitoring_configuration` | Monitoramento | 6 | T-011 activation | Configuração | Planned |
+| O-001 | RF-004 | US-006 | `legal_process` | Processos/API/UI | 6 | T-006 manual process | RPC transacional, CNJ DB-side, RLS, pgTAP, unit e E2E lawyer/operator | Implemented/Tested |
+| O-001 | RF-005 | US-007 | `legal_process`, `process_party`, `process_import_preview` | Importação/API/UI | 6 | T-007 CSV | Parser dedicado, preview privado, hash/TTL, erros por linha, confirm transacional, pgTAP, unit e E2E | Implemented/Tested |
+| O-001 | RF-004 | US-008 | `legal_process` | Validador/API/UI | 6 | T-008 CNJ | Validador universal, dígitos verificadores, CNJ canônico, unit, pgTAP e E2E | Implemented/Tested |
+| O-005 | RF-003 | US-009 | `process_party` | Vínculos/API/UI | 6 | T-009 N:N | Relação N:N real, sempre pending na criação, IDs/RLS, pgTAP e E2E | Implemented/Tested |
+| O-005 | RF-003 | US-010 | `process_party`, `audit_log` | Vínculos/API/UI | 6 | T-010 confirmation | Confirm/reject somente lawyer, transição terminal, auditoria atômica, pgTAP, concorrência e E2E | Implemented/Tested |
+| O-001 | RF-004 | US-011 | `legal_process.monitoring_status` | Monitoramento | 6 | T-011 activation | Estado estrutural `paused`, UI transparente, sem provider/scheduler/job | Partial/Deferred |
 | O-001 | RF-006 | US-012 | `query_job` | Queue/API | 9 | T-012 manual query | Job idempotente | Planned |
 | O-001 | RF-006 | US-013 | `monitoring_schedule`, `query_job` | Scheduler | 9 | T-013 schedule | Relógio controlado | Planned |
 | O-002 | RF-006 | US-014 | `provider`, `query_execution` | DataJudProvider | 1,7–8 | T-014 contract | Fixture/PoC | Planned |
@@ -62,11 +62,11 @@
 
 ## Cobertura Crítica
 
-As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. US-009 e US-010 permanecem diferidas para a Fase 6 porque `process_party` e `legal_process` não foram criados. A confirmação/rejeição de `client_related_party` foi implementada e testada nesta fase.
+As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
 
 ## Aceite funcional adicional da Fase 5
 
-A UI `/app/clientes` lista clientes, parties e vínculos relacionados. Parties homônimas são exibidas com referência curta derivada do ID, tipo e status; a seleção de uma party ocorre por ID, nunca por nome. O fluxo E2E real cobre lawyer criando cliente/party, criando relação `pending`, confirmando uma relação e rejeitando outra; operator cria, mas não confirma/rejeita; reviewer lê sem controles; auditor recebe DENY. `legal_process` e `process_party` permanecem inexistentes e US-009/US-010 continuam `Deferred Phase 6`.
+A UI `/app/clientes` lista clientes, parties e vínculos relacionados. Parties homônimas são exibidas com referência curta derivada do ID, tipo e status; a seleção de uma party ocorre por ID, nunca por nome. O módulo `/app/processos` lista processos com CNJ canônico, client/party por ID e referência curta, vínculos pendentes/terminais, importação CSV com preview, erros por linha e confirmação explícita. O fluxo E2E cobre lawyer, operator, reviewer e auditor conforme D-022; monitoramento permanece transparente e pausado. `legal_process` e `process_party` foram implementados na Fase 6; US-011 permanece `Partial/Deferred`.
 
 ## Evidências Esperadas
 
