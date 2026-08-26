@@ -11,6 +11,7 @@ on:
         phase-4c-admin-control-plane,
         phase-5-clients-parties,
         phase-6-processes-csv,
+        phase-7-provider-abstraction,
       ]
   pull_request:
     branches: [main]

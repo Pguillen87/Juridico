@@ -75,3 +75,16 @@ O teste `10_phase_6_rls_read_hardening.test.sql` prova diretamente no PostgreSQL
 ## Evidências Esperadas
 
 As evidências incluem testes unitários, testes E2E, fixtures, resultados de sandbox, logs sanitizados, hashes, registros de auditoria, testes RLS, fichas por processo da PoC, relatórios de backup/restauração e revisão manual do advogado. Nenhuma evidência poderá incluir segredo ou processo não autorizado.
+
+## Evidência da Fase 7 — Abstração de Provedores
+
+A Fase 7 adiciona a abstração interna `ProviderContractV1` em `src/lib/providers/`, com capabilities allowlisted, request interna, observação normalizada, falha explícita, normalização determinística, registry code-only, gateway backend-only e fixture sintética. O contrato não produz `changed` nem `unchanged`; comparação pertence à Fase 10.
+
+| Objetivo | Requisito | História | Componente | Teste | Status |
+|---|---|---|---|---|---|
+| O-002 | RF-006 | US-014 | Contrato de provider | `src/lib/providers/providers.test.ts`: contrato e capability | Partial/Deferred — sem DataJud real |
+| O-002 | RF-006 | US-015 | `ManualProvider` | observação manual sintética, evidência e falha explícita | Partial/Deferred — entrada operacional sem ação D-022 aprovada |
+| O-002 | RF-007 | US-017 | Normalização de observação | resposta normalizada, `missingFields` e validação runtime | Implemented/Tested — snapshots e persistência deferidos |
+| O-003 | RF-009 | US-027 | Registry/Gateway | provider ou capability ausente retorna `not_supported` | Implemented/Tested |
+
+A D-022 canônica (`docs/10-matriz-papeis-e-autorizacao.md`) possui `manual_reprocess` para lawyer/operator, mas não possui ação `manual_provider_entry`. Nenhuma role foi inventada para entrada manual operacional; essa expansão permanece decisão humana pendente e critério de parada. Nenhum provider real, DataJud, credencial, scheduler, fila, worker, snapshot ou comparador foi adicionado.
