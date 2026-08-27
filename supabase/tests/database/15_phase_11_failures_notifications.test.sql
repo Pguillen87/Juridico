@@ -43,7 +43,7 @@ INSERT INTO public.query_job (
   status, attempt_count, max_attempts, available_at, finished_at
 ) VALUES
   ('b1100000-0000-4000-d000-000000000001', 'b1100000-0000-4000-9000-000000000001', 'b1100000-0000-4000-c000-000000000001', 'datajud_sandbox', 'process_observation', 'scheduled', '2026-08-27 10:00:00+00', 'phase11-job-1', repeat('a', 64), 'phase11-job-1', 'terminal_failure', 1, 3, '2026-08-27 10:00:00+00', '2026-08-27 10:00:01+00'),
-  ('b1100000-0000-4000-d000-000000000002', 'b1100000-0000-4000-9000-000000000001', 'b1100000-0000-4000-c000-000000000001', 'datajud_sandbox', 'process_observation', 'scheduled', '2026-08-27 10:01:00+00', 'phase11-job-2', repeat('b', 64), 'phase11-job-2', 'retry_scheduled', 2, 3, '2026-08-27 10:01:00+00', NULL),
+  ('b1100000-0000-4000-d000-000000000002', 'b1100000-0000-4000-9000-000000000001', 'b1100000-0000-4000-c000-000000000001', 'datajud_sandbox', 'process_observation', 'scheduled', '2026-08-27 10:01:00+00', 'phase11-job-2', repeat('b', 64), 'phase11-job-2', 'retry_scheduled', 2, 3, '2999-01-01 00:00:00+00', NULL),
   ('b1100000-0000-4000-d000-000000000003', 'b1100000-0000-4000-9000-000000000002', 'b1100000-0000-4000-c000-000000000002', 'datajud_sandbox', 'process_observation', 'scheduled', '2026-08-27 10:02:00+00', 'phase11-job-3', repeat('c', 64), 'phase11-job-3', 'terminal_failure', 1, 3, '2026-08-27 10:02:00+00', '2026-08-27 10:02:01+00')
 ON CONFLICT (id) DO NOTHING;
 
@@ -122,6 +122,12 @@ SELECT is(public.phase11_request_failure_reprocess(
   (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
   'manual-reprocess-test'
 ), :'manual_manual_job_id'::uuid, 'mesma chave de reprocessamento retorna o job existente');
+BEGIN;
+SELECT set_config('juridico.phase9_internal', '1', true);
+UPDATE public.query_job
+   SET status = 'cancelled', finished_at = clock_timestamp(), available_at = clock_timestamp(), updated_at = clock_timestamp()
+ WHERE id = :'manual_manual_job_id'::uuid;
+COMMIT;
 SELECT lives_ok($$SELECT public.phase11_assign_failure_incident(
   (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
   'b1100000-0000-4000-8000-000000000001', 'assignment-test')$$, 'lawyer atribui o incidente no próprio office');
