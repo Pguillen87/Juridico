@@ -7,9 +7,20 @@
 | Branch | `phase-11-failures-notifications` |
 | Baseline Fase 10 | `ee687bb0fefdb5d6899b25f3753d5eac77ce3037` |
 | Primeiro commit da Fase 11 | `259e6e58ea9177bda7232281b8951a1c6cf0c78c` |
-| Corretivo | Exceção única autorizada; novo commit incremental em preparação, sem amend, rebase, squash ou force-push |
+| Corretivo final | `490d4bd1d1a24445b422cc36cb5cc0f2de5982ea`; parent `e7fbad6221bd4f6b03909286938639f5893ab882` |
 | Migration 00003 histórica | `20260827000003_phase_11_failures_notifications.sql` — publicação defeituosa preservada como histórico |
 | Migration 00003 canônica corrigida | blob `8d4d9cbcf030d288a5d91ff8262241de94a9bd8c`; SHA-256 `3c61a4215c084d452d70f58ee28a7837df076a5f7716de3ebe774b4bfb200775` |
+| Migration 00004 publicada | blob `ad1f88ccc54c3a0e1be6a16480697fbb090365c6` |
+
+## Commits incrementais
+
+| Commit | Conteúdo |
+|---|---|
+| `5694bae` | Primeiro corretivo: gate histórico, migration 00004, upgrade, E2E, segurança e documentação iniciais. |
+| `ee39a38` | Exceção única: correção somente dos dois `RAISE` da 00003. |
+| `38d5a12` | Bit executável do gate de upgrade. |
+| `e7fbad6` | Comparação estrutural de schema entre reset e upgrade. |
+| `490d4bd` | Reset limpo após pgTAP do upgrade para preservar a regressão cumulativa. |
 
 ## IMPLEMENTADO
 
@@ -29,7 +40,7 @@ A migration 00004 concentra exclusivamente as quatro correções pós-publicaç�
 
 ## TESTADO ANTERIORMENTE NA FASE 11
 
-Antes deste corretivo, o HEAD funcional havia passado format, lint, typecheck, unitários, build, reset Supabase, DB lint, pgTAP, E2E, PoC, todos os testes de concorrência cumulativos, PowerShell e database types no App CI `33106422849`, com sucesso no SHA `5f4286628ade5ad6be48e009d11043bc0bd53056`. O primeiro CI do corretivo (`33109869203`) falhou corretamente em `Start Supabase Local`, expondo o defeito sintático histórico da 00003. O cenário defeituoso `00003 original → 00004` foi retirado como critério de aceite; a nova regressão deve usar Fase 10 → 00003 corrigida → 00004.
+Antes deste corretivo, o HEAD funcional havia passado format, lint, typecheck, unitários, build, reset Supabase, DB lint, pgTAP, E2E, PoC, todos os testes de concorrência cumulativos, PowerShell e database types no App CI `33106422849`, com sucesso no SHA `5f4286628ade5ad6be48e009d11043bc0bd53056`. O primeiro CI do corretivo (`33109869203`) falhou corretamente em `Start Supabase Local`, expondo o defeito sintático histórico da 00003. O cenário defeituoso `00003 original → 00004` foi retirado como critério de aceite; a regressão final usou Fase 10 → 00003 corrigida → 00004.
 
 ## PARCIAL
 
@@ -41,4 +52,8 @@ Não foram usados SMTP, destinatário real, serviço externo real, DataJud real,
 
 ## Validação do corretivo
 
-Os resultados do reset limpo com 00003 corrigida + 00004, do upgrade a partir de schema válido da Fase 10 para 00003 corrigida e depois somente 00004, da regressão cumulativa e do novo App CI serão preenchidos somente com evidência observada após a execução. O upgrade sobre a 00003 original defeituosa não é executado nem alegado, pois a versão original não completa sua própria aplicação. O gate de histórico da Fase 11 deve provar o blob canônico e o SHA-256 da 00003, a exceção limitada aos dois `RAISE`, a imutabilidade da 00004 e a preservação das migrations anteriores.
+O reset completo com 00003 corrigida + 00004 passou. O upgrade válido a partir de schema da Fase 10, aplicando 00003 corrigida e depois somente 00004, passou; o script comparou fingerprints estruturais, funções, assinaturas, grants, RLS/policies, tabelas, constraints, triggers e tipos gerados. O pgTAP passou nos dois estados e o banco foi resetado novamente ao final para não contaminar a regressão cumulativa. O upgrade sobre a 00003 original defeituosa não foi executado nem alegado, pois a versão original não completa sua própria aplicação.
+
+O App CI `33121511656` concluiu `completed/success` com `headSha=490d4bd1d1a24445b422cc36cb5cc0f2de5982ea`. Passaram os gates de secret scan, auditoria de dependências, histórico F9/F10/F11, hygiene, formato, lint, typecheck, unitários, início do Supabase, reset, upgrade, E2E autenticado — incluindo `tests-e2e/failures.spec.ts` —, PoC sintética, DB lint, pgTAP, concorrência legada/F9/F10/F11, PowerShell e database types. A validação local também passou em parser SQL, `git diff --check`, formato, lint, typecheck, 126 unitários, build e `npm audit` sem vulnerabilidades.
+
+O gate de histórico prova o blob canônico e o SHA-256 da 00003, o diff limitado aos dois argumentos `TG_TABLE_NAME`, a imutabilidade publicada da 00004 e a preservação das migrations anteriores.
