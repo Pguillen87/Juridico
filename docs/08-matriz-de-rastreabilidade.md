@@ -38,7 +38,7 @@
 | O-002 | RF-008 | US-021 | `detected_change` | Comparador | 10 | T-021 change | Fingerprint | Planned |
 | O-003 | RF-008 | US-022 | `query_execution` | Comparador/UI | 10 | T-022 unchanged | Estado exibido | Planned |
 | O-003 | RF-009 | US-023 | `query_execution` | Failure center | 9,11 | T-023 source unavailable | `source_unavailable` persistido, retry limitado e mensagem sanitizada | Implemented/Tested — central UI futura |
-| O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker | 9,11 | T-024 timeout | Claim, lease, recovery, token anti-stale e conclusão server-only | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker | 9,11 | T-024 timeout | Claim, lease, recovery, token anti-stale e conclusão server-only; teste real com duas conexões e verificação de histórico 00011/00012 | Implemented/Tested — sandbox only |
 | O-003 | RF-009 | US-025 | `query_job` | Retry | 9,11 | T-025 rate limit | Máximo de três tentativas, backoff/teto e terminalização | Implemented/Tested — sandbox only |
 | O-003 | RF-009 | US-026 | `query_execution` | Failure center | 8,11 | T-026 not found | `not_found` terminal explícito, sem snapshot e sem `unchanged` | Implemented/Tested — persistência sandbox; UI futura |
 | O-003 | RF-009 | US-027 | `provider_capability` | Provider | 7,9,11 | T-027 unsupported | Capability/provider allowlisted; incompatibilidade não chama provider | Implemented/Tested — sandbox |
@@ -62,7 +62,7 @@
 
 ## Cobertura Crítica
 
-As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
+As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. Na Fase 9, o teste PostgreSQL real demonstra scheduler idempotente, claim exclusivo, conclusão sem duplicação, lease antiga rejeitada e nova lease funcional; `scripts/check-phase9-migration-history.sh` demonstra que 00011 é byte a byte igual a `2904185` e que o hardening existe somente em 00012. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
 
 ## Aceite funcional adicional da Fase 5
 

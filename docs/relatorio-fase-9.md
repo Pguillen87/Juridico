@@ -32,7 +32,7 @@ O retry usa backoff determinístico, respeita `Retry-After` somente dentro do te
 
 ## 4. Segurança PostgreSQL e D-022
 
-A migration `20260826000011_phase_9_scheduler_queue_snapshots.sql` é incremental e começa com `SET lock_timeout = '2s'`. As tabelas novas possuem RLS habilitada, chaves compostas de tenant e constraints de estado, tenant, attempts e integridade. As funções privilegiadas usam `SECURITY DEFINER`, `search_path = pg_catalog, public`, validações DB-side e grants mínimos.
+A migration publicada `20260826000011_phase_9_scheduler_queue_snapshots.sql` foi restaurada byte a byte ao conteúdo original de `2904185d0e43546e6f48433533326878fb200c80`; ela permanece imutável. O hardening de stale lease foi movido exclusivamente para a migration incremental `20260826000012_phase_9_stale_lease_hardening.sql`, cuja primeira instrução é `SET lock_timeout = '2s';` e que reaplica a mesma assinatura pública com `SECURITY DEFINER`, `search_path = pg_catalog, public`, validações DB-side, atomicidade, idempotência e grants mínimos. As tabelas novas possuem RLS habilitada, chaves compostas de tenant e constraints de estado, tenant, attempts e integridade.
 
 O navegador pode solicitar somente a alteração de monitoramento autorizada pela D-022. `authenticated`, `anon` e `PUBLIC` não executam scheduler, claim, recovery, completion, configuração de backend ou escrita sistêmica. O `service_role` não recebe DML direto nas tabelas novas; executa somente as RPCs internas destinadas ao scheduler/worker. O reprocessamento manual permanece sem `EXECUTE` público e sem Server Action até decisão específica para US-012/US-029. Não foi criada a ação `manual_provider_entry`, nem houve fallback automático para `ManualProvider`.
 
@@ -40,7 +40,7 @@ A auditoria sistêmica utiliza `actor_user_id = NULL` e origens allowlisted `sys
 
 ## 5. Critérios de aceite e parada
 
-A fase somente pode ser considerada concluída com reset e lint da base, suíte pgTAP específica e cumulativa, tipos oficiais sincronizados, unitários, typecheck, lint, build, higiene, auditoria de segredos e CI do SHA exato verde. A validação deve provar idempotência de janela, isolamento de tenant, processo sigiloso bloqueado antes do provider, concorrência de lease, rejeição de token stale, recuperação, limite de retries, terminalização de `not_found`, atomicidade de exchange/payload/snapshot/auditoria e imutabilidade.
+A fase somente pode ser considerada concluída com reset e lint da base, prova byte a byte da imutabilidade de 00011, suíte pgTAP específica e cumulativa, tipos oficiais sincronizados, unitários, typecheck, lint, build, higiene, auditoria de segredos e CI do SHA exato verde. A validação deve provar idempotência de janela, isolamento de tenant, processo sigiloso bloqueado antes do provider, concorrência de lease, rejeição de token stale, recuperação, limite de retries, terminalização de `not_found`, atomicidade de exchange/payload/snapshot/auditoria e imutabilidade.
 
 A implementação deve parar e não publicar se houver execução de provider pelo scheduler, acesso browser às RPCs internas, DML direto de `service_role`, bypass de processo sigiloso, duplicação de job, perda de tentativa, snapshot para falha, comparação antecipada, segredo em código/log/resposta/fixture, fallback automático do ManualProvider, warning de migration não resolvido, falha de regressão ou CI diferente do SHA publicado.
 
@@ -61,8 +61,10 @@ A implementação deve parar e não publicar se houver execução de provider pe
 | Database types | Saída oficial do Supabase local idêntica ao arquivo versionado após normalização de line endings |
 | `npm audit --audit-level=high --omit=dev` | 0 vulnerabilidades |
 | Higiene, secret scan e `git diff --check` | Passaram |
+| Histórico de migrations | `scripts/check-phase9-migration-history.sh` e o teste concorrente: diff de 00011 contra 2904185 vazio; guard stale exclusivo em 00012 | Passou |
+| Revisão PostgreSQL/security | `lock_timeout` inicial, sem DDL destrutivo/grants amplos, `SECURITY DEFINER`, `search_path` fixo, owner PostgreSQL e `service_role` apenas | Passou |
 
-O script bash de concorrência do último proprietário não foi considerado evidência local válida porque a chamada pelo WSL da máquina Windows apresentou line endings CRLF e não encontrou o Docker integrado nessa distribuição. Esse gate permanece para validação no App CI Linux; a falha ambiental não foi mascarada nem usada para relaxar o workflow. O teste específico `supabase/tests/concurrency/test_phase9_concurrency.sh` foi executado com duas conexões PostgreSQL reais pela integração Git Bash/Docker e passou, comprovando scheduler idempotente, claim exclusivo, conclusão sem duplicação de exchange/snapshot, rejeição de lease stale e conclusão pela nova lease.
+O script bash de concorrência do último proprietário não foi considerado evidência local válida porque a chamada pelo WSL da máquina Windows apresentou line endings CRLF e não encontrou o Docker integrado nessa distribuição. Esse gate permanece para validação no App CI Linux; a falha ambiental não foi mascarada nem usada para relaxar o workflow. O teste específico `supabase/tests/concurrency/test_phase9_concurrency.sh` foi executado com duas conexões PostgreSQL reais pela integração Git Bash/Docker e passou após reset limpo com 00011 original e 00012 incremental, comprovando scheduler idempotente, claim exclusivo, conclusão sem duplicação de exchange/snapshot, rejeição de lease stale e conclusão pela nova lease.
 
 ## 7. Status de escopo
 
@@ -73,5 +75,7 @@ A Fase 9 adiciona somente scheduler, fila, worker, retries e snapshots em sandbo
 [1]: `../docs/01-requisitos-do-produto.md` — Requisitos canônicos do produto.
 [2]: `../docs/10-matriz-papeis-e-autorizacao.md` — Matriz normativa D-022.
 [3]: `../docs/09-definicao-de-pronto.md` — Definição de pronto.
-[4]: `../supabase/migrations/20260826000011_phase_9_scheduler_queue_snapshots.sql` — Migration incremental da Fase 9.
-[5]: `../supabase/tests/database/12_phase_9_scheduler_queue_snapshots.test.sql` — Suíte pgTAP da Fase 9.
+[4]: `../supabase/migrations/20260826000011_phase_9_scheduler_queue_snapshots.sql` — Migration publicada e imutável, restaurada da versão original.
+[5]: `../supabase/migrations/20260826000012_phase_9_stale_lease_hardening.sql` — Hardening incremental de stale lease.
+[6]: `../supabase/tests/database/12_phase_9_scheduler_queue_snapshots.test.sql` — Suíte pgTAP da Fase 9.
+[7]: `../scripts/check-phase9-migration-history.sh` — Verificador automatizado de integridade do histórico.

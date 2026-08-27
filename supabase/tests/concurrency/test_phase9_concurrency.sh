@@ -3,6 +3,30 @@ set -euo pipefail
 
 # Teste de integração real: cada docker exec inicia um psql independente.
 # Todos os dados são sintéticos e o teste deve rodar depois do db reset/pgTAP.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../../.." && pwd)"
+BASE_SHA="${PHASE9_BASE_SHA:-2904185d0e43546e6f48433533326878fb200c80}"
+MIGRATION_11="supabase/migrations/20260826000011_phase_9_scheduler_queue_snapshots.sql"
+MIGRATION_12="supabase/migrations/20260826000012_phase_9_stale_lease_hardening.sql"
+
+# Integridade histórica obrigatória: 00011 publicada é imutável; o guard vive em 00012.
+cd "${REPO_ROOT}"
+git cat-file -e "${BASE_SHA}^{commit}"
+git diff --exit-code "${BASE_SHA}" -- "${MIGRATION_11}"
+if [[ -z "$(git status --porcelain -- "${MIGRATION_11}")" ]]; then
+  git diff --exit-code "${BASE_SHA}...HEAD" -- "${MIGRATION_11}"
+fi
+if grep -q "query execution lease is no longer active" "${MIGRATION_11}"; then
+  echo "O stale guard não pode existir na migration publicada 00011." >&2
+  exit 1
+fi
+if ! grep -q "query execution lease is no longer active" "${MIGRATION_12}"; then
+  echo "O stale guard deve existir na migration incremental 00012." >&2
+  exit 1
+fi
+
+echo "migration-history=PASS (00011 idêntica à baseline; guard exclusivo em 00012)"
+
 DB_CONTAINER="${SUPABASE_DB_CONTAINER:-$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -n 1 || true)}"
 if [[ -z "${DB_CONTAINER}" ]] || ! docker inspect "${DB_CONTAINER}" >/dev/null 2>&1; then
   echo "Não foi possível localizar o container PostgreSQL local do Supabase." >&2
