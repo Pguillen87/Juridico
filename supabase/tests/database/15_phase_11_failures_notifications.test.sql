@@ -56,7 +56,7 @@ INSERT INTO public.query_execution (
   ('b1100000-0000-4000-f000-000000000002', 'b1100000-0000-4000-9000-000000000001', 'b1100000-0000-4000-d000-000000000002', 'b1100000-0000-4000-c000-000000000001', 'datajud_sandbox', 'process_observation', 2, 'retry_scheduled', '2026-08-27 10:01:00+00', '2026-08-27 10:01:01+00', 100, 'datajud_timeout', 'A consulta não produziu uma observação válida.', 'phase11-exec-2'),
   ('b1100000-0000-4000-f000-000000000003', 'b1100000-0000-4000-9000-000000000002', 'b1100000-0000-4000-d000-000000000003', 'b1100000-0000-4000-c000-000000000002', 'datajud_sandbox', 'process_observation', 1, 'terminal_failure', '2026-08-27 10:02:00+00', '2026-08-27 10:02:01+00', 100, 'datajud_timeout', 'A consulta não produziu uma observação válida.', 'phase11-exec-3');
 
-SELECT plan(32);
+SELECT plan(34);
 
 SELECT is((SELECT count(*)::integer FROM pg_class WHERE relname IN ('failure_incident', 'failure_occurrence', 'notification_outbox') AND relrowsecurity), 3, 'tabelas da Fase 11 têm RLS habilitada');
 SELECT ok(NOT has_table_privilege('authenticated', 'public.failure_incident', 'INSERT'), 'authenticated não insere incidente diretamente');
@@ -101,11 +101,11 @@ SELECT lives_ok($$SELECT public.phase11_record_failure_event_internal(
   NULL, 1, 'query_execution', 'b1100000-0000-4000-f000-000000000003')$$, 'outro escritório recebe evidência isolada');
 RESET ROLE;
 
-SELECT is((SELECT count(*)::integer FROM public.failure_incident WHERE office_id = 'b1100000-0000-4000-9000-000000000001'), 2, 'office principal tem somente seus incidentes');
+SELECT is((SELECT count(*)::integer FROM public.failure_incident WHERE office_id = 'b1100000-0000-4000-9000-000000000001'), 3, 'office principal tem somente seus incidentes');
 SELECT is((SELECT occurrence_count FROM public.failure_incident WHERE office_id = 'b1100000-0000-4000-9000-000000000001' AND failure_code = 'datajud_timeout'), 2, 'occurrence_count conta falhas observadas, não tentativas');
 SELECT is((SELECT count(*)::integer FROM public.failure_occurrence WHERE office_id = 'b1100000-0000-4000-9000-000000000001' AND failure_code = 'datajud_timeout' AND attempt_number = 2), 1, 'a segunda tentativa fica registrada na ocorrência');
 SELECT is((SELECT count(*)::integer FROM public.failure_occurrence WHERE office_id = 'b1100000-0000-4000-9000-000000000001' AND source_type = 'scheduler' AND attempt_number IS NULL), 1, 'falha sem conceito de tentativa permanece não aplicável');
-SELECT is((SELECT count(*)::integer FROM public.notification_outbox WHERE office_id = 'b1100000-0000-4000-9000-000000000001' AND channel = 'mock_email' AND simulation_only), 3, 'outbox cria somente eventos mock_email sintéticos por ocorrência');
+SELECT is((SELECT count(*)::integer FROM public.notification_outbox WHERE office_id = 'b1100000-0000-4000-9000-000000000001' AND channel = 'mock_email' AND simulation_only), 4, 'outbox cria somente eventos mock_email sintéticos por ocorrência');
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'b1100000-0000-4000-8000-000000000001', false);
