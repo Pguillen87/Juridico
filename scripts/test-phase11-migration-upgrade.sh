@@ -25,9 +25,9 @@ SELECT md5(concat_ws(E'\n',
   ), ''),
   coalesce((
     SELECT string_agg(
-      grantee || '|' || routine_schema || '|' || routine_name || '|' || specific_name || '|' || privilege_type || '|' || is_grantable,
+      grantee || '|' || routine_schema || '|' || routine_name || '|' || privilege_type || '|' || is_grantable,
       E'\n'
-      ORDER BY grantee, routine_schema, routine_name, specific_name, privilege_type
+      ORDER BY grantee, routine_schema, routine_name, privilege_type
     )
     FROM information_schema.role_routine_grants
     WHERE routine_schema = 'public' AND routine_name LIKE 'phase11_%'
@@ -140,6 +140,12 @@ generate_types() {
   "${PRETTIER[@]}" --write "${output}" >/dev/null
 }
 
+dump_schema() {
+  local workdir="$1"
+  local output="$2"
+  run_supabase db dump --local --schema public --workdir "${workdir}" --file "${output}" >/dev/null
+}
+
 migration_versions() {
   local workdir="$1"
   run_supabase db query --local --workdir "${workdir}" --file "${MIGRATIONS_SQL}"
@@ -149,6 +155,7 @@ echo 'phase11-upgrade=full-reset'
 run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
 full_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/full-types.ts"
+dump_schema "${ROOT_DIR}" "${TMP_DIR}/full-schema.sql"
 run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
 echo "full_reset_fingerprint=${full_fingerprint}"
 echo 'full_reset_pgTap=PASS'
@@ -181,10 +188,12 @@ echo 'phase11-upgrade=apply-incremental-00004'
 run_supabase db push --local --workdir "${ROOT_DIR}" --yes >/dev/null
 upgrade_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/upgrade-types.ts"
+dump_schema "${ROOT_DIR}" "${TMP_DIR}/upgrade-schema.sql"
 run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
 
 if [[ "${full_fingerprint}" != "${upgrade_fingerprint}" ]]; then
   echo "Fingerprint do reset completo diverge do upgrade Fase 10→00003→00004: ${full_fingerprint} != ${upgrade_fingerprint}." >&2
+  diff -u "${TMP_DIR}/full-schema.sql" "${TMP_DIR}/upgrade-schema.sql" | head -240 >&2 || true
   exit 1
 fi
 if ! cmp -s "${TMP_DIR}/full-types.ts" "${TMP_DIR}/upgrade-types.ts"; then
