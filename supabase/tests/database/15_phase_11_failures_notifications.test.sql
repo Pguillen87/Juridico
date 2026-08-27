@@ -112,6 +112,9 @@ SELECT set_config('request.jwt.claim.sub', 'b1100000-0000-4000-8000-000000000001
 SELECT is((SELECT count(*)::integer FROM public.phase11_list_failure_incidents(NULL, NULL, NULL, NULL, NULL, 2, 'open', 50)), 1, 'filtro por tentativa é server-side e retorna a ocorrência correspondente');
 SELECT is((SELECT count(*)::integer FROM public.failure_incident WHERE office_id = 'b1100000-0000-4000-9000-000000000002'), 0, 'RLS não expõe incidente de outro office ao lawyer');
 SELECT ok(has_function_privilege('authenticated', 'public.phase11_list_failure_incidents(text,uuid,date,date,text,integer,text,integer)'::regprocedure, 'EXECUTE'), 'usuário autorizado consulta a lista por RPC invoker');
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'b1100000-0000-4000-8000-000000000001', false);
 SELECT public.phase11_request_failure_reprocess(
   (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
   'manual-reprocess-test'
@@ -122,12 +125,15 @@ SELECT is(public.phase11_request_failure_reprocess(
   (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
   'manual-reprocess-test'
 ), :'manual_manual_job_id'::uuid, 'mesma chave de reprocessamento retorna o job existente');
+RESET ROLE;
 BEGIN;
 SELECT set_config('juridico.phase9_internal', '1', true);
 UPDATE public.query_job
    SET status = 'cancelled', finished_at = clock_timestamp(), available_at = clock_timestamp(), updated_at = clock_timestamp()
  WHERE id = :'manual_manual_job_id'::uuid;
 COMMIT;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub', 'b1100000-0000-4000-8000-000000000001', false);
 SELECT lives_ok($$SELECT public.phase11_assign_failure_incident(
   (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
   'b1100000-0000-4000-8000-000000000001', 'assignment-test')$$, 'lawyer atribui o incidente no próprio office');
