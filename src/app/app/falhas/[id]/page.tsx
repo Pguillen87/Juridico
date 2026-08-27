@@ -85,6 +85,15 @@ export default async function FailureDetailPage({
   };
   const occurrences = (occurrenceRows ??
     []) as unknown as FailureOccurrenceRow[];
+  const lastAttemptNumber = occurrences.reduce<number | null>(
+    (current, item) => {
+      if (item.attempt_number === null) return current;
+      return current === null
+        ? item.attempt_number
+        : Math.max(current, item.attempt_number);
+    },
+    null
+  );
   const canHandle = profile.role === 'lawyer' || profile.role === 'operator';
   const canReprocess = canHandle && job?.status === 'terminal_failure';
   const actionNonce = randomUUID();
@@ -167,10 +176,7 @@ export default async function FailureDetailPage({
               Tentativa atual/última
             </p>
             <p className="mt-1 font-semibold text-slate-950">
-              {attemptLabel(
-                occurrences.find((item) => item.attempt_number !== null)
-                  ?.attempt_number ?? null
-              )}
+              {attemptLabel(lastAttemptNumber)}
             </p>
           </div>
           <div>

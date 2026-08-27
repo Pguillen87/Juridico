@@ -987,6 +987,13 @@ BEGIN
   IF incident_row.id IS NULL OR incident_row.current_job_id IS NULL THEN
     RAISE EXCEPTION 'failure incident has no reprocessable job' USING ERRCODE = '42501';
   END IF;
+  internal_key := 'manual-reprocess:' || incident_row.current_job_id::TEXT || ':' || btrim(p_idempotency_key);
+  SELECT id INTO new_job_id
+    FROM public.query_job
+   WHERE office_id = actor.actor_office_id AND idempotency_key = internal_key;
+  IF new_job_id IS NOT NULL THEN
+    RETURN new_job_id;
+  END IF;
   SELECT * INTO failed_job
     FROM public.query_job
    WHERE id = incident_row.current_job_id
