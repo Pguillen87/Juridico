@@ -313,11 +313,11 @@ SET search_path = pg_catalog, public
 AS $$
 BEGIN
   IF current_setting('juridico.phase11_internal', true) <> '1' THEN
-    RAISE EXCEPTION '% is append-only and writable only by internal phase 11 functions'
+    RAISE EXCEPTION '% is append-only and writable only by internal phase 11 functions', TG_TABLE_NAME
       USING ERRCODE = '42501', HINT = 'Use the authorized domain command.';
   END IF;
   IF TG_OP <> 'INSERT' THEN
-    RAISE EXCEPTION '% is append-only and has no physical mutation' USING ERRCODE = '42501';
+    RAISE EXCEPTION '% is append-only and has no physical mutation', TG_TABLE_NAME USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
 END;
