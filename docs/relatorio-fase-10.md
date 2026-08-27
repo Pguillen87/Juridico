@@ -60,13 +60,13 @@ A rejeição de `comparison version` observada na concorrência é o caso negati
 
 ## 7. Publicação e CI
 
-O corretivo será publicado como um único commit incremental normal sobre `82b0fb46577e3cf65f92a5fb2dfa8c333d83d3bc`, sem amend, rebase, squash ou force-push, exclusivamente em `phase-10-comparison-detection`. O App CI do SHA final deverá confirmar o gate `Phase 10 Migration History`, pgTAP, concorrência real e todos os gates anteriores.
+O corretivo foi publicado como um único commit incremental normal `47e6549868758660ac3bf107831213d1e7dd84d1`, sobre `82b0fb46577e3cf65f92a5fb2dfa8c333d83d3bc`, sem amend, rebase, squash ou force-push, exclusivamente em `phase-10-comparison-detection`. O App CI [33091577072](https://github.com/Pguillen87/Juridico/actions/runs/33091577072) terminou `completed/success`, com `headSha` exatamente igual a `47e6549868758660ac3bf107831213d1e7dd84d1`, incluindo o gate `Phase 10 Migration History`, pgTAP, concorrência real e todos os gates anteriores.
 
 O rollback permanece operacional e não destrutivo: retirar a chamada comparativa por commit reversível ou desabilitação server-only, preservando snapshots e evidências. Não há rollback por `DROP TABLE`, `DROP COLUMN` ou edição de migration publicada.
 
 ## 8. Critérios de parada e confirmação de escopo
 
-A execução deve parar diante de qualquer necessidade de provider real, processo sigiloso automático, segredo, grant amplo, DDL destrutivo, alteração de `main`, auditoria fora da transação, raw payload no diff, conversão de failure em `unchanged`, duplicação concorrente, vulnerabilidade High/Critical ou CI diferente do SHA publicado.
+A execução parou após a conclusão dos critérios de aceite. Não houve necessidade de provider real, processo sigiloso automático, segredo, grant amplo, DDL destrutivo, alteração de `main`, auditoria fora da transação, raw payload no diff, conversão de failure em `unchanged`, duplicação concorrente ou vulnerabilidade High/Critical.
 
 Este corretivo permanece limitado à Fase 10: migration histórica imutável, hardening incremental, seleção de baseline compatível, persistência auditável e detecção mínima de alteração. **A Fase 11 não foi iniciada.**
 
