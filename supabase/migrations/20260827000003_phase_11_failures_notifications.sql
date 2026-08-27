@@ -1437,6 +1437,7 @@ REVOKE ALL ON FUNCTION public.phase11_list_failure_assignees()
 REVOKE ALL ON FUNCTION public.phase11_list_failure_incidents(TEXT, UUID, DATE, DATE, TEXT, INTEGER, TEXT, INTEGER)
   FROM PUBLIC, anon;
 
+GRANT EXECUTE ON FUNCTION public.phase11_record_failure_event_internal(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID, UUID, UUID, INTEGER, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phase11_record_execution_failure_internal(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phase11_record_technical_failure_internal(UUID, TEXT, TEXT, TEXT, JSONB, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phase11_reconcile_success_internal(UUID) TO service_role;
