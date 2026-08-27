@@ -5,8 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI=(npx --no-install supabase)
 PRETTIER=(npx --no-install prettier)
 TMP_DIR="$(mktemp -d)"
-OLD_PROJECT_DIR="${TMP_DIR}/old-project"
+F10_PROJECT_DIR="${TMP_DIR}/phase10-project"
+PRE_HARDENING_PROJECT_DIR="${TMP_DIR}/phase11-pre-hardening-project"
 FINGERPRINT_SQL="${TMP_DIR}/schema-fingerprint.sql"
+MIGRATIONS_SQL="${TMP_DIR}/migration-versions.sql"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
 cat >"${FINGERPRINT_SQL}" <<'SQL'
@@ -106,6 +108,13 @@ SELECT md5(concat_ws(E'\n',
 )) AS fingerprint;
 SQL
 
+cat >"${MIGRATIONS_SQL}" <<'SQL'
+SELECT version
+FROM supabase_migrations.schema_migrations
+WHERE version IN ('20260827000003', '20260827000004')
+ORDER BY version;
+SQL
+
 run_supabase() {
   "${CLI[@]}" "$@"
 }
@@ -131,6 +140,11 @@ generate_types() {
   "${PRETTIER[@]}" --write "${output}" >/dev/null
 }
 
+migration_versions() {
+  local workdir="$1"
+  run_supabase db query --local --workdir "${workdir}" --file "${MIGRATIONS_SQL}"
+}
+
 echo 'phase11-upgrade=full-reset'
 run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
 full_fingerprint="$(fingerprint "${ROOT_DIR}")"
@@ -139,24 +153,42 @@ run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
 echo "full_reset_fingerprint=${full_fingerprint}"
 echo 'full_reset_pgTap=PASS'
 
-echo 'phase11-upgrade=prepare-00003-only'
-mkdir -p "${OLD_PROJECT_DIR}"
-cp -R "${ROOT_DIR}/supabase" "${OLD_PROJECT_DIR}/supabase"
-rm -f "${OLD_PROJECT_DIR}/supabase/migrations/20260827000004_phase_11_failures_notifications_hardening.sql"
-run_supabase db reset --local --workdir "${OLD_PROJECT_DIR}" --yes >/dev/null
+echo 'phase11-upgrade=prepare-phase10-schema'
+mkdir -p "${F10_PROJECT_DIR}"
+cp -R "${ROOT_DIR}/supabase" "${F10_PROJECT_DIR}/supabase"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000003_phase_11_failures_notifications.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000004_phase_11_failures_notifications_hardening.sql"
+run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 
-echo 'phase11-upgrade=apply-only-00004'
+echo 'phase11-upgrade=apply-canonical-00003'
+mkdir -p "${PRE_HARDENING_PROJECT_DIR}"
+cp -R "${F10_PROJECT_DIR}/supabase" "${PRE_HARDENING_PROJECT_DIR}/supabase"
+cp "${ROOT_DIR}/supabase/migrations/20260827000003_phase_11_failures_notifications.sql" \
+  "${PRE_HARDENING_PROJECT_DIR}/supabase/migrations/20260827000003_phase_11_failures_notifications.sql"
+run_supabase db push --local --workdir "${PRE_HARDENING_PROJECT_DIR}" --yes >/dev/null
+pre_hardening_versions="$(migration_versions "${PRE_HARDENING_PROJECT_DIR}")"
+if ! grep -Fq '20260827000003' <<<"${pre_hardening_versions}" \
+  || grep -Fq '20260827000004' <<<"${pre_hardening_versions}"; then
+  echo 'O estado pré-hardening não contém exatamente a 00003 corrigida sem a 00004.' >&2
+  printf '%s\n' "${pre_hardening_versions}" >&2
+  exit 1
+fi
+pre_hardening_fingerprint="$(fingerprint "${PRE_HARDENING_PROJECT_DIR}")"
+echo "pre_hardening_00003_fingerprint=${pre_hardening_fingerprint}"
+echo 'pre_hardening_schema=PASS'
+
+echo 'phase11-upgrade=apply-incremental-00004'
 run_supabase db push --local --workdir "${ROOT_DIR}" --yes >/dev/null
 upgrade_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/upgrade-types.ts"
 run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
 
 if [[ "${full_fingerprint}" != "${upgrade_fingerprint}" ]]; then
-  echo "Fingerprint do reset completo diverge do upgrade 00003→00004: ${full_fingerprint} != ${upgrade_fingerprint}." >&2
+  echo "Fingerprint do reset completo diverge do upgrade Fase 10→00003→00004: ${full_fingerprint} != ${upgrade_fingerprint}." >&2
   exit 1
 fi
 if ! cmp -s "${TMP_DIR}/full-types.ts" "${TMP_DIR}/upgrade-types.ts"; then
-  echo 'Tipos gerados divergem entre reset completo e upgrade 00003→00004.' >&2
+  echo 'Tipos gerados divergem entre reset completo e upgrade Fase 10→00003→00004.' >&2
   diff -u "${TMP_DIR}/full-types.ts" "${TMP_DIR}/upgrade-types.ts" >&2 || true
   exit 1
 fi

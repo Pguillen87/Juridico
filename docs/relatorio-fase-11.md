@@ -7,9 +7,9 @@
 | Branch | `phase-11-failures-notifications` |
 | Baseline Fase 10 | `ee687bb0fefdb5d6899b25f3753d5eac77ce3037` |
 | Primeiro commit da Fase 11 | `259e6e58ea9177bda7232281b8951a1c6cf0c78c` |
-| Corretivo | Em validação nesta execução; sem amend, rebase, squash ou force-push |
-| Migration histórica | `20260827000003_phase_11_failures_notifications.sql` |
-| Migration incremental | `20260827000004_phase_11_failures_notifications_hardening.sql` |
+| Corretivo | Exceção única autorizada; novo commit incremental em preparação, sem amend, rebase, squash ou force-push |
+| Migration 00003 histórica | `20260827000003_phase_11_failures_notifications.sql` — publicação defeituosa preservada como histórico |
+| Migration 00003 canônica corrigida | blob `8d4d9cbcf030d288a5d91ff8262241de94a9bd8c`; SHA-256 `3c61a4215c084d452d70f58ee28a7837df076a5f7716de3ebe774b4bfb200775` |
 
 ## IMPLEMENTADO
 
@@ -21,13 +21,15 @@ A outbox é restrita a `in_app` e `mock_email`, com `simulation_only = true`, se
 
 ## CORRETIVO DE MIGRATIONS
 
-A migration 00003 foi restaurada diretamente do primeiro commit publicado e deve permanecer byte a byte idêntica ao blob `27664c487a6757e8695bea28bf56f8f60ca338bb`. O SHA-256 factual do arquivo restaurado é `cb80b2c61f92c5c2b4ec3b0ea05963cbaf044d1b6f2758285b67fbf6362b722c`.
+A primeira publicação da migration 00003 continha dois `RAISE EXCEPTION '%'` sem argumento correspondente e falhava com `SQLSTATE 42601: too few parameters specified for RAISE`; portanto, não constituía baseline válida para banco novo. O blob defeituoso original é `27664c487a6757e8695bea28bf56f8f60ca338bb` e seu SHA-256 era `cb80b2c61f92c5c2b4ec3b0ea05963cbaf044d1b6f2758285b67fbf6362b722c`.
 
-A migration 00004 concentra exclusivamente as quatro correções pós-publicação identificadas no delta real: parâmetros ausentes nos `RAISE` da trigger append-only; permissão explícita do recorder interno para `service_role`/`postgres`; idempotência antecipada do reprocessamento manual; e `GRANT EXECUTE` mínimo para o recorder interno destinado ao backend. Ela começa com `SET lock_timeout = '2s';`, não edita Fases 9/10 e não usa DDL destrutivo.
+Foi autorizada uma única exceção controlada à imutabilidade. Somente os dois `RAISE` receberam `TG_TABLE_NAME` como argumento, preservando `USING ERRCODE` e `HINT`; nenhuma alteração funcional posterior, grant, RLS ou RPC foi incorporada à 00003. O novo blob canônico é `8d4d9cbcf030d288a5d91ff8262241de94a9bd8c`, com SHA-256 `3c61a4215c084d452d70f58ee28a7837df076a5f7716de3ebe774b4bfb200775`; novas alterações da 00003 são proibidas.
+
+A migration 00004 concentra exclusivamente as quatro correções pós-publicação identificadas no delta real: parâmetros ausentes nos `RAISE` da trigger append-only permanecem fora dela porque foram corrigidos na exceção autorizada; permissão explícita do recorder interno para `service_role`/`postgres`; idempotência antecipada do reprocessamento manual; e `GRANT EXECUTE` mínimo para o recorder interno destinado ao backend. Seu blob publicado é `ad1f88ccc54c3a0e1be6a16480697fbb090365c6`, ela começa com `SET lock_timeout = '2s';`, não edita Fases 9/10 e não usa DDL destrutivo.
 
 ## TESTADO ANTERIORMENTE NA FASE 11
 
-Antes deste corretivo, o HEAD funcional havia passado format, lint, typecheck, unitários, build, reset Supabase, DB lint, pgTAP, E2E, PoC, todos os testes de concorrência cumulativos, PowerShell e database types no App CI `33106422849`, com sucesso no SHA `5f4286628ade5ad6be48e009d11043bc0bd53056`. Esses resultados são evidência do estado funcional anterior; a validação do par 00003 original + 00004 será registrada após a nova regressão.
+Antes deste corretivo, o HEAD funcional havia passado format, lint, typecheck, unitários, build, reset Supabase, DB lint, pgTAP, E2E, PoC, todos os testes de concorrência cumulativos, PowerShell e database types no App CI `33106422849`, com sucesso no SHA `5f4286628ade5ad6be48e009d11043bc0bd53056`. O primeiro CI do corretivo (`33109869203`) falhou corretamente em `Start Supabase Local`, expondo o defeito sintático histórico da 00003. O cenário defeituoso `00003 original → 00004` foi retirado como critério de aceite; a nova regressão deve usar Fase 10 → 00003 corrigida → 00004.
 
 ## PARCIAL
 
@@ -39,4 +41,4 @@ Não foram usados SMTP, destinatário real, serviço externo real, DataJud real,
 
 ## Validação do corretivo
 
-Os resultados do reset limpo com 00003 original + 00004, do upgrade sobre banco já aplicado na 00003 original, da regressão cumulativa e do novo App CI serão preenchidos somente com evidência observada após a execução. O gate de histórico da Fase 11 deve provar o blob e o SHA-256 da 00003, a exclusividade do hardening na 00004 e a preservação das migrations anteriores.
+Os resultados do reset limpo com 00003 corrigida + 00004, do upgrade a partir de schema válido da Fase 10 para 00003 corrigida e depois somente 00004, da regressão cumulativa e do novo App CI serão preenchidos somente com evidência observada após a execução. O upgrade sobre a 00003 original defeituosa não é executado nem alegado, pois a versão original não completa sua própria aplicação. O gate de histórico da Fase 11 deve provar o blob canônico e o SHA-256 da 00003, a exceção limitada aos dois `RAISE`, a imutabilidade da 00004 e a preservação das migrations anteriores.

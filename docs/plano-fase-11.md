@@ -4,7 +4,7 @@
 
 A Fase 11 parte da baseline aprovada da Fase 10, `ee687bb0fefdb5d6899b25f3753d5eac77ce3037`, na branch dedicada `phase-11-failures-notifications`. O escopo é criar uma central interna de falhas, sua linha do tempo append-only, reprocessamento controlado e uma outbox somente interna/sintética. A fase não inicia a Fase 12 e não integra entrega externa.
 
-O corretivo posterior desta fase preserva a migration 00003 no conteúdo da primeira publicação, no commit `259e6e58ea9177bda7232281b8951a1c6cf0c78c`, e concentra correções pós-publicação na migration incremental 00004. Migrations anteriores das Fases 9 e 10 permanecem imutáveis.
+A primeira publicação da migration 00003, no commit `259e6e58ea9177bda7232281b8951a1c6cf0c78c`, continha um erro sintático nos dois `RAISE` da trigger append-only e não era aplicável a banco novo. Foi autorizada uma única exceção controlada à imutabilidade: somente os dois comandos receberam `TG_TABLE_NAME` como argumento. O blob corrigido passa a ser a versão canônica e imutável da 00003; todo hardening posterior permanece exclusivamente na migration incremental 00004. Migrations anteriores das Fases 9 e 10 permanecem imutáveis.
 
 ## Modelo funcional
 
@@ -30,10 +30,10 @@ O provider continua produzindo somente `observation` ou `failure`. `changed`, `u
 
 ## Migration e rollback
 
-A migration 00003 deve permanecer byte a byte igual à primeira publicação. A migration 00004 começa literalmente com `SET lock_timeout = '2s';` e contém somente hardening incremental necessário, sem DDL destrutivo e sem alteração das migrations Fases 9 e 10. O rollback operacional preserva evidência: impede novas chamadas ao writer ou ao transporte sintético e usa migration reversa revisada apenas se necessária; não remove incidentes, ocorrências, auditorias ou histórico.
+A migration 00003 deve permanecer byte a byte igual ao novo blob corrigido, depois da exceção única documentada; novas alterações são proibidas. A migration 00004 começa literalmente com `SET lock_timeout = '2s';` e contém somente hardening incremental necessário, sem DDL destrutivo e sem alteração das migrations Fases 9 e 10. O rollback operacional preserva evidência: impede novas chamadas ao writer ou ao transporte sintético e usa migration reversa revisada apenas se necessária; não remove incidentes, ocorrências, auditorias ou histórico.
 
 ## Validação e critérios de aceite
 
-A validação cobre o caminho de banco novo — migrations anteriores, 00003 original e 00004 — e o upgrade de banco já aplicado até a 00003 original seguido somente da 00004. Os caminhos são comparados por funções, assinaturas, grants, RLS/policies, tabelas/constraints, pgTAP e tipos gerados. A regressão cumulativa inclui histórico das Fases 9 e 10, gate byte a byte da Fase 11, formato, lint, typecheck, unitários, build, reset, DB lint, pgTAP, E2E, PoC sintética, concorrência, PowerShell, hygiene, secret scan, `git diff --check` e auditoria de dependências em nível alto.
+A validação cobre o caminho de banco novo — migrations anteriores, 00003 corrigida e 00004 — e o upgrade tecnicamente válido a partir de um schema da Fase 10, aplicando a 00003 corrigida e depois somente a 00004. O cenário `00003 original defeituosa → 00004` é explicitamente impossível e não é critério de aceite, porque a versão original não completa sua própria aplicação. Os caminhos válidos são comparados por funções, assinaturas, grants, RLS/policies, tabelas/constraints, pgTAP e tipos gerados. A regressão cumulativa inclui histórico das Fases 9 e 10, gate byte a byte da Fase 11, formato, lint, typecheck, unitários, build, reset, DB lint, pgTAP, E2E, PoC sintética, concorrência, PowerShell, hygiene, secret scan, `git diff --check` e auditoria de dependências em nível alto.
 
-O aceite exige 00003 imutável, hardening exclusivo na 00004, reset e upgrade aprovados, contrato funcional preservado, matriz de rastreabilidade atualizada, US-030 explicitamente parcial/deferida para envio real, US-031 limitado à deduplicação lógica sintética, nenhum envio externo e Fase 12 não iniciada.
+O aceite exige o novo blob canônico da 00003 imutável, prova explícita da exceção limitada aos dois `RAISE`, hardening exclusivo na 00004, reset e upgrade válido aprovados, contrato funcional preservado, matriz de rastreabilidade atualizada, US-030 explicitamente parcial/deferida para envio real, US-031 limitado à deduplicação lógica sintética, nenhum envio externo e Fase 12 não iniciada.
