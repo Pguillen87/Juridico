@@ -129,7 +129,7 @@ wait "${PID_A}"
 wait "${PID_B}"
 
 RESULT_LINES="$(cat "${TMP_DIR}/compare-a.out" "${TMP_DIR}/compare-b.out" | awk 'NF' | wc -l | tr -d ' ')"
-REPLAY_LINES="$(cat "${TMP_DIR}/compare-a.out" "${TMP_DIR}/compare-b.out" | awk -F'|' '$6 == "t" {count += 1} END {print count + 0}')"
+REPLAY_LINES="$(cat "${TMP_DIR}/compare-a.out" "${TMP_DIR}/compare-b.out" | awk -F'|' '$8 == "t" {count += 1} END {print count + 0}')"
 if [[ "${RESULT_LINES}" -ne 2 || "${REPLAY_LINES}" -ne 1 ]]; then
   echo "Comparação concorrente inesperada: linhas=${RESULT_LINES} replays=${REPLAY_LINES}" >&2
   cat "${TMP_DIR}/compare-a.out" "${TMP_DIR}/compare-b.out" >&2

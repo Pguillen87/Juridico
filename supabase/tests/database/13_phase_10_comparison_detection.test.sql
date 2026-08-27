@@ -197,7 +197,7 @@ INSERT INTO public.process_snapshot (
 )
 ON CONFLICT (id) DO NOTHING;
 
-SELECT plan(29);
+SELECT plan(31);
 
 SELECT is((SELECT count(*)::integer
              FROM pg_class
@@ -229,6 +229,14 @@ SELECT * FROM public.phase10_compare_process_snapshot(
 ) \gset changed_
 SELECT is(:'changed_result'::text, 'changed'::text, 'snapshot diferente produz changed');
 SELECT ok(:'changed_detected_change_id' IS NOT NULL, 'changed cria detected_change');
+SELECT ok(
+  :'changed_changed_fields'::jsonb = '["/system", "/movements/by-ref/M-1/description"]'::jsonb,
+  'RPC devolve changed_fields persistido sem alterar a fonte única'
+);
+SELECT ok(
+  :'changed_normalized_diff'::jsonb @> '{"entries":[{"path":"/system"}]}'::jsonb,
+  'RPC devolve normalized_diff persistido sem duplicar em detected_change'
+);
 RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.process_comparison), 2, 'há uma comparação por snapshot corrente e versão');
 SELECT is((SELECT count(*)::integer FROM public.detected_change), 1, 'changed cria exatamente uma mudança');

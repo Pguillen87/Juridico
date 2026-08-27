@@ -287,6 +287,8 @@ RETURNS TABLE (
   result TEXT,
   reason_code TEXT,
   comparison_hash TEXT,
+  changed_fields JSONB,
+  normalized_diff JSONB,
   replayed BOOLEAN
 )
 LANGUAGE plpgsql
@@ -638,8 +640,12 @@ BEGIN
     END IF;
   END IF;
 
-  RETURN QUERY SELECT comparison_uuid, detected_uuid, p_result, p_reason_code,
-                      computed_hash, NOT inserted;
+  RETURN QUERY
+  SELECT comparison_uuid, detected_uuid, pc.result, pc.reason_code,
+         pc.comparison_hash, pc.changed_fields, pc.normalized_diff,
+         NOT inserted
+    FROM public.process_comparison pc
+   WHERE pc.id = comparison_uuid;
 END;
 $$;
 

@@ -1393,9 +1393,11 @@ export type Database = {
           p_result: string;
         };
         Returns: {
+          changed_fields: Json;
           comparison_hash: string;
           comparison_id: string;
           detected_change_id: string;
+          normalized_diff: Json;
           reason_code: string;
           replayed: boolean;
           result: string;
