@@ -983,6 +983,10 @@ BEGIN
   IF execution_row.id IS NULL THEN
     RAISE EXCEPTION 'query execution not found' USING ERRCODE = '42501';
   END IF;
+  IF job_row.status = 'running' AND execution_row.status <> 'running' THEN
+    RAISE EXCEPTION 'query execution lease is no longer active'
+      USING ERRCODE = '42501';
+  END IF;
   IF job_row.status <> 'running' OR execution_row.status <> 'running' THEN
     SELECT job_row.id, execution_row.id, job_row.status,
            execution_row.provider_exchange_id,

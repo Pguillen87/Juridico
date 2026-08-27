@@ -145,7 +145,7 @@ A Fase 9 foi implementada somente em sandbox sintético a partir do commit `9246
 | Auditoria sistêmica | `phase9_write_system_audit` | `actor_user_id=NULL`, origem allowlisted `system_scheduler`/`system_worker`, `worker_id` opaco, metadata allowlisted | Implemented/Tested |
 | ManualProvider | registry existente | Sem fallback automático e sem `manual_provider_entry`; US-012/US-029 não ganham endpoint novo | Bloqueado/Deferred |
 
-A suíte `12_phase_9_scheduler_queue_snapshots.test.sql` cobre 36 assertions de grants, RLS, ativação D-022, scheduler idempotente, claim, concorrência de lease, conclusão com exchange/payload/snapshot, recovery, stale worker e retry terminal. Comparação, `changed`, `unchanged`, notificações e produção permanecem fora da Fase 9.
+A suíte `12_phase_9_scheduler_queue_snapshots.test.sql` cobre 36 assertions de grants, RLS, ativação D-022, scheduler idempotente, claim, concorrência de lease, conclusão com exchange/payload/snapshot, recovery, stale worker e retry terminal. O teste real `supabase/tests/concurrency/test_phase9_concurrency.sh` cobre duas conexões PostgreSQL simultâneas, claim exclusivo, conclusão sem duplicação, lease stale e scheduler idempotente. O plano aprovado está registrado em `docs/plano-fase-9.md`. Comparação, `changed`, `unchanged`, notificações e produção permanecem fora da Fase 9.
 
 ## Fechamento factual da Fase 8
 

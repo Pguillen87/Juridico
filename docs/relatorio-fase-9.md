@@ -54,6 +54,7 @@ A implementação deve parar e não publicar se houver execução de provider pe
 | Reset e lint PostgreSQL | Passaram na cópia Docker Windows isolada |
 | Suíte pgTAP cumulativa | 12 arquivos, 305 assertions, passou |
 | Suíte pgTAP específica da Fase 9 | 36 assertions, passou |
+| Concorrência real específica da Fase 9 | Duas conexões PostgreSQL simultâneas; scheduler/claim/conclusão/lease stale, passou |
 | Auth E2E após a UI de monitoramento | 25 testes, passou |
 | PoC DataJud | 29 testes, passou |
 | Concorrência Windows | Rate limit, confirmação Fase 5 e processos/CSV Fase 6 passaram |
@@ -61,7 +62,7 @@ A implementação deve parar e não publicar se houver execução de provider pe
 | `npm audit --audit-level=high --omit=dev` | 0 vulnerabilidades |
 | Higiene, secret scan e `git diff --check` | Passaram |
 
-O script bash de concorrência do último proprietário não foi considerado evidência local válida porque a chamada pelo WSL da máquina Windows apresentou line endings CRLF e não encontrou o Docker integrado nessa distribuição. Esse gate permanece para validação no App CI Linux; a falha ambiental não foi mascarada nem usada para relaxar o workflow.
+O script bash de concorrência do último proprietário não foi considerado evidência local válida porque a chamada pelo WSL da máquina Windows apresentou line endings CRLF e não encontrou o Docker integrado nessa distribuição. Esse gate permanece para validação no App CI Linux; a falha ambiental não foi mascarada nem usada para relaxar o workflow. O teste específico `supabase/tests/concurrency/test_phase9_concurrency.sh` foi executado com duas conexões PostgreSQL reais pela integração Git Bash/Docker e passou, comprovando scheduler idempotente, claim exclusivo, conclusão sem duplicação de exchange/snapshot, rejeição de lease stale e conclusão pela nova lease.
 
 ## 7. Status de escopo
 

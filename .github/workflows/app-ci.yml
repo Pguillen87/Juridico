@@ -90,6 +90,9 @@ jobs:
       - name: Concurrency Test (Last Owner Protection)
         run: ./supabase/tests/concurrency/test_concurrency.sh
 
+      - name: Concurrency Test (Phase 9 Scheduler Queue)
+        run: ./supabase/tests/concurrency/test_phase9_concurrency.sh
+
       - name: Verify PowerShell
         run: pwsh -c '$PSVersionTable'
 
