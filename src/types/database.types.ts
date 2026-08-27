@@ -1137,6 +1137,342 @@ export type Database = {
           },
         ];
       };
+      failure_incident: {
+        Row: {
+          assigned_to_user_id: string | null;
+          capability: string | null;
+          created_at: string;
+          current_execution_id: string | null;
+          current_job_id: string | null;
+          failure_class: string;
+          failure_code: string;
+          failure_stage: string;
+          first_seen_at: string;
+          fingerprint: string;
+          id: string;
+          last_seen_at: string;
+          occurrence_count: number;
+          office_id: string;
+          origin: string;
+          process_id: string | null;
+          provider_id: string | null;
+          recovery_key: string;
+          resolution_code: string | null;
+          resolution_kind: string | null;
+          resolution_note_sanitized: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_to_user_id?: string | null;
+          capability?: string | null;
+          created_at?: string;
+          current_execution_id?: string | null;
+          current_job_id?: string | null;
+          failure_class: string;
+          failure_code: string;
+          failure_stage: string;
+          first_seen_at?: string;
+          fingerprint: string;
+          id?: string;
+          last_seen_at?: string;
+          occurrence_count?: number;
+          office_id: string;
+          origin: string;
+          process_id?: string | null;
+          provider_id?: string | null;
+          recovery_key: string;
+          resolution_code?: string | null;
+          resolution_kind?: string | null;
+          resolution_note_sanitized?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_to_user_id?: string | null;
+          capability?: string | null;
+          created_at?: string;
+          current_execution_id?: string | null;
+          current_job_id?: string | null;
+          failure_class?: string;
+          failure_code?: string;
+          failure_stage?: string;
+          first_seen_at?: string;
+          fingerprint?: string;
+          id?: string;
+          last_seen_at?: string;
+          occurrence_count?: number;
+          office_id?: string;
+          origin?: string;
+          process_id?: string | null;
+          provider_id?: string | null;
+          recovery_key?: string;
+          resolution_code?: string | null;
+          resolution_kind?: string | null;
+          resolution_note_sanitized?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'failure_incident_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'failure_incident_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_incident_office_id_current_execution_id_fkey';
+            columns: ['office_id', 'current_execution_id'];
+            isOneToOne: false;
+            referencedRelation: 'query_execution';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_incident_office_id_current_job_id_fkey';
+            columns: ['office_id', 'current_job_id'];
+            isOneToOne: false;
+            referencedRelation: 'query_job';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      failure_occurrence: {
+        Row: {
+          attempt_number: number | null;
+          context_allowlisted: Json;
+          created_at: string;
+          event_actor_user_id: string | null;
+          event_kind: string;
+          occurred_at: string;
+          failure_class: string | null;
+          failure_code: string | null;
+          failure_stage: string | null;
+          id: string;
+          incident_id: string;
+          new_assignee_user_id: string | null;
+          office_id: string;
+          operator_note_sanitized: string | null;
+          origin: string;
+          previous_assignee_user_id: string | null;
+          process_comparison_id: string | null;
+          process_id: string | null;
+          provider_exchange_id: string | null;
+          query_execution_id: string | null;
+          query_job_id: string | null;
+          recovery_key: string | null;
+          resolution_note_sanitized: string | null;
+          sanitized_message_code: string | null;
+          source_id: string | null;
+          source_type: string;
+          occurrence_idempotency_key: string;
+          observed_job_status: string | null;
+        };
+        Insert: {
+          attempt_number?: number | null;
+          context_allowlisted?: Json;
+          created_at?: string;
+          event_actor_user_id?: string | null;
+          event_kind: string;
+          occurred_at?: string;
+          failure_class?: string | null;
+          failure_code?: string | null;
+          failure_stage?: string | null;
+          id?: string;
+          incident_id: string;
+          new_assignee_user_id?: string | null;
+          office_id: string;
+          operator_note_sanitized?: string | null;
+          origin: string;
+          previous_assignee_user_id?: string | null;
+          process_comparison_id?: string | null;
+          process_id?: string | null;
+          provider_exchange_id?: string | null;
+          query_execution_id?: string | null;
+          query_job_id?: string | null;
+          recovery_key?: string | null;
+          resolution_note_sanitized?: string | null;
+          sanitized_message_code?: string | null;
+          source_id?: string | null;
+          source_type: string;
+          occurrence_idempotency_key: string;
+          observed_job_status?: string | null;
+        };
+        Update: {
+          attempt_number?: number | null;
+          context_allowlisted?: Json;
+          created_at?: string;
+          event_actor_user_id?: string | null;
+          event_kind?: string;
+          occurred_at?: string;
+          failure_class?: string | null;
+          failure_code?: string | null;
+          failure_stage?: string | null;
+          id?: string;
+          incident_id?: string;
+          new_assignee_user_id?: string | null;
+          office_id?: string;
+          operator_note_sanitized?: string | null;
+          origin?: string;
+          previous_assignee_user_id?: string | null;
+          process_comparison_id?: string | null;
+          process_id?: string | null;
+          provider_exchange_id?: string | null;
+          query_execution_id?: string | null;
+          query_job_id?: string | null;
+          recovery_key?: string | null;
+          resolution_note_sanitized?: string | null;
+          sanitized_message_code?: string | null;
+          source_id?: string | null;
+          source_type?: string;
+          occurrence_idempotency_key?: string;
+          observed_job_status?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'failure_occurrence_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'failure_occurrence_office_id_incident_id_fkey';
+            columns: ['office_id', 'incident_id'];
+            isOneToOne: false;
+            referencedRelation: 'failure_incident';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_occurrence_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_occurrence_office_id_query_execution_id_fkey';
+            columns: ['office_id', 'query_execution_id'];
+            isOneToOne: false;
+            referencedRelation: 'query_execution';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_occurrence_office_id_query_job_id_fkey';
+            columns: ['office_id', 'query_job_id'];
+            isOneToOne: false;
+            referencedRelation: 'query_job';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_occurrence_office_id_provider_exchange_id_fkey';
+            columns: ['office_id', 'provider_exchange_id'];
+            isOneToOne: false;
+            referencedRelation: 'provider_exchange';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'failure_occurrence_office_id_process_comparison_id_fkey';
+            columns: ['office_id', 'process_comparison_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_comparison';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      notification_outbox: {
+        Row: {
+          channel: string;
+          created_at: string;
+          detected_change_id: string | null;
+          emitted_at: string | null;
+          event_kind: string;
+          id: string;
+          idempotency_key: string;
+          incident_id: string | null;
+          occurrence_id: string | null;
+          office_id: string;
+          payload_sanitized: Json;
+          recipient_scope: string;
+          simulation_only: boolean;
+          template_version: string;
+        };
+        Insert: {
+          channel: string;
+          created_at?: string;
+          detected_change_id?: string | null;
+          emitted_at?: string | null;
+          event_kind: string;
+          id?: string;
+          idempotency_key: string;
+          incident_id?: string | null;
+          occurrence_id?: string | null;
+          office_id: string;
+          payload_sanitized: Json;
+          recipient_scope: string;
+          simulation_only?: boolean;
+          template_version: string;
+        };
+        Update: {
+          channel?: string;
+          created_at?: string;
+          detected_change_id?: string | null;
+          emitted_at?: string | null;
+          event_kind?: string;
+          id?: string;
+          idempotency_key?: string;
+          incident_id?: string | null;
+          occurrence_id?: string | null;
+          office_id?: string;
+          payload_sanitized?: Json;
+          recipient_scope?: string;
+          simulation_only?: boolean;
+          template_version?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'notification_outbox_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'notification_outbox_office_id_incident_id_fkey';
+            columns: ['office_id', 'incident_id'];
+            isOneToOne: false;
+            referencedRelation: 'failure_incident';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'notification_outbox_office_id_occurrence_id_fkey';
+            columns: ['office_id', 'occurrence_id'];
+            isOneToOne: false;
+            referencedRelation: 'failure_occurrence';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'notification_outbox_office_id_detected_change_id_fkey';
+            columns: ['office_id', 'detected_change_id'];
+            isOneToOne: false;
+            referencedRelation: 'detected_change';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
       user_profile: {
         Row: {
           created_at: string;
@@ -1180,6 +1516,115 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      phase11_add_failure_note: {
+        Args: {
+          p_idempotency_key: string;
+          p_incident_id: string;
+          p_note: string;
+        };
+        Returns: string;
+      };
+      phase11_assign_failure_incident: {
+        Args: {
+          p_assignee_user_id: string | null;
+          p_idempotency_key: string;
+          p_incident_id: string;
+        };
+        Returns: string;
+      };
+      phase11_emit_detected_change_internal: {
+        Args: { p_detected_change_id: string };
+        Returns: string;
+      };
+      phase11_list_failure_assignees: {
+        Args: Record<PropertyKey, never>;
+        Returns: { id: string; name: string; role: string }[];
+      };
+      phase11_list_failure_incidents: {
+        Args: {
+          p_attempt_number?: number | null;
+          p_failure_type?: string | null;
+          p_from_date?: string | null;
+          p_limit?: number;
+          p_priority?: string | null;
+          p_process_id?: string | null;
+          p_status?: string | null;
+          p_to_date?: string | null;
+        };
+        Returns: {
+          assigned_to_user_id: string | null;
+          capability: string | null;
+          current_attempt_number: number | null;
+          failure_class: string;
+          failure_code: string;
+          failure_stage: string;
+          first_seen_at: string;
+          incident_id: string;
+          last_attempt_number: number | null;
+          last_seen_at: string;
+          next_action_code: string;
+          next_attempt_at: string | null;
+          occurrence_count: number;
+          office_id: string;
+          operational_priority: string;
+          origin: string;
+          process_id: string | null;
+          provider_id: string | null;
+          status: string;
+        }[];
+      };
+      phase11_record_execution_failure_internal: {
+        Args: { p_execution_id: string };
+        Returns: string;
+      };
+      phase11_record_failure_event_internal: {
+        Args: {
+          p_attempt_number?: number | null;
+          p_capability?: string | null;
+          p_context_allowlisted: Json;
+          p_failure_class: string;
+          p_failure_code: string;
+          p_failure_stage: string;
+          p_office_id: string;
+          p_origin: string;
+          p_process_id: string | null;
+          p_provider_id: string | null;
+          p_provider_exchange_id?: string | null;
+          p_query_execution_id?: string | null;
+          p_query_job_id?: string | null;
+          p_source_id?: string | null;
+          p_source_type?: string;
+        };
+        Returns: string;
+      };
+      phase11_record_technical_failure_internal: {
+        Args: {
+          p_context_allowlisted: Json;
+          p_failure_code: string;
+          p_failure_stage: string;
+          p_office_id: string;
+          p_origin: string;
+          p_source_id?: string | null;
+        };
+        Returns: string;
+      };
+      phase11_reconcile_success_internal: {
+        Args: { p_execution_id: string };
+        Returns: number;
+      };
+      phase11_request_failure_reprocess: {
+        Args: { p_idempotency_key: string; p_incident_id: string };
+        Returns: string;
+      };
+      phase11_resolve_failure_incident: {
+        Args: {
+          p_idempotency_key: string;
+          p_incident_id: string;
+          p_resolution_code: string;
+          p_resolution_note: string;
+        };
+        Returns: string;
+      };
       can_view_operational_row: {
         Args: { p_office_id: string };
         Returns: boolean;

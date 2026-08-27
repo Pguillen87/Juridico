@@ -15,6 +15,7 @@ on:
         phase-8-datajud-manual,
         phase-9-scheduler-queue-snapshots,
         phase-10-comparison-detection,
+        phase-11-failures-notifications,
       ]
   pull_request:
     branches: [main]
@@ -42,6 +43,9 @@ jobs:
 
       - name: Phase 10 Migration History
         run: ./scripts/check-phase10-migration-history.sh
+
+      - name: Phase 11 Migration History
+        run: ./scripts/check-phase11-migration-history.sh
 
       - name: Repository Hygiene
         shell: bash
@@ -104,6 +108,9 @@ jobs:
 
       - name: Concurrency Test (Phase 10 Comparison Detection)
         run: ./supabase/tests/concurrency/test_phase10_comparison.sh
+
+      - name: Concurrency Test (Phase 11 Failures Notifications)
+        run: ./supabase/tests/concurrency/test_phase11_failures.sh
 
       - name: Verify PowerShell
         run: pwsh -c '$PSVersionTable'

@@ -58,20 +58,37 @@ export default async function AppPage() {
         </div>
 
         {profile.role !== 'auditor' ? (
-          <div className="mt-8 rounded-xl border border-sky-200 bg-sky-50 p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Operação de processos
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Cadastre processos, revise vínculos pendentes e importe um CSV com
-              prévia transacional.
-            </p>
-            <Link
-              className="mt-5 inline-flex rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
-              href="/app/processos"
-            >
-              Abrir processos
-            </Link>
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-6">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Operação de processos
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Cadastre processos, revise vínculos pendentes e importe um CSV
+                com prévia transacional.
+              </p>
+              <Link
+                className="mt-5 inline-flex rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
+                href="/app/processos"
+              >
+                Abrir processos
+              </Link>
+            </div>
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-6">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Central de falhas
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Consulte falhas persistidas, tentativas, histórico operacional e
+                notificações internas sintéticas.
+              </p>
+              <Link
+                className="mt-5 inline-flex rounded-md bg-rose-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-800"
+                href="/app/falhas"
+              >
+                Abrir central de falhas
+              </Link>
+            </div>
           </div>
         ) : null}
 

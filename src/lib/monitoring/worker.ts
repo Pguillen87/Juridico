@@ -24,6 +24,13 @@ import {
   compareAndPersistSnapshot,
   type PersistedComparison,
 } from '@/lib/comparison/persistence';
+import {
+  emitDetectedChange,
+  reconcileExecutionFailure,
+  reconcileSuccessfulExecution,
+  recordComparisonPersistenceFailure,
+  recordInternalFailure,
+} from '@/lib/failures/server';
 
 export const PHASE9_LEASE_DURATION_MS = 30_000;
 
@@ -286,26 +293,95 @@ export async function runMonitoringWorkerOnce(
     }
   );
   if (completionResponse.error) {
+    await recordInternalFailure(
+      {
+        officeId: claim.office_id,
+        processId: claim.process_id,
+        origin: 'persistence',
+        failureStage: 'persistence',
+        failureClass: 'persistence',
+        failureCode: 'provider_persistence_failed',
+        sourceType: 'query_execution',
+        sourceId: claim.execution_id,
+      },
+      client
+    );
     return { status: 'stale_or_rejected', workerId, claim, result };
   }
   const completion = completionFrom(completionResponse.data);
   if (!completion) {
+    await recordInternalFailure(
+      {
+        officeId: claim.office_id,
+        processId: claim.process_id,
+        origin: 'persistence',
+        failureStage: 'persistence',
+        failureClass: 'persistence',
+        failureCode: 'provider_persistence_failed',
+        sourceType: 'query_execution',
+        sourceId: claim.execution_id,
+      },
+      client
+    );
     return { status: 'stale_or_rejected', workerId, claim, result };
+  }
+
+  if (result.kind === 'failure') {
+    await reconcileExecutionFailure(claim.execution_id, client);
   }
 
   let comparison: WorkerComparisonResult | null = null;
   if (completion.snapshot_id) {
     try {
+      const persistedComparison = await compareAndPersistSnapshot(
+        completion.snapshot_id,
+        client
+      );
       comparison = {
         status: 'completed',
-        value: await compareAndPersistSnapshot(completion.snapshot_id, client),
+        value: persistedComparison,
       };
+      if (persistedComparison.detectedChangeId) {
+        const emitted = await emitDetectedChange(
+          persistedComparison.detectedChangeId,
+          client
+        );
+        if (!emitted) {
+          await recordInternalFailure(
+            {
+              officeId: claim.office_id,
+              processId: claim.process_id,
+              origin: 'notification',
+              failureStage: 'notification',
+              failureClass: 'notification',
+              failureCode: 'outbox_persistence_failed',
+              sourceType: 'detected_change',
+              sourceId: persistedComparison.detectedChangeId,
+            },
+            client
+          );
+        }
+      }
     } catch {
       comparison = {
         status: 'failed',
         errorCode: 'comparison_persistence_failed',
       };
+      await recordComparisonPersistenceFailure(
+        {
+          officeId: claim.office_id,
+          processId: claim.process_id,
+          providerId: claim.provider_id,
+          capability: claim.capability,
+          snapshotId: completion.snapshot_id,
+        },
+        client
+      );
     }
+  }
+
+  if (completion.job_status === 'succeeded') {
+    await reconcileSuccessfulExecution(claim.execution_id, client);
   }
   return {
     status: 'completed',
