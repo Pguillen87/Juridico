@@ -14,6 +14,7 @@ on:
         phase-7-provider-abstraction,
         phase-8-datajud-manual,
         phase-9-scheduler-queue-snapshots,
+        phase-10-comparison-detection,
       ]
   pull_request:
     branches: [main]
@@ -97,6 +98,9 @@ jobs:
 
       - name: Concurrency Test (Phase 9 Scheduler Queue)
         run: ./supabase/tests/concurrency/test_phase9_concurrency.sh
+
+      - name: Concurrency Test (Phase 10 Comparison Detection)
+        run: ./supabase/tests/concurrency/test_phase10_comparison.sh
 
       - name: Verify PowerShell
         run: pwsh -c '$PSVersionTable'

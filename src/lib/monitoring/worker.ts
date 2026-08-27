@@ -20,6 +20,10 @@ import {
   sanitizeRawProviderPayload,
 } from '@/lib/providers/payload';
 import type { ProviderExecutionWithPayload } from '@/lib/providers/registry';
+import {
+  compareAndPersistSnapshot,
+  type PersistedComparison,
+} from '@/lib/comparison/persistence';
 
 export const PHASE9_LEASE_DURATION_MS = 30_000;
 
@@ -58,6 +62,13 @@ type QueryExecutionCompletion = {
   readonly next_attempt_at: string | null;
 };
 
+export type WorkerComparisonResult =
+  | { readonly status: 'completed'; readonly value: PersistedComparison }
+  | {
+      readonly status: 'failed';
+      readonly errorCode: 'comparison_persistence_failed';
+    };
+
 export type WorkerRunResult =
   | { readonly status: 'idle'; readonly workerId: string }
   | {
@@ -66,6 +77,7 @@ export type WorkerRunResult =
       readonly claim: QueryJobClaim;
       readonly completion: QueryExecutionCompletion;
       readonly result: ProviderResultV1;
+      readonly comparison: WorkerComparisonResult | null;
     }
   | {
       readonly status: 'stale_or_rejected';
@@ -280,5 +292,27 @@ export async function runMonitoringWorkerOnce(
   if (!completion) {
     return { status: 'stale_or_rejected', workerId, claim, result };
   }
-  return { status: 'completed', workerId, claim, completion, result };
+
+  let comparison: WorkerComparisonResult | null = null;
+  if (completion.snapshot_id) {
+    try {
+      comparison = {
+        status: 'completed',
+        value: await compareAndPersistSnapshot(completion.snapshot_id, client),
+      };
+    } catch {
+      comparison = {
+        status: 'failed',
+        errorCode: 'comparison_persistence_failed',
+      };
+    }
+  }
+  return {
+    status: 'completed',
+    workerId,
+    claim,
+    completion,
+    result,
+    comparison,
+  };
 }

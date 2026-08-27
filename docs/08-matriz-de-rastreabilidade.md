@@ -33,10 +33,10 @@
 | O-002 | RF-007 | US-016 | `raw_provider_payload` | Storage | 8–9 | T-016 raw payload | Hash/sanitização, relação indireta por execution e atomicidade | Implemented/Tested — storage privado |
 | O-002 | RF-007 | US-017 | `process_snapshot` | Normalizador | 7–9 | T-017 normalize | Dados normalizados, missing fields e snapshot somente de observation | Implemented/Tested — comparação futura fora |
 | O-002 | RF-007 | US-018 | `process_snapshot` | Snapshot | 9 | T-018 snapshot | Um snapshot imutável por execução, hash canônico e provenance | Implemented/Tested — sandbox only |
-| O-002 | RF-007 | US-019 | `process_snapshot` | Comparador | 10 | T-019 baseline | Resultado esperado | Planned |
-| O-003 | RF-008 | US-020 | `process_movement` | Deduplicação | 10 | T-020 dedupe movement | Constraint/hash | Planned |
-| O-002 | RF-008 | US-021 | `detected_change` | Comparador | 10 | T-021 change | Fingerprint | Planned |
-| O-003 | RF-008 | US-022 | `query_execution` | Comparador/UI | 10 | T-022 unchanged | Estado exibido | Planned |
+| O-002 | RF-007 | US-019 | `process_snapshot`, `process_comparison` | Comparador backend-only | 10 | T-019 baseline | `comparator.test.ts`, pgTAP e reset limpo; primeiro snapshot `not_comparable` | Implemented/Tested — sandbox only |
+| O-003 | RF-008 | US-020 | `process_comparison` | Diff/deduplicação | 10 | T-020 dedupe movement | Identidade por `movementRef`, multiplicidade preservada, canonicalização e hash determinísticos | Implemented/Tested |
+| O-002 | RF-008 | US-021 | `process_comparison`, `detected_change` | Comparador | 10 | T-021 change | `changed` com diff completo em `process_comparison`, uma única mudança mínima e fingerprint estável | Implemented/Tested — sandbox only |
+| O-003 | RF-008 | US-022 | `process_comparison` | Estados comparativos | 10 | T-022 unchanged | `unchanged` sem diff e `not_comparable` distinto de failure; sem UI antecipada | Implemented/Tested — backend-only |
 | O-003 | RF-009 | US-023 | `query_execution` | Failure center | 9,11 | T-023 source unavailable | `source_unavailable` persistido, retry limitado e mensagem sanitizada | Implemented/Tested — central UI futura |
 | O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker | 9,11 | T-024 timeout | Claim, lease, recovery, token anti-stale e conclusão server-only; teste real com duas conexões e verificação de histórico 00011/00012 | Implemented/Tested — sandbox only |
 | O-003 | RF-009 | US-025 | `query_job` | Retry | 9,11 | T-025 rate limit | Máximo de três tentativas, backoff/teto e terminalização | Implemented/Tested — sandbox only |
@@ -62,7 +62,7 @@
 
 ## Cobertura Crítica
 
-As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. Na Fase 9, o teste PostgreSQL real demonstra scheduler idempotente, claim exclusivo, conclusão sem duplicação, lease antiga rejeitada e nova lease funcional; `scripts/check-phase9-migration-history.sh` demonstra que 00011 é byte a byte igual a `2904185` e que o hardening existe somente em 00012. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
+As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. Na Fase 9, o teste PostgreSQL real demonstra scheduler idempotente, claim exclusivo, conclusão sem duplicação, lease antiga rejeitada e nova lease funcional; `scripts/check-phase9-migration-history.sh` demonstra que 00011 é byte a byte igual a `2904185` e que o hardening existe somente em 00012. Na Fase 10, US-019 a US-022 foram implementadas com comparador determinístico, persistência append-only, fonte única do diff, `detected_change` mínimo, RLS/grants, auditoria atômica, pgTAP e concorrência real. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
 
 ## Aceite funcional adicional da Fase 5
 
@@ -146,6 +146,12 @@ A Fase 9 foi implementada somente em sandbox sintético a partir do commit `9246
 | ManualProvider | registry existente | Sem fallback automático e sem `manual_provider_entry`; US-012/US-029 não ganham endpoint novo | Bloqueado/Deferred |
 
 A suíte `12_phase_9_scheduler_queue_snapshots.test.sql` cobre 36 assertions de grants, RLS, ativação D-022, scheduler idempotente, claim, concorrência de lease, conclusão com exchange/payload/snapshot, recovery, stale worker e retry terminal. O teste real `supabase/tests/concurrency/test_phase9_concurrency.sh` cobre duas conexões PostgreSQL simultâneas, claim exclusivo, conclusão sem duplicação, lease stale e scheduler idempotente. O plano aprovado está registrado em `docs/plano-fase-9.md`. Comparação, `changed`, `unchanged`, notificações e produção permanecem fora da Fase 9.
+
+## Evidência da Fase 10 — Comparação e detecção
+
+A Fase 10 adiciona `src/lib/comparison/` com canonicalização determinística, versionamento interno allowlisted `comparison-v1`, diff técnico e hashes estáveis. `process_comparison` é a fonte única e imutável do resultado completo; `detected_change` é mínimo, só referencia comparações `changed` e não duplica `normalized_diff` nem `changed_fields`. A migration `20260827000001_phase_10_comparison_detection.sql` mantém `SECURITY DEFINER`, `search_path` fixo, RLS, grants backend-only, lock curto por processo, auditoria allowlisted na mesma transação e rollback integral se a auditoria falhar.
+
+O teste `supabase/tests/database/13_phase_10_comparison_detection.test.sql` passou com 29 assertions após reset limpo. O teste real `supabase/tests/concurrency/test_phase10_comparison.sh` passou com duas comparações concorrentes, um replay, duas linhas em `process_comparison`, uma linha em `detected_change`, zero colunas de diff duplicadas e rejeição de versão não allowlisted. Falhas do provider continuam sem snapshot e nunca são convertidas em `unchanged`; nenhuma UI, notificação, relatório, PDF ou Fase 11 foi iniciada.
 
 ## Fechamento factual da Fase 8
 

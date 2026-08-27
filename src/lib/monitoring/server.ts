@@ -21,3 +21,8 @@ export {
   shouldRetry,
   terminalFailureStatus,
 } from './retry';
+export {
+  compareAndPersistSnapshot,
+  type ComparisonRpcClient,
+  type PersistedComparison,
+} from '@/lib/comparison/persistence';

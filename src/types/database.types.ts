@@ -217,6 +217,47 @@ export type Database = {
           },
         ];
       };
+      detected_change: {
+        Row: {
+          change_fingerprint: string;
+          change_type: string;
+          comparison_id: string;
+          created_at: string;
+          detected_at: string;
+          id: string;
+          office_id: string;
+          process_id: string;
+        };
+        Insert: {
+          change_fingerprint: string;
+          change_type?: string;
+          comparison_id: string;
+          created_at?: string;
+          detected_at?: string;
+          id?: string;
+          office_id: string;
+          process_id: string;
+        };
+        Update: {
+          change_fingerprint?: string;
+          change_type?: string;
+          comparison_id?: string;
+          created_at?: string;
+          detected_at?: string;
+          id?: string;
+          office_id?: string;
+          process_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'detected_change_office_id_comparison_id_process_id_fkey';
+            columns: ['office_id', 'comparison_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_comparison';
+            referencedColumns: ['office_id', 'id', 'process_id'];
+          },
+        ];
+      };
       legal_process: {
         Row: {
           client_id: string;
@@ -452,6 +493,73 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'office';
             referencedColumns: ['id'];
+          },
+        ];
+      };
+      process_comparison: {
+        Row: {
+          changed_fields: Json;
+          comparison_hash: string;
+          comparison_version: string;
+          created_at: string;
+          current_snapshot_id: string;
+          id: string;
+          normalized_diff: Json;
+          office_id: string;
+          previous_snapshot_id: string | null;
+          process_id: string;
+          reason_code: string | null;
+          result: string;
+        };
+        Insert: {
+          changed_fields?: Json;
+          comparison_hash: string;
+          comparison_version: string;
+          created_at?: string;
+          current_snapshot_id: string;
+          id?: string;
+          normalized_diff?: Json;
+          office_id: string;
+          previous_snapshot_id?: string | null;
+          process_id: string;
+          reason_code?: string | null;
+          result: string;
+        };
+        Update: {
+          changed_fields?: Json;
+          comparison_hash?: string;
+          comparison_version?: string;
+          created_at?: string;
+          current_snapshot_id?: string;
+          id?: string;
+          normalized_diff?: Json;
+          office_id?: string;
+          previous_snapshot_id?: string | null;
+          process_id?: string;
+          reason_code?: string | null;
+          result?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_comparison_office_id_current_snapshot_id_fkey';
+            columns: ['office_id', 'current_snapshot_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_snapshot';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_comparison_office_id_previous_snapshot_id_fkey';
+            columns: ['office_id', 'previous_snapshot_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_snapshot';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_comparison_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
           },
         ];
       };
@@ -1275,6 +1383,54 @@ export type Database = {
         }[];
       };
       normalize_cnj: { Args: { p_cnj: string }; Returns: string };
+      phase10_compare_process_snapshot: {
+        Args: {
+          p_changed_fields: Json;
+          p_comparison_version: string;
+          p_current_snapshot_id: string;
+          p_normalized_diff: Json;
+          p_reason_code: string;
+          p_result: string;
+        };
+        Returns: {
+          comparison_hash: string;
+          comparison_id: string;
+          detected_change_id: string;
+          reason_code: string;
+          replayed: boolean;
+          result: string;
+        }[];
+      };
+      phase10_get_snapshot_pair_internal: {
+        Args: { p_current_snapshot_id: string };
+        Returns: {
+          created_at: string;
+          id: string;
+          missing_fields: Json;
+          normalized_data: Json;
+          normalizer_version: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          snapshot_hash: string;
+          snapshot_role: string;
+          source: string;
+        }[];
+      };
+      phase10_write_system_audit: {
+        Args: {
+          p_action: string;
+          p_comparison_id: string;
+          p_correlation_id: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_office_id: string;
+          p_process_id: string;
+          p_reason_code: string;
+          p_result: string;
+        };
+        Returns: number;
+      };
       phase6_validate_import_rows: {
         Args: { p_office_id: string; p_rows: Json };
         Returns: undefined;

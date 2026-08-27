@@ -153,6 +153,39 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
           },
         ],
         error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            snapshot_role: 'current',
+            id: '91000000-0000-4000-b000-000000000001',
+            office_id: '91000000-0000-4000-9000-000000000001',
+            process_id: '91000000-0000-4000-c000-000000000001',
+            provider_id: 'datajud_sandbox',
+            source: 'datajud',
+            normalizer_version: '1.0.0',
+            normalized_data: observation.data,
+            missing_fields: observation.missingFields,
+            snapshot_hash: snapshotHash(observation.data),
+            created_at: '2026-01-01T11:00:00.000Z',
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            comparison_id: '91000000-0000-4000-1100-000000000001',
+            detected_change_id: null,
+            result: 'not_comparable',
+            reason_code: 'first_snapshot',
+            changed_fields: [],
+            normalized_diff: { entries: [] },
+            comparison_hash: 'b'.repeat(64),
+            replayed: false,
+          },
+        ],
+        error: null,
       });
     const client: MonitoringRpcClient = { rpc };
 
@@ -166,6 +199,8 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
     expect(rpc.mock.calls.map(([name]) => name)).toEqual([
       'phase9_claim_query_job',
       'phase9_complete_query_execution',
+      'phase10_get_snapshot_pair_internal',
+      'phase10_compare_process_snapshot',
     ]);
     expect(rpc).toHaveBeenNthCalledWith(1, 'phase9_claim_query_job', {
       p_worker_id: 'phase9-worker-test',
@@ -185,7 +220,13 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
       })
     );
     expect(JSON.stringify(rpc.mock.calls)).not.toContain('service_role');
-    expect(JSON.stringify(rpc.mock.calls)).not.toContain('changed');
-    expect(JSON.stringify(rpc.mock.calls)).not.toContain('unchanged');
+    expect(rpc.mock.calls[1]?.[1]).not.toMatchObject({
+      p_result: 'changed',
+      p_result_status: 'changed',
+    });
+    expect(result.status === 'completed' && result.comparison).toMatchObject({
+      status: 'completed',
+      value: { result: 'not_comparable', reasonCode: 'first_snapshot' },
+    });
   });
 });
