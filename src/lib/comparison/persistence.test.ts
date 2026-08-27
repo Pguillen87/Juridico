@@ -83,13 +83,16 @@ describe('compareAndPersistSnapshot', () => {
       comparisonHash: 'b'.repeat(64),
       replayed: false,
     });
-    expect(rpc).toHaveBeenLastCalledWith('phase10_compare_process_snapshot', {
-      p_current_snapshot_id: currentSnapshotId,
-      p_comparison_version: 'comparison-v1',
-      p_result: 'not_comparable',
-      p_reason_code: 'first_snapshot',
-      p_changed_fields: [],
-      p_normalized_diff: { entries: [] },
-    });
+    expect(rpc).toHaveBeenLastCalledWith(
+      'phase10_compare_process_snapshot_v2',
+      {
+        p_current_snapshot_id: currentSnapshotId,
+        p_comparison_version: 'comparison-v1',
+        p_result: 'not_comparable',
+        p_reason_code: 'first_snapshot',
+        p_changed_fields: [],
+        p_normalized_diff: { entries: [] },
+      }
+    );
   });
 });

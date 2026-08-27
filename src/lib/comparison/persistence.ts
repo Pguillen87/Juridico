@@ -118,9 +118,12 @@ export async function compareAndPersistSnapshot(
   currentSnapshotId: string,
   client: ComparisonRpcClient = createAdminClient() as unknown as ComparisonRpcClient
 ): Promise<PersistedComparison> {
-  const pairResponse = await client.rpc('phase10_get_snapshot_pair_internal', {
-    p_current_snapshot_id: currentSnapshotId,
-  });
+  const pairResponse = await client.rpc(
+    'phase10_get_snapshot_pair_compatible_internal',
+    {
+      p_current_snapshot_id: currentSnapshotId,
+    }
+  );
   if (pairResponse.error) {
     throw new Error('Não foi possível carregar os snapshots para comparação.');
   }
@@ -130,14 +133,17 @@ export async function compareAndPersistSnapshot(
     pair.current,
     COMPARISON_VERSION_V1
   );
-  const persistResponse = await client.rpc('phase10_compare_process_snapshot', {
-    p_current_snapshot_id: currentSnapshotId,
-    p_comparison_version: output.comparisonVersion,
-    p_result: output.result,
-    p_reason_code: output.reasonCode,
-    p_changed_fields: output.changedFields,
-    p_normalized_diff: output.normalizedDiff,
-  });
+  const persistResponse = await client.rpc(
+    'phase10_compare_process_snapshot_v2',
+    {
+      p_current_snapshot_id: currentSnapshotId,
+      p_comparison_version: output.comparisonVersion,
+      p_result: output.result,
+      p_reason_code: output.reasonCode,
+      p_changed_fields: output.changedFields,
+      p_normalized_diff: output.normalizedDiff,
+    }
+  );
   if (persistResponse.error) {
     throw new Error('Não foi possível persistir o resultado comparativo.');
   }

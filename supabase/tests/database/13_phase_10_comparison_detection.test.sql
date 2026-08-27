@@ -197,7 +197,7 @@ INSERT INTO public.process_snapshot (
 )
 ON CONFLICT (id) DO NOTHING;
 
-SELECT plan(31);
+SELECT plan(33);
 
 SELECT is((SELECT count(*)::integer
              FROM pg_class
@@ -205,24 +205,26 @@ SELECT is((SELECT count(*)::integer
               AND relrowsecurity), 2, 'novas tabelas comparativas têm RLS habilitada');
 SELECT ok(NOT has_table_privilege('authenticated', 'public.process_comparison', 'INSERT'), 'authenticated não insere comparação diretamente');
 SELECT ok(NOT has_table_privilege('service_role', 'public.process_comparison', 'INSERT'), 'service_role não recebe INSERT direto em comparação');
-SELECT ok(NOT has_function_privilege('public', 'public.phase10_compare_process_snapshot(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'PUBLIC não executa comparação');
-SELECT ok(NOT has_function_privilege('anon', 'public.phase10_compare_process_snapshot(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'anon não executa comparação');
-SELECT ok(NOT has_function_privilege('authenticated', 'public.phase10_compare_process_snapshot(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'authenticated não executa comparação');
-SELECT ok(has_function_privilege('service_role', 'public.phase10_compare_process_snapshot(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'service_role executa comparação backend-only');
+SELECT ok(NOT has_function_privilege('public', 'public.phase10_compare_process_snapshot_v2(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'PUBLIC não executa comparação');
+SELECT ok(NOT has_function_privilege('anon', 'public.phase10_compare_process_snapshot_v2(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'anon não executa comparação');
+SELECT ok(NOT has_function_privilege('authenticated', 'public.phase10_compare_process_snapshot_v2(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'authenticated não executa comparação');
+SELECT ok(has_function_privilege('service_role', 'public.phase10_compare_process_snapshot_v2(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'service_role executa comparação v2 backend-only');
+SELECT ok(NOT has_function_privilege('service_role', 'public.phase10_get_snapshot_pair_internal(uuid)'::regprocedure, 'EXECUTE'), 'caminho legado do leitor não é executável');
+SELECT ok(NOT has_function_privilege('service_role', 'public.phase10_compare_process_snapshot(uuid,text,text,text,jsonb,jsonb)'::regprocedure, 'EXECUTE'), 'caminho legado da comparação não é executável');
 
 SET ROLE service_role;
-SELECT * FROM public.phase10_compare_process_snapshot(
+SELECT * FROM public.phase10_compare_process_snapshot_v2(
   'a1000000-0000-4000-1000-000000000001', 'comparison-v1', 'not_comparable',
   'first_snapshot', '[]', '{"entries":[]}'
 ) \gset first_
 SELECT is(:'first_result'::text, 'not_comparable'::text, 'primeiro snapshot é not_comparable');
 SELECT is(:'first_replayed'::text, 'f'::text, 'primeira comparação não é replay');
 RESET ROLE;
-SELECT is((SELECT count(*)::integer FROM public.process_comparison), 1, 'primeiro snapshot cria uma comparação');
-SELECT is((SELECT count(*)::integer FROM public.detected_change), 0, 'primeiro snapshot não cria detected_change');
+SELECT is((SELECT count(*)::integer FROM public.process_comparison WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 1, 'primeiro snapshot cria uma comparação');
+SELECT is((SELECT count(*)::integer FROM public.detected_change WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 0, 'primeiro snapshot não cria detected_change');
 SET ROLE service_role;
 
-SELECT * FROM public.phase10_compare_process_snapshot(
+SELECT * FROM public.phase10_compare_process_snapshot_v2(
   'a1000000-0000-4000-1000-000000000002', 'comparison-v1', 'changed', NULL,
   '["/system", "/movements/by-ref/M-1/description"]',
   '{"entries":[{"path":"/system","changeType":"field_updated","before":"synthetic-system","after":"synthetic-system-v2"},{"path":"/movements/by-ref/M-1/description","changeType":"movement_updated","before":"Movimento antigo","after":"Movimento novo"}]}'
@@ -238,8 +240,8 @@ SELECT ok(
   'RPC devolve normalized_diff persistido sem duplicar em detected_change'
 );
 RESET ROLE;
-SELECT is((SELECT count(*)::integer FROM public.process_comparison), 2, 'há uma comparação por snapshot corrente e versão');
-SELECT is((SELECT count(*)::integer FROM public.detected_change), 1, 'changed cria exatamente uma mudança');
+SELECT is((SELECT count(*)::integer FROM public.process_comparison WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 2, 'há uma comparação por snapshot corrente e versão');
+SELECT is((SELECT count(*)::integer FROM public.detected_change WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 1, 'changed cria exatamente uma mudança');
 SELECT ok((SELECT normalized_diff @> '{"entries":[{"path":"/system"}]}'::jsonb
              FROM public.process_comparison
             WHERE id = :'changed_comparison_id'), 'process_comparison mantém o diff completo');
@@ -249,45 +251,45 @@ SELECT ok(NOT EXISTS (
      AND column_name IN ('changed_fields', 'normalized_diff')
 ), 'detected_change não duplica o diff');
 SELECT throws_ok(
-  $$SELECT * FROM public.phase10_compare_process_snapshot('a1000000-0000-4000-1000-000000000002', 'comparison-v1', 'changed', NULL, '["/wrong"]', '{"entries":[{"path":"/system","changeType":"field_updated","before":"synthetic-system","after":"synthetic-system-v2"}]}' )$$,
+  $$SELECT * FROM public.phase10_compare_process_snapshot_v2('a1000000-0000-4000-1000-000000000002', 'comparison-v1', 'changed', NULL, '["/wrong"]', '{"entries":[{"path":"/system","changeType":"field_updated","before":"synthetic-system","after":"synthetic-system-v2"}]}' )$$,
   '22023', 'changed_fields must match normalized_diff paths', 'changed_fields divergente do diff é rejeitado'
 );
 SET ROLE service_role;
 
-SELECT * FROM public.phase10_compare_process_snapshot(
+SELECT * FROM public.phase10_compare_process_snapshot_v2(
   'a1000000-0000-4000-1000-000000000002', 'comparison-v1', 'changed', NULL,
   '["/system", "/movements/by-ref/M-1/description"]',
   '{"entries":[{"path":"/system","changeType":"field_updated","before":"synthetic-system","after":"synthetic-system-v2"},{"path":"/movements/by-ref/M-1/description","changeType":"movement_updated","before":"Movimento antigo","after":"Movimento novo"}]}'
 ) \gset replay_
 SELECT is(:'replay_replayed'::text, 't'::text, 'mesma dupla e versão é replay idempotente');
 RESET ROLE;
-SELECT is((SELECT count(*)::integer FROM public.process_comparison), 2, 'replay não duplica comparação');
-SELECT is((SELECT count(*)::integer FROM public.detected_change), 1, 'replay não duplica detected_change');
+SELECT is((SELECT count(*)::integer FROM public.process_comparison WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 2, 'replay não duplica comparação');
+SELECT is((SELECT count(*)::integer FROM public.detected_change WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 1, 'replay não duplica detected_change');
 SET ROLE service_role;
 
-SELECT * FROM public.phase10_compare_process_snapshot(
+SELECT * FROM public.phase10_compare_process_snapshot_v2(
   'a1000000-0000-4000-1000-000000000003', 'comparison-v1', 'unchanged', NULL,
   '[]', '{"entries":[]}'
 ) \gset unchanged_
 SELECT is(:'unchanged_result'::text, 'unchanged'::text, 'snapshot igual produz unchanged');
 RESET ROLE;
-SELECT is((SELECT count(*)::integer FROM public.detected_change), 1, 'unchanged não cria detected_change');
+SELECT is((SELECT count(*)::integer FROM public.detected_change WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 1, 'unchanged não cria detected_change');
 SET ROLE service_role;
 
 SELECT throws_ok(
-  $$SELECT * FROM public.phase10_compare_process_snapshot('a1000000-0000-4000-1000-000000000003', 'custom', 'unchanged', NULL, '[]', '{"entries":[]}')$$,
+  $$SELECT * FROM public.phase10_compare_process_snapshot_v2('a1000000-0000-4000-1000-000000000003', 'custom', 'unchanged', NULL, '[]', '{"entries":[]}')$$,
   '22023', NULL, 'versão de comparação desconhecida é rejeitada'
 );
 
 SET ROLE authenticated;
 SELECT throws_ok(
-  $$SELECT * FROM public.phase10_compare_process_snapshot('a1000000-0000-4000-1000-000000000003', 'comparison-v1', 'unchanged', NULL, '[]', '{"entries":[]}')$$,
+  $$SELECT * FROM public.phase10_compare_process_snapshot_v2('a1000000-0000-4000-1000-000000000003', 'comparison-v1', 'unchanged', NULL, '[]', '{"entries":[]}')$$,
   '42501', NULL, 'browser não possui EXECUTE da comparação'
 );
 RESET ROLE;
 SET ROLE anon;
 SELECT throws_ok(
-  $$SELECT * FROM public.phase10_compare_process_snapshot('a1000000-0000-4000-1000-000000000003', 'comparison-v1', 'unchanged', NULL, '[]', '{"entries":[]}')$$,
+  $$SELECT * FROM public.phase10_compare_process_snapshot_v2('a1000000-0000-4000-1000-000000000003', 'comparison-v1', 'unchanged', NULL, '[]', '{"entries":[]}')$$,
   '42501', NULL, 'anon não possui EXECUTE da comparação'
 );
 RESET ROLE;
@@ -306,12 +308,12 @@ BEFORE INSERT ON public.audit_log
 FOR EACH ROW EXECUTE FUNCTION pg_temp.fail_phase10_audit();
 SET ROLE service_role;
 SELECT throws_ok(
-  $$SELECT * FROM public.phase10_compare_process_snapshot('a1000000-0000-4000-1000-000000000004', 'comparison-v1', 'changed', NULL, '["/system"]', '{"entries":[{"path":"/system","changeType":"field_updated","before":"x","after":"y"}]}')$$,
+  $$SELECT * FROM public.phase10_compare_process_snapshot_v2('a1000000-0000-4000-1000-000000000004', 'comparison-v1', 'changed', NULL, '["/system"]', '{"entries":[{"path":"/system","changeType":"field_updated","before":"x","after":"y"}]}')$$,
   NULL, 'synthetic phase 10 audit failure', 'falha de auditoria faz rollback da comparação'
 );
 RESET ROLE;
 DROP TRIGGER phase10_test_fail_audit ON public.audit_log;
-SELECT is((SELECT count(*)::integer FROM public.process_comparison), 3, 'rollback não deixa comparação parcial');
+SELECT is((SELECT count(*)::integer FROM public.process_comparison WHERE office_id = 'a1000000-0000-4000-9000-000000000001'::uuid), 3, 'rollback não deixa comparação parcial');
 
 SELECT ok(
   NOT has_table_privilege('service_role', 'public.process_comparison', 'UPDATE')

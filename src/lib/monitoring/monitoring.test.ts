@@ -199,8 +199,8 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
     expect(rpc.mock.calls.map(([name]) => name)).toEqual([
       'phase9_claim_query_job',
       'phase9_complete_query_execution',
-      'phase10_get_snapshot_pair_internal',
-      'phase10_compare_process_snapshot',
+      'phase10_get_snapshot_pair_compatible_internal',
+      'phase10_compare_process_snapshot_v2',
     ]);
     expect(rpc).toHaveBeenNthCalledWith(1, 'phase9_claim_query_job', {
       p_worker_id: 'phase9-worker-test',

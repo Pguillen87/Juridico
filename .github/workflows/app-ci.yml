@@ -40,6 +40,9 @@ jobs:
       - name: Phase 9 Migration History
         run: ./scripts/check-phase9-migration-history.sh
 
+      - name: Phase 10 Migration History
+        run: ./scripts/check-phase10-migration-history.sh
+
       - name: Repository Hygiene
         shell: bash
         run: |

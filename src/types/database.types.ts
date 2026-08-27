@@ -1393,6 +1393,24 @@ export type Database = {
           p_result: string;
         };
         Returns: {
+          comparison_hash: string;
+          comparison_id: string;
+          detected_change_id: string;
+          reason_code: string;
+          replayed: boolean;
+          result: string;
+        }[];
+      };
+      phase10_compare_process_snapshot_v2: {
+        Args: {
+          p_changed_fields: Json;
+          p_comparison_version: string;
+          p_current_snapshot_id: string;
+          p_normalized_diff: Json;
+          p_reason_code: string;
+          p_result: string;
+        };
+        Returns: {
           changed_fields: Json;
           comparison_hash: string;
           comparison_id: string;
@@ -1401,6 +1419,22 @@ export type Database = {
           reason_code: string;
           replayed: boolean;
           result: string;
+        }[];
+      };
+      phase10_get_snapshot_pair_compatible_internal: {
+        Args: { p_current_snapshot_id: string };
+        Returns: {
+          created_at: string;
+          id: string;
+          missing_fields: Json;
+          normalized_data: Json;
+          normalizer_version: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          snapshot_hash: string;
+          snapshot_role: string;
+          source: string;
         }[];
       };
       phase10_get_snapshot_pair_internal: {
@@ -1418,6 +1452,10 @@ export type Database = {
           snapshot_role: string;
           source: string;
         }[];
+      };
+      phase10_resolve_compatible_previous_snapshot: {
+        Args: { p_current_snapshot_id: string };
+        Returns: string;
       };
       phase10_write_system_audit: {
         Args: {

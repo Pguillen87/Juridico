@@ -1,212 +1,94 @@
 SET lock_timeout = '2s';
 
--- Fase 10: comparação determinística de snapshots normalizados.
--- A versão ativa é deliberadamente fechada no banco. Nova versão exige código,
--- allowlist, migration, testes e documentação explícitos.
-CREATE TABLE public.process_comparison (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  office_id UUID NOT NULL,
-  process_id UUID NOT NULL,
-  previous_snapshot_id UUID,
-  current_snapshot_id UUID NOT NULL,
-  comparison_version TEXT NOT NULL
-    CHECK (comparison_version IN ('comparison-v1')),
-  result TEXT NOT NULL
-    CHECK (result IN ('changed', 'unchanged', 'not_comparable')),
-  reason_code TEXT
-    CHECK (reason_code IS NULL OR reason_code IN (
-      'first_snapshot', 'normalizer_incompatible', 'source_incompatible',
-      'required_field_missing', 'snapshot_invalid', 'baseline_incomplete',
-      'field_presence_incompatible'
-    )),
-  changed_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
-  normalized_diff JSONB NOT NULL DEFAULT '{"entries": []}'::jsonb,
-  comparison_hash TEXT NOT NULL CHECK (comparison_hash ~ '^[0-9a-f]{64}$'),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (office_id, id),
-  UNIQUE (office_id, id, process_id),
-  UNIQUE (office_id, process_id, current_snapshot_id, comparison_version),
-  FOREIGN KEY (office_id, process_id)
-    REFERENCES public.legal_process(office_id, id)
-    ON DELETE RESTRICT,
-  FOREIGN KEY (office_id, previous_snapshot_id)
-    REFERENCES public.process_snapshot(office_id, id)
-    ON DELETE RESTRICT,
-  FOREIGN KEY (office_id, current_snapshot_id)
-    REFERENCES public.process_snapshot(office_id, id)
-    ON DELETE RESTRICT,
-  CHECK (
-    jsonb_typeof(changed_fields) = 'array'
-    AND CASE WHEN jsonb_typeof(changed_fields) = 'array'
-             THEN jsonb_array_length(changed_fields) ELSE 0 END <= 200
-  ),
-  CHECK (
-    jsonb_typeof(normalized_diff) = 'object'
-    AND jsonb_typeof(normalized_diff->'entries') = 'array'
-    AND CASE WHEN jsonb_typeof(normalized_diff->'entries') = 'array'
-             THEN jsonb_array_length(normalized_diff->'entries') ELSE 0 END <= 200
-  ),
-  CHECK (
-    (result = 'not_comparable' AND reason_code IS NOT NULL)
-    OR (result IN ('changed', 'unchanged') AND reason_code IS NULL)
-  ),
-  CHECK (
-    (result = 'changed'
-      AND jsonb_array_length(changed_fields) > 0
-      AND jsonb_array_length(normalized_diff->'entries') > 0)
-    OR (result IN ('unchanged', 'not_comparable')
-      AND jsonb_array_length(changed_fields) = 0
-      AND jsonb_array_length(normalized_diff->'entries') = 0)
-  )
-);
+-- Fase 10 hardening incremental.
+-- A migration 00001 permanece byte a byte imutável. Esta migration adiciona
+-- somente a resolução de baseline compatível e o contrato RPC completo.
 
-CREATE INDEX process_comparison_process_idx
-  ON public.process_comparison (office_id, process_id, created_at DESC);
-CREATE INDEX process_comparison_current_idx
-  ON public.process_comparison (office_id, current_snapshot_id);
-
-CREATE TABLE public.detected_change (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  office_id UUID NOT NULL,
-  process_id UUID NOT NULL,
-  comparison_id UUID NOT NULL,
-  change_fingerprint TEXT NOT NULL CHECK (change_fingerprint ~ '^[0-9a-f]{64}$'),
-  change_type TEXT NOT NULL DEFAULT 'snapshot_changed'
-    CHECK (change_type IN ('snapshot_changed')),
-  detected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (office_id, id),
-  UNIQUE (office_id, comparison_id),
-  FOREIGN KEY (office_id, comparison_id, process_id)
-    REFERENCES public.process_comparison(office_id, id, process_id)
-    ON DELETE RESTRICT
-);
-
-CREATE INDEX detected_change_process_idx
-  ON public.detected_change (office_id, process_id, detected_at DESC);
-CREATE INDEX detected_change_comparison_idx
-  ON public.detected_change (office_id, comparison_id);
-
-CREATE OR REPLACE FUNCTION public.phase10_block_comparison_mutation()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $$
-BEGIN
-  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME
-    USING ERRCODE = '42501',
-          HINT = 'Comparative evidence is immutable.';
-END;
-$$;
-
-CREATE TRIGGER tr_process_comparison_append_only
-BEFORE UPDATE OR DELETE ON public.process_comparison
-FOR EACH ROW EXECUTE FUNCTION public.phase10_block_comparison_mutation();
-
-CREATE TRIGGER tr_detected_change_append_only
-BEFORE UPDATE OR DELETE ON public.detected_change
-FOR EACH ROW EXECUTE FUNCTION public.phase10_block_comparison_mutation();
-
-CREATE OR REPLACE FUNCTION public.phase10_guard_detected_change()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = pg_catalog, public
-AS $$
-DECLARE
-  comparison_result TEXT;
-BEGIN
-  SELECT pc.result
-    INTO comparison_result
-    FROM public.process_comparison pc
-   WHERE pc.office_id = NEW.office_id
-     AND pc.id = NEW.comparison_id
-     AND pc.process_id = NEW.process_id;
-  IF comparison_result IS DISTINCT FROM 'changed' THEN
-    RAISE EXCEPTION 'detected_change requires a changed comparison'
-      USING ERRCODE = '23514';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER tr_detected_change_requires_changed
-BEFORE INSERT ON public.detected_change
-FOR EACH ROW EXECUTE FUNCTION public.phase10_guard_detected_change();
-
-CREATE OR REPLACE FUNCTION public.phase10_write_system_audit(
-  p_action TEXT,
-  p_entity_type TEXT,
-  p_entity_id UUID,
-  p_office_id UUID,
-  p_process_id UUID,
-  p_comparison_id UUID,
-  p_result TEXT,
-  p_reason_code TEXT,
-  p_correlation_id UUID
+CREATE OR REPLACE FUNCTION public.phase10_resolve_compatible_previous_snapshot(
+  p_current_snapshot_id UUID
 )
-RETURNS BIGINT
+RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
 DECLARE
-  audit_id BIGINT;
+  current_snapshot public.process_snapshot%ROWTYPE;
+  process_row public.legal_process%ROWTYPE;
+  previous_id UUID;
 BEGIN
-  IF p_action NOT IN (
-       'comparison.completed', 'comparison.not_comparable',
-       'detected_change.created'
-     )
-     OR p_entity_type NOT IN ('process_comparison', 'detected_change')
-     OR p_result NOT IN ('changed', 'unchanged', 'not_comparable')
-     OR p_office_id IS NULL OR p_process_id IS NULL
-     OR p_entity_id IS NULL OR p_comparison_id IS NULL
-     OR p_correlation_id IS NULL
-  THEN
-    RAISE EXCEPTION 'invalid phase 10 audit event' USING ERRCODE = '22023';
-  END IF;
-  IF p_action = 'comparison.not_comparable'
-     AND p_entity_type <> 'process_comparison'
-  THEN
-    RAISE EXCEPTION 'invalid phase 10 comparison audit entity' USING ERRCODE = '22023';
-  END IF;
-  IF p_action = 'detected_change.created'
-     AND (p_entity_type <> 'detected_change' OR p_result <> 'changed')
-  THEN
-    RAISE EXCEPTION 'invalid phase 10 change audit event' USING ERRCODE = '22023';
-  END IF;
-  IF p_action = 'comparison.completed'
-     AND (p_entity_type <> 'process_comparison' OR p_reason_code IS NOT NULL)
-  THEN
-    RAISE EXCEPTION 'invalid phase 10 completion audit event' USING ERRCODE = '22023';
-  END IF;
-  IF p_action = 'comparison.not_comparable'
-     AND (p_result <> 'not_comparable' OR p_reason_code IS NULL)
-  THEN
-    RAISE EXCEPTION 'invalid phase 10 not comparable audit event' USING ERRCODE = '22023';
+  SELECT ps.* INTO current_snapshot
+    FROM public.process_snapshot ps
+   WHERE ps.id = p_current_snapshot_id;
+  IF current_snapshot.id IS NULL THEN
+    RAISE EXCEPTION 'current snapshot not found' USING ERRCODE = '42501';
   END IF;
 
-  INSERT INTO public.audit_log (
-    audit_scope, office_id, actor_user_id, action, entity_type, entity_id,
-    correlation_id, metadata
-  ) VALUES (
-    'operational', p_office_id, NULL, p_action, p_entity_type, p_entity_id,
-    p_correlation_id,
-    jsonb_build_object(
-      'origin', 'system_comparator',
-      'process_id', p_process_id::TEXT,
-      'comparison_id', p_comparison_id::TEXT,
-      'result', p_result,
-      'reason_code', p_reason_code
-    )
-  )
-  RETURNING id INTO audit_id;
-  RETURN audit_id;
+  SELECT lp.* INTO process_row
+    FROM public.legal_process lp
+   WHERE lp.id = current_snapshot.process_id
+     AND lp.office_id = current_snapshot.office_id;
+  IF process_row.id IS NULL THEN
+    RAISE EXCEPTION 'snapshot process not found' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT ps.id INTO previous_id
+    FROM public.process_snapshot ps
+    JOIN public.query_execution qe
+      ON qe.id = ps.query_execution_id
+     AND qe.office_id = ps.office_id
+     AND qe.process_id = ps.process_id
+    JOIN public.provider_exchange pe
+      ON pe.id = qe.provider_exchange_id
+     AND pe.office_id = ps.office_id
+     AND pe.process_id = ps.process_id
+   WHERE ps.office_id = current_snapshot.office_id
+     AND ps.process_id = current_snapshot.process_id
+     AND ps.provider_id = current_snapshot.provider_id
+     AND ps.source = current_snapshot.source
+     AND ps.normalizer_version = current_snapshot.normalizer_version
+     AND (ps.created_at, ps.id) < (current_snapshot.created_at, current_snapshot.id)
+     AND qe.status = 'succeeded'
+     AND qe.provider_id = ps.provider_id
+     AND pe.provider_id = ps.provider_id
+     AND pe.source = ps.source
+     AND pe.result_kind = 'observation'
+     AND ps.normalized_data->>'processRef' IS NOT DISTINCT FROM process_row.cnj_number
+     AND jsonb_typeof(ps.missing_fields) = 'array'
+     AND jsonb_array_length(ps.missing_fields) = 0
+     AND ps.normalized_data ?& ARRAY[
+       'processRef', 'tribunal', 'system', 'movements', 'parties'
+     ]
+     AND jsonb_typeof(ps.normalized_data->'movements') = 'array'
+     AND jsonb_typeof(ps.normalized_data->'parties') = 'array'
+     AND NOT EXISTS (
+       SELECT 1
+         FROM jsonb_array_elements(ps.normalized_data->'movements') AS movement
+        WHERE jsonb_typeof(movement->'missingFields') <> 'array'
+           OR jsonb_array_length(movement->'missingFields') <> 0
+     )
+     AND NOT EXISTS (
+       SELECT 1
+         FROM jsonb_array_elements(ps.normalized_data->'parties') AS party
+        WHERE jsonb_typeof(party->'missingFields') <> 'array'
+           OR jsonb_array_length(party->'missingFields') <> 0
+     )
+     AND encode(
+       extensions.digest(
+         convert_to(ps.normalized_data::TEXT, 'UTF8'), 'sha256'
+       ),
+       'hex'
+     ) = ps.snapshot_hash
+     AND NOT public.provider_json_has_comparison(ps.normalized_data)
+     AND NOT public.provider_payload_has_sensitive_key(ps.normalized_data)
+   ORDER BY ps.created_at DESC, ps.id DESC
+   LIMIT 1;
+
+  RETURN previous_id;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.phase10_get_snapshot_pair_internal(
+CREATE OR REPLACE FUNCTION public.phase10_get_snapshot_pair_compatible_internal(
   p_current_snapshot_id UUID
 )
 RETURNS TABLE (
@@ -236,13 +118,12 @@ BEGIN
   IF current_snapshot.id IS NULL THEN
     RAISE EXCEPTION 'current snapshot not found' USING ERRCODE = '42501';
   END IF;
+
   SELECT ps.* INTO previous_snapshot
     FROM public.process_snapshot ps
-   WHERE ps.office_id = current_snapshot.office_id
-     AND ps.process_id = current_snapshot.process_id
-     AND (ps.created_at, ps.id) < (current_snapshot.created_at, current_snapshot.id)
-   ORDER BY ps.created_at DESC, ps.id DESC
-   LIMIT 1;
+   WHERE ps.id = public.phase10_resolve_compatible_previous_snapshot(
+     current_snapshot.id
+   );
 
   snapshot_role := 'current';
   id := current_snapshot.id;
@@ -256,6 +137,7 @@ BEGIN
   snapshot_hash := current_snapshot.snapshot_hash;
   created_at := current_snapshot.created_at;
   RETURN NEXT;
+
   IF previous_snapshot.id IS NOT NULL THEN
     snapshot_role := 'previous';
     id := previous_snapshot.id;
@@ -273,7 +155,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.phase10_compare_process_snapshot(
+CREATE OR REPLACE FUNCTION public.phase10_compare_process_snapshot_v2(
   p_current_snapshot_id UUID,
   p_comparison_version TEXT,
   p_result TEXT,
@@ -287,6 +169,8 @@ RETURNS TABLE (
   result TEXT,
   reason_code TEXT,
   comparison_hash TEXT,
+  changed_fields JSONB,
+  normalized_diff JSONB,
   replayed BOOLEAN
 )
 LANGUAGE plpgsql
@@ -464,11 +348,9 @@ BEGIN
 
   SELECT ps.* INTO previous_snapshot
     FROM public.process_snapshot ps
-   WHERE ps.office_id = current_snapshot.office_id
-     AND ps.process_id = current_snapshot.process_id
-     AND (ps.created_at, ps.id) < (current_snapshot.created_at, current_snapshot.id)
-   ORDER BY ps.created_at DESC, ps.id DESC
-   LIMIT 1;
+   WHERE ps.id = public.phase10_resolve_compatible_previous_snapshot(
+     current_snapshot.id
+   );
   previous_exists := previous_snapshot.id IS NOT NULL;
   IF previous_exists THEN
     SELECT qe.* INTO previous_execution
@@ -638,51 +520,43 @@ BEGIN
     END IF;
   END IF;
 
-  RETURN QUERY SELECT comparison_uuid, detected_uuid, p_result, p_reason_code,
-                      computed_hash, NOT inserted;
+  RETURN QUERY
+  SELECT comparison_uuid, detected_uuid, pc.result, pc.reason_code,
+         pc.comparison_hash, pc.changed_fields, pc.normalized_diff,
+         NOT inserted
+    FROM public.process_comparison pc
+   WHERE pc.id = comparison_uuid;
 END;
 $$;
 
-ALTER TABLE public.process_comparison ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.detected_change ENABLE ROW LEVEL SECURITY;
-
-REVOKE ALL ON public.process_comparison, public.detected_change
-  FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT ON public.process_comparison, public.detected_change TO authenticated;
-
-CREATE POLICY process_comparison_select_same_office
-ON public.process_comparison
-FOR SELECT TO authenticated
-USING (public.can_view_operational_row(office_id));
-
-CREATE POLICY detected_change_select_same_office
-ON public.detected_change
-FOR SELECT TO authenticated
-USING (public.can_view_operational_row(office_id));
-
-REVOKE ALL ON FUNCTION public.phase10_block_comparison_mutation()
-  FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.phase10_guard_detected_change()
-  FROM PUBLIC, anon, authenticated, service_role;
+-- O caminho publicado permanece preservado para rollback, mas não é mais
+-- executável pelo backend: o wrapper usa somente as funções compatíveis abaixo.
 REVOKE ALL ON FUNCTION public.phase10_get_snapshot_pair_internal(UUID)
-  FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.phase10_get_snapshot_pair_internal(UUID)
-  TO service_role;
-REVOKE ALL ON FUNCTION public.phase10_write_system_audit(
-  TEXT, TEXT, UUID, UUID, UUID, UUID, TEXT, TEXT, UUID
-) FROM PUBLIC, anon, authenticated, service_role;
+  FROM service_role;
 REVOKE ALL ON FUNCTION public.phase10_compare_process_snapshot(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB
+) FROM service_role;
+
+REVOKE ALL ON FUNCTION public.phase10_resolve_compatible_previous_snapshot(UUID)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.phase10_resolve_compatible_previous_snapshot(UUID)
+  TO service_role;
+REVOKE ALL ON FUNCTION public.phase10_get_snapshot_pair_compatible_internal(UUID)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.phase10_get_snapshot_pair_compatible_internal(UUID)
+  TO service_role;
+REVOKE ALL ON FUNCTION public.phase10_compare_process_snapshot_v2(
+  UUID, TEXT, TEXT, TEXT, JSONB, JSONB
 ) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.phase10_compare_process_snapshot(
+GRANT EXECUTE ON FUNCTION public.phase10_compare_process_snapshot_v2(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB
 ) TO service_role;
 
-COMMENT ON TABLE public.process_comparison IS
-  'Fase 10: fonte única e imutável do resultado, campos e diff de comparação de snapshots.';
-COMMENT ON TABLE public.detected_change IS
-  'Fase 10: fato mínimo de mudança detectada; detalhes permanecem em process_comparison.';
-COMMENT ON FUNCTION public.phase10_compare_process_snapshot(
+COMMENT ON FUNCTION public.phase10_resolve_compatible_previous_snapshot(UUID) IS
+  'Fase 10 hardening: resolve o snapshot histórico válido mais recente compatível.';
+COMMENT ON FUNCTION public.phase10_get_snapshot_pair_compatible_internal(UUID) IS
+  'Fase 10 hardening: retorna snapshot atual e baseline histórica compatível; backend-only.';
+COMMENT ON FUNCTION public.phase10_compare_process_snapshot_v2(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB
 ) IS
-  'Fase 10: compara snapshot corrente com a observação histórica anterior sob versão allowlisted; backend-only e idempotente.';
+  'Fase 10 hardening: persiste comparação idempotente e devolve exatamente o diff persistido.';

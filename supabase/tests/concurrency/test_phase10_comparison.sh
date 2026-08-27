@@ -99,14 +99,14 @@ INSERT INTO public.process_snapshot (
 SQL
 
 psql_cmd <<SQL >/dev/null
-SELECT * FROM public.phase10_compare_process_snapshot(
+SELECT * FROM public.phase10_compare_process_snapshot_v2(
   '${SNAPSHOT1_ID}', 'comparison-v1', 'not_comparable', 'first_snapshot', '[]', '{"entries":[]}'
 );
 SQL
 
 cat >"${TMP_DIR}/compare-a.sql" <<SQL
 BEGIN;
-SELECT * FROM public.phase10_compare_process_snapshot(
+SELECT * FROM public.phase10_compare_process_snapshot_v2(
   '${SNAPSHOT2_ID}', 'comparison-v1', 'changed', NULL,
   '["/system", "/movements/by-ref/M-1/description", "/movements/by-ref/M-2"]',
   '{"entries":[
@@ -138,7 +138,7 @@ fi
 
 VERSION_RC=0
 set +e
-psql_cmd -c "SELECT * FROM public.phase10_compare_process_snapshot('${SNAPSHOT2_ID}', 'custom', 'changed', NULL, '[\"/system\"]', '{\"entries\":[]}' );" >/dev/null
+psql_cmd -c "SELECT * FROM public.phase10_compare_process_snapshot_v2('${SNAPSHOT2_ID}', 'custom', 'changed', NULL, '[\"/system\"]', '{\"entries\":[]}' );" >/dev/null
 VERSION_RC=$?
 set -e
 if [[ "${VERSION_RC}" -eq 0 ]]; then
