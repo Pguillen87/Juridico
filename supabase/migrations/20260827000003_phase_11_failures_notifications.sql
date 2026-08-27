@@ -544,7 +544,8 @@ DECLARE
   metadata JSONB;
   context_key TEXT;
 BEGIN
-  IF current_setting('juridico.phase11_internal', true) <> '1' THEN
+  IF current_user NOT IN ('service_role', 'postgres')
+     AND current_setting('juridico.phase11_internal', true) <> '1' THEN
     RAISE EXCEPTION 'phase 11 failure recorder is backend-only' USING ERRCODE = '42501';
   END IF;
   IF p_office_id IS NULL OR p_origin NOT IN (
