@@ -56,7 +56,7 @@ INSERT INTO public.query_execution (
   ('b1100000-0000-4000-f000-000000000002', 'b1100000-0000-4000-9000-000000000001', 'b1100000-0000-4000-d000-000000000002', 'b1100000-0000-4000-c000-000000000001', 'datajud_sandbox', 'process_observation', 2, 'retry_scheduled', '2026-08-27 10:01:00+00', '2026-08-27 10:01:01+00', 100, 'datajud_timeout', 'A consulta não produziu uma observação válida.', 'phase11-exec-2'),
   ('b1100000-0000-4000-f000-000000000003', 'b1100000-0000-4000-9000-000000000002', 'b1100000-0000-4000-d000-000000000003', 'b1100000-0000-4000-c000-000000000002', 'datajud_sandbox', 'process_observation', 1, 'terminal_failure', '2026-08-27 10:02:00+00', '2026-08-27 10:02:01+00', 100, 'datajud_timeout', 'A consulta não produziu uma observação válida.', 'phase11-exec-3');
 
-SELECT plan(31);
+SELECT plan(32);
 
 SELECT is((SELECT count(*)::integer FROM pg_class WHERE relname IN ('failure_incident', 'failure_occurrence', 'notification_outbox') AND relrowsecurity), 3, 'tabelas da Fase 11 têm RLS habilitada');
 SELECT ok(NOT has_table_privilege('authenticated', 'public.failure_incident', 'INSERT'), 'authenticated não insere incidente diretamente');
@@ -118,6 +118,10 @@ SELECT public.phase11_request_failure_reprocess(
 ) AS manual_job_id \gset manual_
 SELECT ok(:'manual_manual_job_id' IS NOT NULL, 'lawyer solicita reprocessamento pela RPC encapsuladora');
 SELECT is((SELECT status FROM public.query_job WHERE id = :'manual_manual_job_id'), 'pending', 'reprocessamento cria job pendente');
+SELECT is(public.phase11_request_failure_reprocess(
+  (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
+  'manual-reprocess-test'
+), :'manual_manual_job_id'::uuid, 'mesma chave de reprocessamento retorna o job existente');
 SELECT lives_ok($$SELECT public.phase11_assign_failure_incident(
   (SELECT id FROM public.failure_incident WHERE failure_code = 'datajud_not_found' AND office_id = 'b1100000-0000-4000-9000-000000000001'),
   'b1100000-0000-4000-8000-000000000001', 'assignment-test')$$, 'lawyer atribui o incidente no próprio office');

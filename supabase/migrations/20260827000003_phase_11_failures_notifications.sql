@@ -987,6 +987,17 @@ BEGIN
   IF incident_row.id IS NULL OR incident_row.current_job_id IS NULL THEN
     RAISE EXCEPTION 'failure incident has no reprocessable job' USING ERRCODE = '42501';
   END IF;
+  SELECT fo.query_job_id INTO new_job_id
+    FROM public.failure_occurrence fo
+   WHERE fo.office_id = actor.actor_office_id
+     AND fo.incident_id = incident_row.id
+     AND fo.event_kind = 'manual_reprocess_requested'
+     AND fo.occurrence_idempotency_key =
+       'manual-reprocess-requested:' || actor.actor_office_id::TEXT || ':' || btrim(p_idempotency_key)
+   LIMIT 1;
+  IF new_job_id IS NOT NULL THEN
+    RETURN new_job_id;
+  END IF;
   internal_key := 'manual-reprocess:' || incident_row.current_job_id::TEXT || ':' || btrim(p_idempotency_key);
   SELECT id INTO new_job_id
     FROM public.query_job
@@ -1034,7 +1045,7 @@ BEGIN
     incident_row.failure_class, incident_row.failure_code, 'query_job', new_job_id::TEXT,
     incident_row.recovery_key, new_job_id, 'manual_reprocess_requested',
     jsonb_build_object('operation', 'failure_reprocess'),
-    'manual-reprocess-requested:' || actor.actor_office_id::TEXT || ':' || internal_key,
+    'manual-reprocess-requested:' || actor.actor_office_id::TEXT || ':' || btrim(p_idempotency_key),
     actor.actor_id
   ) ON CONFLICT (office_id, occurrence_idempotency_key) DO NOTHING
   RETURNING id INTO occurrence_id;
