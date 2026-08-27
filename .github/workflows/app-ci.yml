@@ -38,6 +38,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Secret Scan
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -nE 'sk_(live|test)_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----' -- . ':(exclude)*.example' ':(exclude)*.md'; then
+            echo "Possível segredo de alta confiança encontrado no conteúdo versionado."
+            exit 1
+          fi
+          echo "Secret scan de padrões de alta confiança: PASS"
+
+      - name: Dependency Audit
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Phase 9 Migration History
         run: ./scripts/check-phase9-migration-history.sh
 
@@ -81,6 +94,9 @@ jobs:
 
       - name: Supabase DB Reset
         run: npm run db:reset
+
+      - name: Phase 11 Migration Upgrade
+        run: ./scripts/test-phase11-migration-upgrade.sh
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps

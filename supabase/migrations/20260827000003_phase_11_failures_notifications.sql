@@ -313,11 +313,11 @@ SET search_path = pg_catalog, public
 AS $$
 BEGIN
   IF current_setting('juridico.phase11_internal', true) <> '1' THEN
-    RAISE EXCEPTION '% is append-only and writable only by internal phase 11 functions', TG_TABLE_NAME
+    RAISE EXCEPTION '% is append-only and writable only by internal phase 11 functions'
       USING ERRCODE = '42501', HINT = 'Use the authorized domain command.';
   END IF;
   IF TG_OP <> 'INSERT' THEN
-    RAISE EXCEPTION '% is append-only and has no physical mutation', TG_TABLE_NAME USING ERRCODE = '42501';
+    RAISE EXCEPTION '% is append-only and has no physical mutation' USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
 END;
@@ -544,8 +544,7 @@ DECLARE
   metadata JSONB;
   context_key TEXT;
 BEGIN
-  IF current_user NOT IN ('service_role', 'postgres')
-     AND current_setting('juridico.phase11_internal', true) <> '1' THEN
+  IF current_setting('juridico.phase11_internal', true) <> '1' THEN
     RAISE EXCEPTION 'phase 11 failure recorder is backend-only' USING ERRCODE = '42501';
   END IF;
   IF p_office_id IS NULL OR p_origin NOT IN (
@@ -988,24 +987,6 @@ BEGIN
   IF incident_row.id IS NULL OR incident_row.current_job_id IS NULL THEN
     RAISE EXCEPTION 'failure incident has no reprocessable job' USING ERRCODE = '42501';
   END IF;
-  SELECT fo.query_job_id INTO new_job_id
-    FROM public.failure_occurrence fo
-   WHERE fo.office_id = actor.actor_office_id
-     AND fo.incident_id = incident_row.id
-     AND fo.event_kind = 'manual_reprocess_requested'
-     AND fo.occurrence_idempotency_key =
-       'manual-reprocess-requested:' || actor.actor_office_id::TEXT || ':' || btrim(p_idempotency_key)
-   LIMIT 1;
-  IF new_job_id IS NOT NULL THEN
-    RETURN new_job_id;
-  END IF;
-  internal_key := 'manual-reprocess:' || incident_row.current_job_id::TEXT || ':' || btrim(p_idempotency_key);
-  SELECT id INTO new_job_id
-    FROM public.query_job
-   WHERE office_id = actor.actor_office_id AND idempotency_key = internal_key;
-  IF new_job_id IS NOT NULL THEN
-    RETURN new_job_id;
-  END IF;
   SELECT * INTO failed_job
     FROM public.query_job
    WHERE id = incident_row.current_job_id
@@ -1046,7 +1027,7 @@ BEGIN
     incident_row.failure_class, incident_row.failure_code, 'query_job', new_job_id::TEXT,
     incident_row.recovery_key, new_job_id, 'manual_reprocess_requested',
     jsonb_build_object('operation', 'failure_reprocess'),
-    'manual-reprocess-requested:' || actor.actor_office_id::TEXT || ':' || btrim(p_idempotency_key),
+    'manual-reprocess-requested:' || actor.actor_office_id::TEXT || ':' || internal_key,
     actor.actor_id
   ) ON CONFLICT (office_id, occurrence_idempotency_key) DO NOTHING
   RETURNING id INTO occurrence_id;
@@ -1438,7 +1419,6 @@ REVOKE ALL ON FUNCTION public.phase11_list_failure_assignees()
 REVOKE ALL ON FUNCTION public.phase11_list_failure_incidents(TEXT, UUID, DATE, DATE, TEXT, INTEGER, TEXT, INTEGER)
   FROM PUBLIC, anon;
 
-GRANT EXECUTE ON FUNCTION public.phase11_record_failure_event_internal(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, UUID, UUID, UUID, INTEGER, TEXT, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phase11_record_execution_failure_internal(UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phase11_record_technical_failure_internal(UUID, TEXT, TEXT, TEXT, JSONB, TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.phase11_reconcile_success_internal(UUID) TO service_role;

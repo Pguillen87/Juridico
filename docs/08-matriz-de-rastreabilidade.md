@@ -37,15 +37,15 @@
 | O-003 | RF-008 | US-020 | `process_comparison` | Diff/deduplicação | 10 | T-020 dedupe movement | Identidade por `movementRef`, multiplicidade preservada, canonicalização e hash determinísticos | Implemented/Tested |
 | O-002 | RF-008 | US-021 | `process_comparison`, `detected_change` | Comparador | 10 | T-021 change | `changed` com diff completo em `process_comparison`, uma única mudança mínima e fingerprint estável | Implemented/Tested — sandbox only |
 | O-003 | RF-008 | US-022 | `process_comparison` | Estados comparativos | 10 | T-022 unchanged | `unchanged` sem diff e `not_comparable` distinto de failure; sem UI antecipada | Implemented/Tested — backend-only |
-| O-003 | RF-009 | US-023 | `query_execution` | Failure center | 9,11 | T-023 source unavailable | `source_unavailable` persistido, retry limitado e mensagem sanitizada | Implemented/Tested — central UI futura |
-| O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker | 9,11 | T-024 timeout | Claim, lease, recovery, token anti-stale e conclusão server-only; teste real com duas conexões e verificação de histórico 00011/00012 | Implemented/Tested — sandbox only |
-| O-003 | RF-009 | US-025 | `query_job` | Retry | 9,11 | T-025 rate limit | Máximo de três tentativas, backoff/teto e terminalização | Implemented/Tested — sandbox only |
-| O-003 | RF-009 | US-026 | `query_execution` | Failure center | 8,11 | T-026 not found | `not_found` terminal explícito, sem snapshot e sem `unchanged` | Implemented/Tested — persistência sandbox; UI futura |
-| O-003 | RF-009 | US-027 | `provider_capability` | Provider | 7,9,11 | T-027 unsupported | Capability/provider allowlisted; incompatibilidade não chama provider | Implemented/Tested — sandbox |
-| O-003 | RF-009 | US-028 | `query_execution` | Failure center | 11 | T-028 failure center | Estados e códigos persistidos para futura central, sem UI nova nesta fase | Partial/Deferred — UI futura |
-| O-003 | RF-009 | US-029 | `query_job` | Queue/API | 9,11 | T-029 reprocess | RPC permanece sem EXECUTE público enquanto a autorização específica não estiver fechada | Partial/Deferred — sem endpoint |
-| O-004 | RF-010 | US-030 | `notification` | EmailProvider | 11 | T-030 email sandbox | Mensagem | Planned |
-| O-004 | RF-008 | US-031 | `notification` | Idempotência | 11 | T-031 dedupe notification | Chave única | Planned |
+| O-003 | RF-009 | US-023 | `query_execution` | Failure center | 9,11 | T-023 source unavailable | `source_unavailable` persistido, retry limitado, mensagem sanitizada, central e timeline da Fase 11 | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-024 | `query_execution`, `query_job` | Worker/Failure center | 9,11 | T-024 timeout | Claim, lease, recovery, token anti-stale e conclusão server-only; falha observada na central, teste real com duas conexões e verificação de histórico 00011/00012 | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-025 | `query_job` | Retry/Failure center | 9,11 | T-025 rate limit | Máximo de três tentativas, backoff/teto, terminalização e tentativa exibida a partir da ocorrência | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-026 | `query_execution` | Failure center | 8,11 | T-026 not found | `not_found` terminal explícito, sem snapshot e sem `unchanged`, exibido na central com mensagem sanitizada | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-027 | `provider_capability` | Provider/Failure center | 7,9,11 | T-027 unsupported | Capability/provider allowlisted; incompatibilidade não chama provider e falha `not_supported` é rastreável na central | Implemented/Tested — sandbox |
+| O-003 | RF-009 | US-028 | `query_execution` | Failure center | 11 | T-028 failure center | Central `/app/falhas` e detalhe com filtros server-side por tipo, processo, data, tentativa, prioridade, responsável e estado; tentativa derivada de `failure_occurrence.attempt_number`, isolamento por `office_id` e “não se aplica” sem execução | Implemented/Tested — sandbox only |
+| O-003 | RF-009 | US-029 | `query_job` | Queue/API/Failure center | 9,11 | T-029 reprocess | `phase11_request_failure_reprocess` é a única fronteira browser→Server Action→RPC; idempotência, isolamento e D-022 revalidados no banco; RPC Fase 9 permanece sem exposição direta | Implemented/Tested — sem entrega externa |
+| O-004 | RF-010 | US-030 | `notification_outbox` | Internal notification outbox | 11 | T-030 email sandbox | Outbox append-only, `simulation_only=true`, canais fechados `in_app`/`mock_email`, escopo interno e sem SMTP/destinatário real | Implemented/Tested — infraestrutura sintética; envio real parcial/deferido |
+| O-004 | RF-008 | US-031 | `notification_outbox` | Idempotência | 11 | T-031 dedupe notification | Chaves únicas e concorrência comprovam deduplicação lógica sintética por incidente/ocorrência/canal; entrega real não implementada | Implemented/Tested — deduplicação sintética; entrega real parcial/deferida |
 | O-004 | RF-011 | US-032 | `weekly_report` | Scheduler/Reports | 12 | T-032 weekly | Período | Planned |
 | O-004 | RF-011 | US-033 | `report_process` | Reports/UI | 12 | T-033 by process | Tela/fixture | Planned |
 | O-004 | RF-011 | US-034 | `report_party` | Reports/UI | 12 | T-034 by party | N:N | Planned |
@@ -62,7 +62,7 @@
 
 ## Cobertura Crítica
 
-As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. Na Fase 9, o teste PostgreSQL real demonstra scheduler idempotente, claim exclusivo, conclusão sem duplicação, lease antiga rejeitada e nova lease funcional; `scripts/check-phase9-migration-history.sh` demonstra que 00011 é byte a byte igual a `2904185` e que o hardening existe somente em 00012. Na Fase 10, US-019 a US-022 foram implementadas com comparador determinístico, persistência append-only, fonte única do diff, `detected_change` mínimo, RLS/grants, auditoria atômica, pgTAP e concorrência real. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
+As histórias `Must` possuem ao menos um teste associado. Na Fase 5, US-004 e US-005 foram implementadas e testadas por RPCs transacionais, RLS, pgTAP, unitários e E2E. Na Fase 6, US-006 a US-010 foram implementadas e testadas com RPCs, RLS, pgTAP, unitários, E2E e concorrência. Na Fase 9, o teste PostgreSQL real demonstra scheduler idempotente, claim exclusivo, conclusão sem duplicação, lease antiga rejeitada e nova lease funcional; `scripts/check-phase9-migration-history.sh` demonstra que 00011 é byte a byte igual a `2904185` e que o hardening existe somente em 00012. Na Fase 10, US-019 a US-022 foram implementadas com comparador determinístico, persistência append-only, fonte única do diff, `detected_change` mínimo, RLS/grants, auditoria atômica, pgTAP e concorrência real. Na Fase 11, US-023 a US-031 foram cobertas no escopo aprovado com incidentes, timeline append-only, filtros server-side incluindo tentativa, RPC de reprocessamento com D-022, outbox sintética, deduplicação lógica, RLS/grants, pgTAP, unitários, E2E e concorrência. US-011 permanece parcial/deferida: existe somente estado estrutural `paused`, sem provider, scheduler, fila, capability ou job.
 
 ## Aceite funcional adicional da Fase 5
 
@@ -97,7 +97,7 @@ A D-022 canônica (`docs/10-matriz-papeis-e-autorizacao.md`) possui `manual_repr
 | O-002 | RF-007 | US-017 | Falha de integridade permanece `source=manual` e não vira `not_found` ou `unchanged` | assertions de ramo, status, mensagem sanitizada e ausência de estados de comparação | Implemented/Tested |
 | O-003 | RF-009 | US-027 | Validator runtime fecha o contrato por allowlists e coerência | `providers.test.ts`: resultado válido aceito e resultado estruturalmente incoerente rejeitado | Implemented/Tested |
 
-O corretivo não amplia D-022, não cria entrada manual operacional, não altera banco e não antecipa Fase 8 ou Fase 10.
+O corretivo não amplia D-022, não cria entrada manual operacional e não antecipa a Fase 12. A Fase 11 não implementa envio real: US-030 permanece parcial/deferida quanto a entrega externa e US-031 comprova somente deduplicação lógica sintética. A migration 00003 da Fase 11 é preservada byte a byte no commit da primeira publicação; correções posteriores devem permanecer em migration incremental.
 
 ## Fechamento do corretivo da Fase 7
 
