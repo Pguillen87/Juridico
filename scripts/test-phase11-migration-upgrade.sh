@@ -190,6 +190,9 @@ upgrade_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/upgrade-types.ts"
 dump_schema "${ROOT_DIR}" "${TMP_DIR}/upgrade-schema.sql"
 run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
+run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
+
+echo 'post_upgrade_clean_reset=PASS'
 
 if [[ "${full_fingerprint}" != "${upgrade_fingerprint}" ]]; then
   echo "Fingerprint do reset completo diverge do upgrade Fase 10→00003→00004: ${full_fingerprint} != ${upgrade_fingerprint}." >&2
