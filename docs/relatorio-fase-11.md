@@ -7,7 +7,7 @@
 | Branch | `phase-11-failures-notifications` |
 | Baseline Fase 10 | `ee687bb0fefdb5d6899b25f3753d5eac77ce3037` |
 | Primeiro commit da Fase 11 | `259e6e58ea9177bda7232281b8951a1c6cf0c78c` |
-| Corretivo final | `a740b82e5ce7fe01c319a81dfcde11e9bcd16b45`; parent `490d4bd1d1a24445b422cc36cb5cc0f2de5982ea` |
+| Último commit funcional antes do fechamento documental | `a740b82e5ce7fe01c319a81dfcde11e9bcd16b45`; parent `490d4bd1d1a24445b422cc36cb5cc0f2de5982ea` |
 | Migration 00003 histórica | `20260827000003_phase_11_failures_notifications.sql` — publicação defeituosa preservada como histórico |
 | Migration 00003 canônica corrigida | blob `8d4d9cbcf030d288a5d91ff8262241de94a9bd8c`; SHA-256 `3c61a4215c084d452d70f58ee28a7837df076a5f7716de3ebe774b4bfb200775` |
 | Migration 00004 publicada | blob `ad1f88ccc54c3a0e1be6a16480697fbb090365c6` |
@@ -55,6 +55,8 @@ Não foram usados SMTP, destinatário real, serviço externo real, DataJud real,
 
 O reset completo com 00003 corrigida + 00004 passou. O upgrade válido a partir de schema da Fase 10, aplicando 00003 corrigida e depois somente 00004, passou; o script comparou fingerprints estruturais, funções, assinaturas, grants, RLS/policies, tabelas, constraints, triggers e tipos gerados. O pgTAP passou nos dois estados e o banco foi resetado novamente ao final para não contaminar a regressão cumulativa. O upgrade sobre a 00003 original defeituosa não foi executado nem alegado, pois a versão original não completa sua própria aplicação.
 
-O App CI final `33122271713` concluiu `completed/success` com `headSha=a740b82e5ce7fe01c319a81dfcde11e9bcd16b45`. Passaram os gates de secret scan, auditoria de dependências, histórico F9/F10/F11, hygiene, formato, lint, typecheck, unitários, início do Supabase, reset, upgrade, E2E autenticado — incluindo `tests-e2e/failures.spec.ts` —, PoC sintética, DB lint, pgTAP, concorrência legada/F9/F10/F11, PowerShell e database types. A validação local também passou em parser SQL, `git diff --check`, formato, lint, typecheck, 126 unitários, build e `npm audit` sem vulnerabilidades.
+O App CI do último commit funcional `33122271713` concluiu `completed/success` com `headSha=a740b82e5ce7fe01c319a81dfcde11e9bcd16b45`. Passaram os gates de secret scan, auditoria de dependências, histórico F9/F10/F11, hygiene, formato, lint, typecheck, unitários, início do Supabase, reset, upgrade, E2E autenticado — incluindo `tests-e2e/failures.spec.ts` —, PoC sintética, DB lint, pgTAP, concorrência legada/F9/F10/F11, PowerShell e database types. A validação local também passou em parser SQL, `git diff --check`, formato, lint, typecheck, 126 unitários, build e `npm audit` sem vulnerabilidades.
+
+> O SHA final da branch e o App CI executado após o commit de fechamento documental são evidências pós-publicação e são verificados externamente no GitHub durante a auditoria de encerramento. O relatório não tenta auto-referenciar o SHA do próprio commit documental, pois alterar o documento gera um novo SHA.
 
 O gate de histórico prova o blob canônico e o SHA-256 da 00003, o diff limitado aos dois argumentos `TG_TABLE_NAME`, a imutabilidade publicada da 00004 e a preservação das migrations anteriores.
