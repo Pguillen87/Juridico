@@ -229,10 +229,16 @@ SELECT ok(NOT has_function_privilege('authenticated', 'public.phase12_write_audi
 
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000003', false);
 SELECT is((SELECT count(*)::integer FROM public.weekly_report), 0, 'operator não recebe visibilidade de relatório');
-SELECT throws_ok($$SELECT public.phase12_approve_report(:'generated_report_id'::uuid, :'generated_version_id'::uuid, 'operator-approve')$$, '42501', 'permission denied', 'operator não aprova');
+SELECT throws_ok(
+  format('SELECT public.phase12_approve_report(%L::uuid, %L::uuid, %L)', :'generated_report_id', :'generated_version_id', 'operator-approve'),
+  '42501', 'permission denied', 'operator não aprova'
+);
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000004', false);
 SELECT is((SELECT count(*)::integer FROM public.weekly_report), 0, 'auditor não recebe visibilidade de relatório');
-SELECT throws_ok($$SELECT public.phase12_cancel_report(:'generated_report_id'::uuid, 'other', 'auditor-cancel')$$, '42501', 'permission denied', 'auditor não cancela');
+SELECT throws_ok(
+  format('SELECT public.phase12_cancel_report(%L::uuid, %L, %L)', :'generated_report_id', 'other', 'auditor-cancel'),
+  '42501', 'permission denied', 'auditor não cancela'
+);
 RESET ROLE;
 
 SET ROLE authenticated;
@@ -284,7 +290,7 @@ SELECT throws_ok(
     'SELECT public.phase12_create_editorial_version(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L::jsonb, %L)',
     :'generated_report_id', :'generated_report_id', '{"not_allowed":"não"}', 'invalid-editorial'
   ),
-  '22023', 'invalid editorial content', 'campo editorial não allowlisted é rejeitado no banco'
+  '22023', 'editorial field is not allowlisted', 'campo editorial não allowlisted é rejeitado no banco'
 );
 SELECT phase12_submit_report(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'phase12-submit-2');
 RESET ROLE;
