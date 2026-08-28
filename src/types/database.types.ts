@@ -1473,6 +1473,251 @@ export type Database = {
           },
         ];
       };
+      report_command_idempotency: {
+        Row: {
+          created_at: string;
+          id: number;
+          idempotency_key: string;
+          office_id: string;
+          operation: string;
+          report_id: string | null;
+          request_fingerprint: string;
+          version_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: never;
+          idempotency_key: string;
+          office_id: string;
+          operation: string;
+          report_id?: string | null;
+          request_fingerprint: string;
+          version_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: never;
+          idempotency_key?: string;
+          office_id?: string;
+          operation?: string;
+          report_id?: string | null;
+          request_fingerprint?: string;
+          version_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'report_command_idempotency_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'report_command_idempotency_office_id_report_id_fkey';
+            columns: ['office_id', 'report_id'];
+            isOneToOne: false;
+            referencedRelation: 'weekly_report';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_command_idempotency_office_id_version_id_fkey';
+            columns: ['office_id', 'version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      report_party: {
+        Row: {
+          content: Json;
+          created_at: string;
+          id: string;
+          office_id: string;
+          party_id: string;
+          report_id: string;
+          report_version_id: string;
+          source_manifest: Json;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          id?: string;
+          office_id: string;
+          party_id: string;
+          report_id: string;
+          report_version_id: string;
+          source_manifest?: Json;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          id?: string;
+          office_id?: string;
+          party_id?: string;
+          report_id?: string;
+          report_version_id?: string;
+          source_manifest?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'report_party_office_id_party_id_fkey';
+            columns: ['office_id', 'party_id'];
+            isOneToOne: false;
+            referencedRelation: 'party';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_party_office_id_report_id_fkey';
+            columns: ['office_id', 'report_id'];
+            isOneToOne: false;
+            referencedRelation: 'weekly_report';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_party_office_id_report_version_id_fkey';
+            columns: ['office_id', 'report_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      report_process: {
+        Row: {
+          content: Json;
+          created_at: string;
+          id: string;
+          office_id: string;
+          process_id: string;
+          report_id: string;
+          report_version_id: string;
+          source_manifest: Json;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          id?: string;
+          office_id: string;
+          process_id: string;
+          report_id: string;
+          report_version_id: string;
+          source_manifest?: Json;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          id?: string;
+          office_id?: string;
+          process_id?: string;
+          report_id?: string;
+          report_version_id?: string;
+          source_manifest?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'report_process_office_id_process_id_fkey';
+            columns: ['office_id', 'process_id'];
+            isOneToOne: false;
+            referencedRelation: 'legal_process';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_process_office_id_report_id_fkey';
+            columns: ['office_id', 'report_id'];
+            isOneToOne: false;
+            referencedRelation: 'weekly_report';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_process_office_id_report_version_id_fkey';
+            columns: ['office_id', 'report_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
+      report_version: {
+        Row: {
+          base_version_id: string | null;
+          content_hash: string;
+          created_at: string;
+          created_by: string | null;
+          creation_kind: string;
+          id: string;
+          office_id: string;
+          previous_version_id: string | null;
+          report_id: string;
+          schema_version: string;
+          source_manifest: Json;
+          source_version_id: string | null;
+          structured_content: Json;
+          version_number: number;
+        };
+        Insert: {
+          base_version_id?: string | null;
+          content_hash: string;
+          created_at?: string;
+          created_by?: string | null;
+          creation_kind: string;
+          id?: string;
+          office_id: string;
+          previous_version_id?: string | null;
+          report_id: string;
+          schema_version: string;
+          source_manifest: Json;
+          source_version_id?: string | null;
+          structured_content: Json;
+          version_number: number;
+        };
+        Update: {
+          base_version_id?: string | null;
+          content_hash?: string;
+          created_at?: string;
+          created_by?: string | null;
+          creation_kind?: string;
+          id?: string;
+          office_id?: string;
+          previous_version_id?: string | null;
+          report_id?: string;
+          schema_version?: string;
+          source_manifest?: Json;
+          source_version_id?: string | null;
+          structured_content?: Json;
+          version_number?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'report_version_office_id_base_version_id_fkey';
+            columns: ['office_id', 'base_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_version_office_id_previous_version_id_fkey';
+            columns: ['office_id', 'previous_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_version_office_id_report_id_fkey';
+            columns: ['office_id', 'report_id'];
+            isOneToOne: false;
+            referencedRelation: 'weekly_report';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'report_version_office_id_source_version_id_fkey';
+            columns: ['office_id', 'source_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+        ];
+      };
       user_profile: {
         Row: {
           created_at: string;
@@ -1504,6 +1749,101 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'user_profile_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      weekly_report: {
+        Row: {
+          approved_at: string | null;
+          approved_by: string | null;
+          approved_hash: string | null;
+          approved_version_id: string | null;
+          cancel_reason_code: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          client_id: string;
+          created_at: string;
+          current_version_id: string | null;
+          generation_key: string;
+          id: string;
+          office_id: string;
+          period_end_utc: string;
+          period_start_utc: string;
+          report_type: string;
+          status: string;
+          timezone: string;
+          updated_at: string;
+        };
+        Insert: {
+          approved_at?: string | null;
+          approved_by?: string | null;
+          approved_hash?: string | null;
+          approved_version_id?: string | null;
+          cancel_reason_code?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          client_id: string;
+          created_at?: string;
+          current_version_id?: string | null;
+          generation_key: string;
+          id?: string;
+          office_id: string;
+          period_end_utc: string;
+          period_start_utc: string;
+          report_type?: string;
+          status?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Update: {
+          approved_at?: string | null;
+          approved_by?: string | null;
+          approved_hash?: string | null;
+          approved_version_id?: string | null;
+          cancel_reason_code?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          client_id?: string;
+          created_at?: string;
+          current_version_id?: string | null;
+          generation_key?: string;
+          id?: string;
+          office_id?: string;
+          period_end_utc?: string;
+          period_start_utc?: string;
+          report_type?: string;
+          status?: string;
+          timezone?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'weekly_report_approved_version_fk';
+            columns: ['office_id', 'approved_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'weekly_report_current_version_fk';
+            columns: ['office_id', 'current_version_id'];
+            isOneToOne: false;
+            referencedRelation: 'report_version';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'weekly_report_office_id_client_id_fkey';
+            columns: ['office_id', 'client_id'];
+            isOneToOne: false;
+            referencedRelation: 'client';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'weekly_report_office_id_fkey';
             columns: ['office_id'];
             isOneToOne: false;
             referencedRelation: 'office';
@@ -1943,6 +2283,163 @@ export type Database = {
           p_entity_id: string;
           p_entity_type: string;
           p_metadata?: Json;
+          p_office_id: string;
+        };
+        Returns: number;
+      };
+      phase12_approve_report: {
+        Args: {
+          p_idempotency_key: string;
+          p_report_id: string;
+          p_version_id: string;
+        };
+        Returns: undefined;
+      };
+      phase12_assert_backend: { Args: never; Returns: undefined };
+      phase12_build_report_content: {
+        Args: {
+          p_client_id: string;
+          p_office_id: string;
+          p_period_end_utc: string;
+          p_period_start_utc: string;
+        };
+        Returns: Json;
+      };
+      phase12_build_source_manifest: {
+        Args: {
+          p_client_id: string;
+          p_office_id: string;
+          p_period_end_utc: string;
+          p_period_start_utc: string;
+        };
+        Returns: Json;
+      };
+      phase12_can_view_report_row: {
+        Args: { p_office_id: string };
+        Returns: boolean;
+      };
+      phase12_cancel_report: {
+        Args: {
+          p_idempotency_key: string;
+          p_reason_code: string;
+          p_report_id: string;
+        };
+        Returns: undefined;
+      };
+      phase12_complete_command: {
+        Args: {
+          p_idempotency_key: string;
+          p_office_id: string;
+          p_operation: string;
+          p_report_id: string;
+          p_version_id: string;
+        };
+        Returns: undefined;
+      };
+      phase12_create_editorial_version: {
+        Args: {
+          p_base_version_id: string;
+          p_editorial: Json;
+          p_idempotency_key: string;
+          p_report_id: string;
+        };
+        Returns: string;
+      };
+      phase12_generate_weekly_report: {
+        Args: {
+          p_as_of_utc?: string;
+          p_client_id: string;
+          p_office_id: string;
+          p_period_end_utc?: string;
+          p_period_start_utc?: string;
+        };
+        Returns: {
+          replayed: boolean;
+          report_id: string;
+          version_id: string;
+        }[];
+      };
+      phase12_hash_version: {
+        Args: {
+          p_period_end_utc: string;
+          p_period_start_utc: string;
+          p_schema_version: string;
+          p_source_manifest: Json;
+          p_structured_content: Json;
+        };
+        Returns: string;
+      };
+      phase12_period_end_for: {
+        Args: { p_as_of_utc: string };
+        Returns: string;
+      };
+      phase12_period_start_for: {
+        Args: { p_period_end_utc: string };
+        Returns: string;
+      };
+      phase12_process_history_proven: {
+        Args: {
+          p_client_id: string;
+          p_office_id: string;
+          p_period_end_utc: string;
+          p_process_id: string;
+        };
+        Returns: boolean;
+      };
+      phase12_process_party_history_proven: {
+        Args: {
+          p_office_id: string;
+          p_period_end_utc: string;
+          p_relation_id: string;
+        };
+        Returns: boolean;
+      };
+      phase12_register_command: {
+        Args: {
+          p_idempotency_key: string;
+          p_office_id: string;
+          p_operation: string;
+          p_report_id: string;
+          p_request_fingerprint: string;
+        };
+        Returns: Record<string, unknown>;
+      };
+      phase12_restore_report_version: {
+        Args: {
+          p_base_version_id: string;
+          p_idempotency_key: string;
+          p_report_id: string;
+          p_source_version_id: string;
+        };
+        Returns: string;
+      };
+      phase12_return_report_to_draft: {
+        Args: {
+          p_idempotency_key: string;
+          p_report_id: string;
+          p_version_id: string;
+        };
+        Returns: undefined;
+      };
+      phase12_submit_report: {
+        Args: {
+          p_idempotency_key: string;
+          p_report_id: string;
+          p_version_id: string;
+        };
+        Returns: undefined;
+      };
+      phase12_validate_editorial: {
+        Args: { p_editorial: Json };
+        Returns: undefined;
+      };
+      phase12_write_audit_internal: {
+        Args: {
+          p_action: string;
+          p_actor_user_id: string;
+          p_entity_id: string;
+          p_entity_type: string;
+          p_metadata: Json;
           p_office_id: string;
         };
         Returns: number;
