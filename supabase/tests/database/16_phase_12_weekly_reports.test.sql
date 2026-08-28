@@ -187,6 +187,7 @@ SELECT report_id, version_id, replayed
     'c1200000-0000-4000-b000-000000000001',
     '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', '2026-08-28 21:00:00+00')
   \gset generated_
+RESET ROLE;
 SELECT ok(:'generated_report_id' IS NOT NULL, 'geração cria weekly_report sintético');
 SELECT ok(:'generated_version_id' IS NOT NULL, 'geração cria a primeira versão');
 SELECT is((SELECT content_hash FROM public.report_version WHERE id = :'generated_version_id'), public.phase12_hash_version('report-v1', '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', (SELECT structured_content FROM public.report_version WHERE id = :'generated_version_id'), (SELECT source_manifest FROM public.report_version WHERE id = :'generated_version_id')), 'hash da versão é verificável');
@@ -199,15 +200,17 @@ SELECT is((SELECT (structured_content->'processes'->0->>'manual_review_required'
 SELECT is((SELECT occurrence_count FROM public.failure_incident WHERE id = 'c1200000-0000-4000-f100-000000000001'), 1, 'occurrence_count representa observações, não número da tentativa');
 SELECT is((SELECT structured_content->'parties'->0->>'relationship_state' FROM public.report_version WHERE id = :'generated_version_id'), 'pending', 'parte ambígua não é confirmada automaticamente');
 SELECT is((SELECT count(*)::integer FROM public.report_version WHERE report_id = :'generated_report_id'::uuid), 1, 'primeira geração cria uma única versão');
+SET ROLE service_role;
 SELECT report_id, version_id, replayed
   FROM public.phase12_generate_weekly_report(
     'c1200000-0000-4000-9000-000000000001',
     'c1200000-0000-4000-b000-000000000001',
     '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', '2026-08-28 21:00:00+00')
   \gset replay_
+RESET ROLE;
 SELECT is(:'replay_replayed', 't', 'geração repetida é idempotente');
 SELECT is((SELECT count(*)::integer FROM public.report_version WHERE report_id = :'generated_report_id'::uuid), 1, 'replay não cria segunda versão');
-
+SET ROLE service_role;
 SELECT report_id, version_id, replayed
   FROM public.phase12_generate_weekly_report(
     'c1200000-0000-4000-9000-000000000002',
