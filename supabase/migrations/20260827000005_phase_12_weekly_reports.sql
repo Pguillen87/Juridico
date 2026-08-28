@@ -1460,5 +1460,4 @@ GRANT EXECUTE ON FUNCTION public.phase12_cancel_report(UUID, TEXT, TEXT) TO auth
 REVOKE ALL ON FUNCTION public.phase12_write_audit_internal(TEXT, TEXT, UUID, UUID, UUID, JSONB) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.phase12_register_command(UUID, TEXT, TEXT, TEXT, UUID) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.phase12_complete_command(UUID, TEXT, TEXT, UUID, UUID) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.phase12_can_view_report_row(UUID) FROM PUBLIC, anon, authenticated;
 GRANT USAGE, SELECT ON SEQUENCE public.report_command_idempotency_id_seq TO postgres;
