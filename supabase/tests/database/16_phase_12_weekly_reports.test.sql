@@ -177,7 +177,9 @@ SELECT throws_ok(
     '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', '2026-08-28 21:00:00+00')$$,
   'P0001', 'manual_review_required', 'vínculo cliente-processo sem prova histórica falha fechado'
 );
+RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.weekly_report WHERE client_id = 'c1200000-0000-4000-b000-000000000003'), 0, 'falha histórica não cria relatório parcial');
+SET ROLE service_role;
 
 SELECT report_id, version_id, replayed
   FROM public.phase12_generate_weekly_report(
