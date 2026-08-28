@@ -156,7 +156,11 @@ run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
 full_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/full-types.ts"
 dump_schema "${ROOT_DIR}" "${TMP_DIR}/full-schema.sql"
-run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
+if ! run_supabase test db --local --workdir "${ROOT_DIR}" >"${TMP_DIR}/phase11-full-pgtap.log" 2>&1; then
+  echo 'Falha no pgTAP do reset completo Fase 11→00004.' >&2
+  tail -240 "${TMP_DIR}/phase11-full-pgtap.log" >&2
+  exit 1
+fi
 echo "full_reset_fingerprint=${full_fingerprint}"
 echo 'full_reset_pgTap=PASS'
 
@@ -189,7 +193,11 @@ run_supabase db push --local --workdir "${ROOT_DIR}" --yes >/dev/null
 upgrade_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/upgrade-types.ts"
 dump_schema "${ROOT_DIR}" "${TMP_DIR}/upgrade-schema.sql"
-run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
+if ! run_supabase test db --local --workdir "${ROOT_DIR}" >"${TMP_DIR}/phase11-upgrade-pgtap.log" 2>&1; then
+  echo 'Falha no pgTAP do upgrade incremental Fase 10→00003→00004.' >&2
+  tail -240 "${TMP_DIR}/phase11-upgrade-pgtap.log" >&2
+  exit 1
+fi
 run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
 
 echo 'post_upgrade_clean_reset=PASS'
