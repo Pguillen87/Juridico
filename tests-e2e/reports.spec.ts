@@ -56,7 +56,7 @@ test.describe('Relatórios semanais — Fase 12', () => {
     ).toBeVisible();
     await expect(page.locator('article').getByText('Rascunho')).toBeVisible();
     await expect(
-      page.getByText('Aprovação não significa envio.')
+      page.locator('header').getByText('Aprovação não significa envio.')
     ).toBeVisible();
     await expect(page.getByText('PDF')).toHaveCount(0);
     await expect(page.getByText('Enviar')).toHaveCount(0);
@@ -135,7 +135,7 @@ test.describe('Relatórios semanais — Fase 12', () => {
       page.getByText('Aprovação registrada para a versão')
     ).toBeVisible();
     await expect(
-      page.getByText('Aprovação não significa envio.')
+      page.locator('header').getByText('Aprovação não significa envio.')
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Aprovar esta versão' })
