@@ -1,5 +1,6 @@
 name: Phase 12 Original Migration Proof
 on:
+  workflow_dispatch:
   push:
     branches: [diagnostic-phase12-original-20260828]
 jobs:
