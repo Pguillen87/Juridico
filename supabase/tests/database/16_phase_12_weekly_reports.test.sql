@@ -237,7 +237,13 @@ RESET ROLE;
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000002', false);
-SELECT lives_ok($$SELECT public.phase12_create_editorial_version(:'generated_report_id'::uuid, :'generated_version_id'::uuid, '{"summary_note":"Nota sintética"}', 'phase12-edit-1')$$, 'reviewer cria versão editorial');
+SELECT lives_ok(
+  format(
+    'SELECT public.phase12_create_editorial_version(%L::uuid, %L::uuid, %L::jsonb, %L)',
+    :'generated_report_id', :'generated_version_id', '{"summary_note":"Nota sintética"}', 'phase12-edit-1'
+  ),
+  'reviewer cria versão editorial'
+);
 RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.report_version WHERE report_id = :'generated_report_id'::uuid), 2, 'versão editorial é append-only');
 
@@ -245,22 +251,52 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000002', false);
 SELECT phase12_submit_report(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'phase12-submit-1');
 SELECT phase12_return_report_to_draft(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'phase12-return-1');
-SELECT lives_ok($$SELECT public.phase12_restore_report_version(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), :'generated_version_id'::uuid, 'phase12-restore-1')$$, 'restauração cria nova versão sem sobrescrever histórico');
+SELECT lives_ok(
+  format(
+    'SELECT public.phase12_restore_report_version(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L::uuid, %L)',
+    :'generated_report_id', :'generated_report_id', :'generated_version_id', 'phase12-restore-1'
+  ),
+  'restauração cria nova versão sem sobrescrever histórico'
+);
 RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.report_version WHERE report_id = :'generated_report_id'::uuid), 3, 'restauração cria V3 e preserva V1/V2');
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000002', false);
-SELECT throws_ok($$SELECT public.phase12_approve_report(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'reviewer-approve')$$, '42501', 'permission denied', 'reviewer não aprova');
+SELECT throws_ok(
+  format(
+    'SELECT public.phase12_approve_report(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L)',
+    :'generated_report_id', :'generated_report_id', 'reviewer-approve'
+  ),
+  '42501', 'permission denied', 'reviewer não aprova'
+);
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000006', false);
-SELECT throws_ok($$SELECT public.phase12_approve_report(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'owner-reviewer-approve')$$, '42501', 'permission denied', 'is_owner não concede poder de aprovação');
+SELECT throws_ok(
+  format(
+    'SELECT public.phase12_approve_report(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L)',
+    :'generated_report_id', :'generated_report_id', 'owner-reviewer-approve'
+  ),
+  '42501', 'permission denied', 'is_owner não concede poder de aprovação'
+);
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000002', false);
-SELECT throws_ok($$SELECT public.phase12_create_editorial_version(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), '{"not_allowed":"não"}', 'invalid-editorial')$$, '22023', 'invalid editorial content', 'campo editorial não allowlisted é rejeitado no banco');
+SELECT throws_ok(
+  format(
+    'SELECT public.phase12_create_editorial_version(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L::jsonb, %L)',
+    :'generated_report_id', :'generated_report_id', '{"not_allowed":"não"}', 'invalid-editorial'
+  ),
+  '22023', 'invalid editorial content', 'campo editorial não allowlisted é rejeitado no banco'
+);
 SELECT phase12_submit_report(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'phase12-submit-2');
 RESET ROLE;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000001', false);
-SELECT lives_ok($$SELECT public.phase12_approve_report(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'phase12-approve-1')$$, 'somente lawyer aprova e o hash é recalculado');
+SELECT lives_ok(
+  format(
+    'SELECT public.phase12_approve_report(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L)',
+    :'generated_report_id', :'generated_report_id', 'phase12-approve-1'
+  ),
+  'somente lawyer aprova e o hash é recalculado'
+);
 RESET ROLE;
 SELECT is((SELECT status FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'approved', 'aprovação muda o estado');
 SELECT is((SELECT approved_hash FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), (SELECT content_hash FROM public.report_version WHERE id = (SELECT approved_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid)), 'approved_hash aponta para a versão aprovada');
@@ -270,7 +306,13 @@ UPDATE public.report_version SET content_hash = repeat('c', 64) WHERE id = (SELE
 ALTER TABLE public.report_version ENABLE TRIGGER tr_report_version_append_only;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000001', false);
-SELECT throws_ok($$SELECT public.phase12_approve_report(:'generated_report_id'::uuid, (SELECT approved_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'phase12-approve-corrupt')$$, '23514', 'report version hash mismatch', 'aprovação falha fechado com hash corrompido');
+SELECT throws_ok(
+  format(
+    'SELECT public.phase12_approve_report(%L::uuid, (SELECT approved_version_id FROM public.weekly_report WHERE id = %L::uuid), %L)',
+    :'generated_report_id', :'generated_report_id', 'phase12-approve-corrupt'
+  ),
+  '23514', 'report version hash mismatch', 'aprovação falha fechado com hash corrompido'
+);
 RESET ROLE;
 ALTER TABLE public.report_version DISABLE TRIGGER tr_report_version_append_only;
 UPDATE public.report_version rv
@@ -286,10 +328,25 @@ SELECT is((SELECT status FROM public.weekly_report WHERE id = :'generated_report
 
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', 'c1200000-0000-4000-8000-000000000001', false);
-SELECT lives_ok($$SELECT public.phase12_cancel_report(:'generated_report_id'::uuid, 'incorrect_content', 'phase12-cancel-1')$$, 'lawyer cancela relatório');
-SELECT lives_ok($$SELECT public.phase12_cancel_report(:'generated_report_id'::uuid, 'incorrect_content', 'phase12-cancel-1')$$, 'cancelamento repetido é idempotente');
-SELECT throws_ok($$SELECT public.phase12_cancel_report(:'generated_report_id'::uuid, 'other', 'phase12-cancel-2')$$, 'P0001', 'report cannot be cancelled', 'cancelamento novo é bloqueado após terminalidade');
-SELECT throws_ok($$SELECT public.phase12_create_editorial_version(:'generated_report_id'::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), '{"summary_note":"não"}', 'phase12-edit-cancelled')$$, 'P0001', 'report is not editable', 'cancelled é terminal e não aceita nova versão');
+SELECT lives_ok(
+  format('SELECT public.phase12_cancel_report(%L::uuid, %L, %L)', :'generated_report_id', 'incorrect_content', 'phase12-cancel-1'),
+  'lawyer cancela relatório'
+);
+SELECT lives_ok(
+  format('SELECT public.phase12_cancel_report(%L::uuid, %L, %L)', :'generated_report_id', 'incorrect_content', 'phase12-cancel-1'),
+  'cancelamento repetido é idempotente'
+);
+SELECT throws_ok(
+  format('SELECT public.phase12_cancel_report(%L::uuid, %L, %L)', :'generated_report_id', 'other', 'phase12-cancel-2'),
+  'P0001', 'report cannot be cancelled', 'cancelamento novo é bloqueado após terminalidade'
+);
+SELECT throws_ok(
+  format(
+    'SELECT public.phase12_create_editorial_version(%L::uuid, (SELECT current_version_id FROM public.weekly_report WHERE id = %L::uuid), %L::jsonb, %L)',
+    :'generated_report_id', :'generated_report_id', '{"summary_note":"não"}', 'phase12-edit-cancelled'
+  ),
+  'P0001', 'report is not editable', 'cancelled é terminal e não aceita nova versão'
+);
 RESET ROLE;
 SELECT is((SELECT status FROM public.weekly_report WHERE id = :'generated_report_id'::uuid), 'cancelled', 'cancelamento preserva estado terminal');
 SELECT is((SELECT count(*)::integer FROM public.report_version WHERE report_id = :'generated_report_id'::uuid), 3, 'cancelamento não cria versão');
