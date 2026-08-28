@@ -357,6 +357,7 @@ DECLARE
   field_value JSONB;
   nested_key TEXT;
   nested_value JSONB;
+  max_text_length INTEGER;
 BEGIN
   IF p_editorial IS NULL OR jsonb_typeof(p_editorial) <> 'object' THEN
     RAISE EXCEPTION 'invalid editorial content' USING ERRCODE = '22023';
@@ -371,9 +372,10 @@ BEGIN
       RAISE EXCEPTION 'editorial field is not allowlisted' USING ERRCODE = '22023';
     END IF;
     IF field_name IN ('title', 'summary_note', 'closing_note') THEN
+      max_text_length := CASE WHEN field_name = 'title' THEN 240 ELSE 2000 END;
       IF jsonb_typeof(field_value) <> 'string'
          OR char_length(btrim(field_value #>> '{}')) < 1
-         OR char_length(field_value #>> '{}') > CASE WHEN field_name = 'title' THEN 240 ELSE 2000 END
+         OR char_length(field_value #>> '{}') > max_text_length
       THEN
         RAISE EXCEPTION 'invalid editorial text' USING ERRCODE = '22023';
       END IF;
