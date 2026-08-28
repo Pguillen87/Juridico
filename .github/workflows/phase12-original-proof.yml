@@ -1,0 +1,23 @@
+name: Phase 12 Original Migration Proof
+on:
+  push:
+    branches: [diagnostic-phase12-original-20260828]
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - name: Start Supabase Local
+        run: npx supabase start
+      - name: Apply F11 plus original 00005
+        run: npm run db:reset
+      - name: Original migration smoke tests
+        run: npx supabase test db supabase/tests/database/99_phase12_original_smoke.test.sql
+      - name: Stop Supabase Local
+        if: always()
+        run: npx supabase stop > /dev/null 2>&1 || true

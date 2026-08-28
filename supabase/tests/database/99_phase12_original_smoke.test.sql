@@ -1,0 +1,12 @@
+BEGIN;
+SELECT plan(8);
+SELECT has_table('public', 'weekly_report', 'original 00005 creates weekly_report');
+SELECT has_table('public', 'report_version', 'original 00005 creates report_version');
+SELECT has_table('public', 'report_process', 'original 00005 creates report_process');
+SELECT has_table('public', 'report_party', 'original 00005 creates report_party');
+SELECT has_table('public', 'report_command_idempotency', 'original 00005 creates idempotency table');
+SELECT has_function('public', 'phase12_hash_version', ARRAY['text','timestamp with time zone','timestamp with time zone','jsonb','jsonb'], 'original 00005 creates hash function');
+SELECT has_function('public', 'phase12_generate_weekly_report', ARRAY['uuid','uuid','timestamp with time zone','timestamp with time zone','text'], 'original 00005 creates generator');
+SELECT has_function('public', 'phase12_approve_report', ARRAY['uuid','uuid','uuid','text'], 'original 00005 creates approval RPC');
+SELECT * FROM finish();
+ROLLBACK;
