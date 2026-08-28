@@ -150,18 +150,22 @@ echo 'phase12-upgrade=prepare-phase10-schema'
 mkdir -p "${F10_PROJECT_DIR}"
 cp -R "${ROOT_DIR}/supabase" "${F10_PROJECT_DIR}/supabase"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_reports.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 
 mkdir -p "${PRE_F12_PROJECT_DIR}"
 cp -R "${F10_PROJECT_DIR}/supabase" "${PRE_F12_PROJECT_DIR}/supabase"
 cp "${ROOT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_reports.sql" \
   "${PRE_F12_PROJECT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_reports.sql"
+cp "${ROOT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql" \
+  "${PRE_F12_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
 
-echo 'phase12-upgrade=apply-00005'
+echo 'phase12-upgrade=apply-00005-and-00006'
 run_supabase db push --local --workdir "${PRE_F12_PROJECT_DIR}" --yes >/dev/null
 versions="$(migration_versions "${PRE_F12_PROJECT_DIR}")"
-if ! grep -Fq '20260827000005' <<<"${versions}"; then
-  echo 'A migration 00005 não foi aplicada no caminho incremental.' >&2
+if ! grep -Fq '20260827000005' <<<"${versions}" || ! grep -Fq '20260827000006' <<<"${versions}"; then
+  echo 'As migrations 00005 e 00006 não foram aplicadas no caminho incremental.' >&2
+  printf '%s\n' "${versions}" >&2
   exit 1
 fi
 upgrade_fingerprint="$(fingerprint "${PRE_F12_PROJECT_DIR}")"
@@ -170,11 +174,11 @@ run_supabase test db --local --workdir "${PRE_F12_PROJECT_DIR}" >/dev/null
 run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
 
 if [[ "${full_fingerprint}" != "${upgrade_fingerprint}" ]]; then
-  echo "Fingerprint de reset completo diverge do upgrade Fase 11→00005: ${full_fingerprint} != ${upgrade_fingerprint}." >&2
+  echo "Fingerprint de reset completo diverge do upgrade Fase 11→00005→00006: ${full_fingerprint} != ${upgrade_fingerprint}." >&2
   exit 1
 fi
 if ! cmp -s "${TMP_DIR}/full-types.ts" "${TMP_DIR}/upgrade-types.ts"; then
-  echo 'Tipos gerados divergem entre reset completo e upgrade Fase 11→00005.' >&2
+  echo 'Tipos gerados divergem entre reset completo e upgrade Fase 11→00005→00006.' >&2
   diff -u "${TMP_DIR}/full-types.ts" "${TMP_DIR}/upgrade-types.ts" >&2 || true
   exit 1
 fi
