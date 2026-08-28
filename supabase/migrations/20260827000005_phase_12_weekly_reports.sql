@@ -829,6 +829,8 @@ DECLARE
   new_version_id UUID;
   generation_key_value TEXT;
   audit_id BIGINT;
+  process_row RECORD;
+  party_row RECORD;
 BEGIN
   PERFORM public.phase12_assert_backend();
   IF p_office_id IS NULL OR p_client_id IS NULL OR p_as_of_utc IS NULL THEN
