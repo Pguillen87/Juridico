@@ -208,7 +208,7 @@ SELECT report_id, version_id, replayed
     '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', '2026-08-28 21:00:00+00')
   \gset replay_
 RESET ROLE;
-SELECT is(:'replay_replayed', 't', 'geração repetida é idempotente');
+SELECT is(:'replay_replayed'::boolean, true, 'geração repetida é idempotente');
 SELECT is((SELECT count(*)::integer FROM public.report_version WHERE report_id = :'generated_report_id'::uuid), 1, 'replay não cria segunda versão');
 SET ROLE service_role;
 SELECT report_id, version_id, replayed
