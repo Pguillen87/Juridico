@@ -85,26 +85,41 @@ try {
     } else if (fixtureRun.status !== 0) {
       process.exitCode = fixtureRun.status ?? 1;
     } else {
-      process.env.PLAYWRIGHT_START_COMMAND = 'node .next/standalone/server.js';
-      process.env.HOSTNAME = 'localhost';
-      process.env.PORT = '3000';
-      process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
-      process.env.JURIDICO_E2E_PASSWORD =
-        process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
-      process.env.NEXT_PUBLIC_SUPABASE_URL = localEnv.API_URL;
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = localEnv.ANON_KEY;
-      const e2eRun = run('npx --no-install playwright test', 'npx', [
-        '--no-install',
-        'playwright',
-        'test',
-      ]);
-      if (e2eRun.error) {
+      const reportsFixtureRun = run(
+        'node scripts/bootstrap-phase12-e2e-fixture.mjs',
+        'node',
+        ['scripts/bootstrap-phase12-e2e-fixture.mjs']
+      );
+      if (reportsFixtureRun.error) {
         process.stderr.write(
-          `Falha ao iniciar Auth E2E: ${e2eRun.error.message}\n`
+          `Falha ao iniciar fixture de relatórios: ${reportsFixtureRun.error.message}\n`
         );
         process.exitCode = 1;
+      } else if (reportsFixtureRun.status !== 0) {
+        process.exitCode = reportsFixtureRun.status ?? 1;
       } else {
-        process.exitCode = e2eRun.status ?? 1;
+        process.env.PLAYWRIGHT_START_COMMAND =
+          'node .next/standalone/server.js';
+        process.env.HOSTNAME = 'localhost';
+        process.env.PORT = '3000';
+        process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
+        process.env.JURIDICO_E2E_PASSWORD =
+          process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
+        process.env.NEXT_PUBLIC_SUPABASE_URL = localEnv.API_URL;
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = localEnv.ANON_KEY;
+        const e2eRun = run('npx --no-install playwright test', 'npx', [
+          '--no-install',
+          'playwright',
+          'test',
+        ]);
+        if (e2eRun.error) {
+          process.stderr.write(
+            `Falha ao iniciar Auth E2E: ${e2eRun.error.message}\n`
+          );
+          process.exitCode = 1;
+        } else {
+          process.exitCode = e2eRun.status ?? 1;
+        }
       }
     }
   }

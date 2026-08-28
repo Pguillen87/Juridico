@@ -89,6 +89,23 @@ export default async function AppPage() {
                 Abrir central de falhas
               </Link>
             </div>
+            {profile.role === 'lawyer' || profile.role === 'reviewer' ? (
+              <div className="rounded-xl border border-violet-200 bg-violet-50 p-6">
+                <h2 className="text-lg font-semibold text-slate-950">
+                  Relatórios semanais
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Revise versões semanais congeladas, acompanhe evidências e
+                  mantenha aprovação separada de qualquer envio.
+                </p>
+                <Link
+                  className="mt-5 inline-flex rounded-md bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-800"
+                  href="/app/relatorios"
+                >
+                  Abrir relatórios
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
