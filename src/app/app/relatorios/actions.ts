@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { requirePermission } from '@/lib/auth/guards';
 import { createClient } from '@/lib/supabase/server';
@@ -80,6 +81,10 @@ export async function createEditorialVersionAction(
   _previousState: ReportActionState | null,
   formData: FormData
 ): Promise<ReportActionState> {
+  let redirectPath: string | null = null;
+  let result: ReportActionState = {
+    error: 'Não foi possível concluir a operação.',
+  };
   try {
     await requirePermission('edit_report_draft', { redirectOnDenied: false });
     const parsed = editorialSchema.safeParse({
@@ -110,21 +115,28 @@ export async function createEditorialVersionAction(
     if (error) return actionError(error.message);
     revalidatePath('/app/relatorios');
     revalidatePath(`/app/relatorios/${parsed.data.reportId}`);
-    return {
+    result = {
       success: true,
       message:
         'Nova versão editorial criada. Os fatos técnicos permanecem congelados.',
       versionId: data,
     };
+    redirectPath = `/app/relatorios/${parsed.data.reportId}?result=editorial-created`;
   } catch (error) {
-    return actionError(error);
+    result = actionError(error);
   }
+  if (redirectPath) redirect(redirectPath);
+  return result;
 }
 
 export async function restoreReportVersionAction(
   _previousState: ReportActionState | null,
   formData: FormData
 ): Promise<ReportActionState> {
+  let redirectPath: string | null = null;
+  let result: ReportActionState = {
+    error: 'Não foi possível concluir a operação.',
+  };
   try {
     await requirePermission('edit_report_draft', { redirectOnDenied: false });
     const parsed = restoreSchema.safeParse(
@@ -142,20 +154,27 @@ export async function restoreReportVersionAction(
     if (error) return actionError(error.message);
     revalidatePath('/app/relatorios');
     revalidatePath(`/app/relatorios/${parsed.data.reportId}`);
-    return {
+    result = {
       success: true,
       message: 'Conteúdo editorial restaurado em uma nova versão.',
       versionId: data,
     };
+    redirectPath = `/app/relatorios/${parsed.data.reportId}?result=editorial-restored`;
   } catch (error) {
-    return actionError(error);
+    result = actionError(error);
   }
+  if (redirectPath) redirect(redirectPath);
+  return result;
 }
 
 export async function submitReportAction(
   _previousState: ReportActionState | null,
   formData: FormData
 ): Promise<ReportActionState> {
+  let redirectPath: string | null = null;
+  let result: ReportActionState = {
+    error: 'Não foi possível concluir a operação.',
+  };
   try {
     await requirePermission('review_report', { redirectOnDenied: false });
     const parsed = reviewSchema.safeParse(
@@ -171,16 +190,23 @@ export async function submitReportAction(
     if (error) return actionError(error.message);
     revalidatePath('/app/relatorios');
     revalidatePath(`/app/relatorios/${parsed.data.reportId}`);
-    return { success: true, message: 'Relatório enviado para revisão.' };
+    result = { success: true, message: 'Relatório enviado para revisão.' };
+    redirectPath = `/app/relatorios/${parsed.data.reportId}?result=submitted`;
   } catch (error) {
-    return actionError(error);
+    result = actionError(error);
   }
+  if (redirectPath) redirect(redirectPath);
+  return result;
 }
 
 export async function returnReportToDraftAction(
   _previousState: ReportActionState | null,
   formData: FormData
 ): Promise<ReportActionState> {
+  let redirectPath: string | null = null;
+  let result: ReportActionState = {
+    error: 'Não foi possível concluir a operação.',
+  };
   try {
     await requirePermission('review_report', { redirectOnDenied: false });
     const parsed = reviewSchema.safeParse(
@@ -196,16 +222,23 @@ export async function returnReportToDraftAction(
     if (error) return actionError(error.message);
     revalidatePath('/app/relatorios');
     revalidatePath(`/app/relatorios/${parsed.data.reportId}`);
-    return { success: true, message: 'Relatório devolvido para edição.' };
+    result = { success: true, message: 'Relatório devolvido para edição.' };
+    redirectPath = `/app/relatorios/${parsed.data.reportId}?result=returned`;
   } catch (error) {
-    return actionError(error);
+    result = actionError(error);
   }
+  if (redirectPath) redirect(redirectPath);
+  return result;
 }
 
 export async function approveReportAction(
   _previousState: ReportActionState | null,
   formData: FormData
 ): Promise<ReportActionState> {
+  let redirectPath: string | null = null;
+  let result: ReportActionState = {
+    error: 'Não foi possível concluir a operação.',
+  };
   try {
     await requirePermission('approve_final_report', {
       redirectOnDenied: false,
@@ -223,20 +256,27 @@ export async function approveReportAction(
     if (error) return actionError(error.message);
     revalidatePath('/app/relatorios');
     revalidatePath(`/app/relatorios/${parsed.data.reportId}`);
-    return {
+    result = {
       success: true,
       message:
         'Versão aprovada com hash recalculado. Aprovação não significa envio.',
     };
+    redirectPath = `/app/relatorios/${parsed.data.reportId}?result=approved`;
   } catch (error) {
-    return actionError(error);
+    result = actionError(error);
   }
+  if (redirectPath) redirect(redirectPath);
+  return result;
 }
 
 export async function cancelReportAction(
   _previousState: ReportActionState | null,
   formData: FormData
 ): Promise<ReportActionState> {
+  let redirectPath: string | null = null;
+  let result: ReportActionState = {
+    error: 'Não foi possível concluir a operação.',
+  };
   try {
     await requirePermission('cancel_report', { redirectOnDenied: false });
     const parsed = cancelSchema.safeParse(
@@ -253,11 +293,14 @@ export async function cancelReportAction(
     if (error) return actionError(error.message);
     revalidatePath('/app/relatorios');
     revalidatePath(`/app/relatorios/${parsed.data.reportId}`);
-    return {
+    result = {
       success: true,
       message: 'Relatório cancelado. O estado é terminal nesta fase.',
     };
+    redirectPath = `/app/relatorios/${parsed.data.reportId}?result=cancelled`;
   } catch (error) {
-    return actionError(error);
+    result = actionError(error);
   }
+  if (redirectPath) redirect(redirectPath);
+  return result;
 }

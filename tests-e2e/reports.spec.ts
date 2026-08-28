@@ -1,4 +1,18 @@
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+
+const phase12FixturePath = path.resolve(
+  process.cwd(),
+  'scripts/bootstrap-phase12-e2e-fixture.mjs'
+);
+
+function resetPhase12Fixture() {
+  execFileSync(process.execPath, [phase12FixturePath], {
+    stdio: 'inherit',
+    env: process.env,
+  });
+}
 
 const password = process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
 const clientIds = {
@@ -22,6 +36,10 @@ async function logout(page: Page) {
 }
 
 test.describe('Relatórios semanais — Fase 12', () => {
+  test.beforeEach(() => {
+    resetPhase12Fixture();
+  });
+
   test('lawyer filtra server-side por cliente e vê os limites da fase', async ({
     page,
   }) => {
@@ -36,7 +54,7 @@ test.describe('Relatórios semanais — Fase 12', () => {
     await expect(
       page.getByText('Cliente d1200000 · período semanal')
     ).toBeVisible();
-    await expect(page.getByText('Rascunho')).toBeVisible();
+    await expect(page.locator('article').getByText('Rascunho')).toBeVisible();
     await expect(
       page.getByText('Aprovação não significa envio.')
     ).toBeVisible();

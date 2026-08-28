@@ -66,6 +66,68 @@ if (!lawyerId || !reviewerId) {
   throw new Error('Usuários E2E lawyer/reviewer não foram preparados.');
 }
 
+const clientIdList = Object.values(CLIENT_IDS)
+  .map((clientId) => `'${clientId}'`)
+  .join(', ');
+
+const cleanup = `
+SET juridico.phase12_internal = '1';
+ALTER TABLE public.report_version DISABLE TRIGGER tr_report_version_append_only;
+ALTER TABLE public.report_process DISABLE TRIGGER tr_report_process_append_only;
+ALTER TABLE public.report_party DISABLE TRIGGER tr_report_party_append_only;
+ALTER TABLE public.weekly_report DISABLE TRIGGER tr_weekly_report_domain_guard;
+ALTER TABLE public.report_command_idempotency DISABLE TRIGGER tr_report_idempotency_guard;
+UPDATE public.weekly_report
+   SET current_version_id = NULL,
+       approved_version_id = NULL,
+       approved_hash = NULL,
+       approved_by = NULL,
+       approved_at = NULL,
+       cancelled_by = NULL,
+       cancelled_at = NULL,
+       cancel_reason_code = NULL
+ WHERE office_id = '${OFFICE_ID}'
+   AND client_id IN (${clientIdList});
+DELETE FROM public.report_command_idempotency WHERE office_id = '${OFFICE_ID}';
+DELETE FROM public.report_process
+ WHERE office_id = '${OFFICE_ID}'
+   AND report_id IN (SELECT id FROM public.weekly_report WHERE office_id = '${OFFICE_ID}' AND client_id IN (${clientIdList}));
+DELETE FROM public.report_party
+ WHERE office_id = '${OFFICE_ID}'
+   AND report_id IN (SELECT id FROM public.weekly_report WHERE office_id = '${OFFICE_ID}' AND client_id IN (${clientIdList}));
+DO $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  LOOP
+    DELETE FROM public.report_version rv
+     WHERE rv.office_id = '${OFFICE_ID}'
+       AND rv.report_id IN (SELECT id FROM public.weekly_report WHERE office_id = '${OFFICE_ID}' AND client_id IN (${clientIdList}))
+       AND NOT EXISTS (
+         SELECT 1
+           FROM public.report_version child
+          WHERE child.office_id = rv.office_id
+            AND (
+              child.previous_version_id = rv.id
+              OR child.base_version_id = rv.id
+              OR child.source_version_id = rv.id
+            )
+       );
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    EXIT WHEN deleted_count = 0;
+  END LOOP;
+END $$;
+DELETE FROM public.weekly_report
+ WHERE office_id = '${OFFICE_ID}'
+   AND client_id IN (${clientIdList});
+ALTER TABLE public.report_command_idempotency ENABLE TRIGGER tr_report_idempotency_guard;
+ALTER TABLE public.weekly_report ENABLE TRIGGER tr_weekly_report_domain_guard;
+ALTER TABLE public.report_party ENABLE TRIGGER tr_report_party_append_only;
+ALTER TABLE public.report_process ENABLE TRIGGER tr_report_process_append_only;
+ALTER TABLE public.report_version ENABLE TRIGGER tr_report_version_append_only;
+RESET juridico.phase12_internal;
+`;
+
 const values = Object.entries(CLIENT_IDS)
   .map(([kind, clientId]) => {
     const partyId = PARTY_IDS[kind];
@@ -81,7 +143,8 @@ ON CONFLICT (id) DO NOTHING;
   })
   .join('\n');
 
-psql(`${values}
+psql(`${cleanup}
+${values}
 SET ROLE service_role;
 SELECT public.phase12_generate_weekly_report('${OFFICE_ID}', '${CLIENT_IDS.list}', '${PERIOD_START}', '${PERIOD_END}', '${AS_OF}');
 SELECT public.phase12_generate_weekly_report('${OFFICE_ID}', '${CLIENT_IDS.review}', '${PERIOD_START}', '${PERIOD_END}', '${AS_OF}');

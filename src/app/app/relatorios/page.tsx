@@ -76,6 +76,9 @@ export default async function ReportsPage({
           <p className="mt-1 text-sm text-slate-600">
             A consulta é server-side e limitada ao escritório da sessão ativa.
           </p>
+          <p className="mt-2 text-sm text-slate-600">
+            Aprovação não significa envio.
+          </p>
           <form
             method="get"
             className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
