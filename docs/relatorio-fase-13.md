@@ -1,0 +1,43 @@
+# Relatório — Fase 13: Entrega privada de PDF
+
+## 1. Identificação e escopo factual
+
+| Campo | Estado factual |
+|---|---|
+| Branch | `phase-13-pdf-delivery` |
+| Migration nova | `20260827000007_phase_13_pdf_delivery.sql` |
+| Primeiro comando | `SET lock_timeout = '2s';` |
+| Escopo | PDF validado, artefato privado local, contato confirmado e workflow de delivery controlado |
+| Dados/serviços externos | não utilizados |
+
+Este relatório descreve a implementação local atual, incluindo migration, código de aplicação, tipos sincronizados, documentação e gates de CI.
+
+## 2. IMPLEMENTADO NO CÓDIGO ATUAL
+
+A Fase 13 adiciona bucket privado `private-reports` e as tabelas `client_contact`, `report_artifact`, `email_delivery`, `email_delivery_attempt` e `email_delivery_retry_command`. `report_artifact` vincula relatório, versão aprovada, hashes, fingerprint, tamanho e URI privada. Contatos exigem e-mail normalizado e confirmação. Deliveries preservam cópia dos hashes/URI do artefato e têm idempotência por escritório/chave.
+
+As RPCs `phase13_create_client_contact`, `phase13_confirm_client_contact`, `phase13_deactivate_client_contact`, `phase13_generate_final_pdf`, `phase13_authorize_send`, `phase13_claim_delivery_attempt`, `phase13_record_delivery_attempt`, `phase13_reconcile_unknown_delivery`, `phase13_retry_delivery`, `phase13_resend_delivery`, `phase13_get_delivery_for_send` e `phase13_get_artifact` formam as fronteiras de domínio. O banco exige relatório aprovado, actor lawyer ativo, escritório ativo e objeto privado existente; claims de tentativa são reservados a `service_role`. Estados de entrega e o resultado `unknown_outcome` são persistidos explicitamente.
+
+`src/lib/reports/pdf-renderer.ts` fornece renderer injetável e adapter Playwright, valida `%PDF-`, SHA-256, tamanho e hash/snapshot. `src/lib/delivery/email-provider.ts` fornece contrato e `FakeEmailProvider`; suas respostas são sintéticas e não representam envio externo. As Server Actions/UI da branch integram a geração, download/autorização e ações de delivery sem transformar aprovação em envio automático.
+
+## 3. CONTROLES E EVIDÊNCIA DE GATE
+
+A migration inicia com lock curto, usa constraints/foreign keys, RLS, revogação de DML direto e policies de leitura fechada. Triggers tornam artefatos append-only e impedem alteração de identidade de delivery/tentativa. Auditoria allowlisted é gravada na mesma transação pelas RPCs.
+
+Foram adicionados os gates:
+
+- `scripts/check-phase13-migration-history.sh`: verifica 00005 no blob `c8f13774c0707d8502c6348283f2adf0e2673149`, 00006 no blob `2b61ff7a1e857e5ee395a602dda20d83498e6720`, `SET lock_timeout` na 00007 e imutabilidade histórica.
+- `scripts/test-phase13-migration-upgrade.sh`: faz reset completo e upgrade incremental F12→00007, compara fingerprint de schema/funções/tipos e executa pgTAP nos dois caminhos.
+- `.github/workflows/app-ci.yml`: preserva gates anteriores e inclui branch, histórico e upgrade F13. Nenhum placeholder de concorrência foi incluído, pois não existe script F13 correspondente.
+
+Os resultados de execução devem ser registrados pelo CI; este documento não inventa run, SHA ou contagem de testes.
+
+## 4. PARCIAL E DEFERIDO
+
+A capacidade de entrega está preparada apenas para sandbox/local. **Provider real**, **e-mail/SMTP real**, **storage remoto**, **produção**, **staging** e **retenção/expurgo automático** estão explicitamente **DEFERIDOS**. Também não há credenciais reais, endpoint externo, deploy, scheduler de retenção ou política de descarte implementada. O fake provider, o bucket local e os estados SQL não são evidência de integração real.
+
+A autorização de envio registra intenção e permite execução posterior controlada; não prova aceitação por provedor nem entrega ao destinatário. Resultado `unknown_outcome` exige reconciliação humana e não deve ser reinterpretado como sucesso ou falha.
+
+## 5. Rollback e limites
+
+Rollback operacional significa bloquear novas ações F13 e preservar relatórios, artefatos, deliveries, tentativas e auditorias existentes. Não se apagam evidências nem se reescrevem migrations históricas. Qualquer alteração futura deve ser aditiva, revisada e manter o primeiro comando `SET lock_timeout = '2s';`.

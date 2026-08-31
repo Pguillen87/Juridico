@@ -1,0 +1,37 @@
+SELECT plan(33);
+
+SELECT ok(EXISTS (SELECT 1 FROM storage.buckets WHERE id='private-reports' AND public=false), 'private report bucket exists');
+SELECT ok(to_regclass('public.client_contact') IS NOT NULL, 'client contact exists');
+SELECT ok(to_regclass('public.report_artifact') IS NOT NULL, 'report artifact exists');
+SELECT ok(to_regclass('public.email_delivery') IS NOT NULL, 'email delivery exists');
+SELECT ok(to_regclass('public.email_delivery_attempt') IS NOT NULL, 'delivery attempts exist');
+SELECT ok(EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='report_artifact' AND column_name='approved_hash'), 'artifact stores approved hash');
+SELECT ok(EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='report_artifact' AND column_name='generation_fingerprint'), 'artifact has semantic generation fingerprint');
+SELECT ok(EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='client_contact' AND column_name='confirmed_by'), 'contact stores confirmer');
+SELECT ok(EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='client_contact' AND column_name='confirmed_at'), 'contact stores confirmation time');
+SELECT ok(NOT has_table_privilege('authenticated','public.report_artifact','SELECT'), 'browser cannot directly select artifacts');
+SELECT ok(NOT has_table_privilege('authenticated','public.email_delivery','SELECT'), 'browser cannot directly select deliveries');
+SELECT ok(NOT has_table_privilege('authenticated','public.email_delivery_attempt','SELECT'), 'browser cannot directly select attempts');
+SELECT ok(NOT has_table_privilege('authenticated','public.client_contact','SELECT'), 'browser cannot directly select contacts');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='phase13_generate_final_pdf'), 'pdf generation rpc exists');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='phase13_authorize_send'), 'send authorization rpc exists');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='phase13_retry_delivery'), 'manual retry rpc exists');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='phase13_reconcile_unknown_delivery'), 'reconciliation rpc exists');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='phase13_resend_delivery'), 'intentional resend rpc exists');
+SELECT ok(NOT has_function_privilege('authenticated','public.phase13_record_delivery_attempt(uuid,integer,text,jsonb)'::regprocedure,'EXECUTE'), 'attempt recorder remains backend-only');
+SELECT ok(NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='email_delivery' AND column_name='next_attempt_at'), 'delivery has no automatic scheduler timestamp');
+SELECT ok(EXISTS (SELECT 1 FROM pg_class WHERE oid='public.report_artifact'::regclass AND relrowsecurity), 'artifacts have RLS');
+SELECT ok(EXISTS (SELECT 1 FROM pg_class WHERE oid='public.email_delivery'::regclass AND relrowsecurity), 'deliveries have RLS');
+SELECT ok(EXISTS (SELECT 1 FROM pg_class WHERE oid='public.email_delivery_attempt'::regclass AND relrowsecurity), 'attempts have RLS');
+SELECT ok(NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='report_artifact' AND indexdef ILIKE '%UNIQUE%file_hash%'), 'artifact hash is not a unique identity');
+SELECT ok(EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.email_delivery'::regclass AND pg_get_constraintdef(oid) ILIKE '%unknown_outcome%'), 'unknown outcome is represented in delivery constraints');
+SELECT ok(NOT has_table_privilege('authenticated','public.email_delivery_retry_command','SELECT'), 'retry commands are not directly readable');
+SELECT ok(NOT has_table_privilege('anon','public.report_artifact','SELECT'), 'unauthenticated users cannot directly select artifacts');
+SELECT ok(NOT has_table_privilege('anon','public.email_delivery','SELECT'), 'unauthenticated users cannot directly select deliveries');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='phase13_claim_delivery_attempt'), 'atomic attempt claim rpc exists');
+SELECT ok(NOT has_function_privilege('authenticated','public.phase13_claim_delivery_attempt(uuid)'::regprocedure,'EXECUTE'), 'attempt claim remains backend-only');
+SELECT ok(EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.email_delivery'::regclass AND pg_get_constraintdef(oid) ILIKE '%processing%'), 'processing delivery state is constrained');
+SELECT ok(EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.email_delivery_attempt'::regclass AND pg_get_constraintdef(oid) ILIKE '%attempt_number >= 1%' AND pg_get_constraintdef(oid) ILIKE '%attempt_number <= 3%'), 'attempt number is capped at three');
+SELECT ok(EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='public.email_delivery_attempt'::regclass AND tgname='phase13_attempt_append_only'), 'attempt mutation guard exists');
+
+SELECT * FROM finish();

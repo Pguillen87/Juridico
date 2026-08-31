@@ -12,24 +12,31 @@ export default defineConfig({
     timeout: 15000,
   },
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     trace: 'on-first-retry',
   },
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/phase13-delivery.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'phase13',
+      testMatch: '**/phase13-delivery.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
   ],
   webServer: {
     command: process.env.PLAYWRIGHT_START_COMMAND ?? 'npm run dev',
-    url: 'http://localhost:3000',
+    url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === 'true',
     env: {
       NEXT_PUBLIC_SUPABASE_URL:
         process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321',
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     },
   },
 });

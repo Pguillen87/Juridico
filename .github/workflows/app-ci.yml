@@ -17,6 +17,7 @@ on:
         phase-10-comparison-detection,
         phase-11-failures-notifications,
         phase-12-weekly-reports-review-approval,
+        phase-13-pdf-delivery,
       ]
   pull_request:
     branches: [main]
@@ -64,6 +65,9 @@ jobs:
       - name: Phase 12 Migration History
         run: ./scripts/check-phase12-migration-history.sh
 
+      - name: Phase 13 Migration History
+        run: ./scripts/check-phase13-migration-history.sh
+
       - name: Repository Hygiene
         shell: bash
         run: |
@@ -105,6 +109,9 @@ jobs:
       - name: Phase 12 Migration Upgrade
         run: ./scripts/test-phase12-migration-upgrade.sh
 
+      - name: Phase 13 Migration Upgrade
+        run: ./scripts/test-phase13-migration-upgrade.sh
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
@@ -138,6 +145,23 @@ jobs:
 
       - name: Concurrency Test (Phase 12 Weekly Reports)
         run: ./supabase/tests/concurrency/test_phase12_reports.sh
+
+      - name: Concurrency Test (Phase 13 PDF Delivery)
+        run: ./supabase/tests/concurrency/test_phase13_delivery.sh
+
+      - name: Bootstrap Phase 13 local E2E fixture
+        run: node scripts/bootstrap-phase13-e2e-fixture.mjs
+        env:
+          PHASE13_E2E_FIXTURE: '1'
+          JURIDICO_E2E_PASSWORD: 'TestOnly-Local-123!'
+
+      - name: Phase 13 E2E (local synthetic fixture)
+        run: npx playwright test --project=phase13 tests-e2e/phase13-delivery.spec.ts
+        env:
+          PHASE13_E2E_FIXTURE: '1'
+          PHASE13_E2E_PASSWORD: 'TestOnly-Local-123!'
+          PHASE13_E2E_REPORT_ID: 'f1300000-0000-4000-c000-000000000101'
+          PHASE13_E2E_ARTIFACT_ID: 'f1300000-0000-4000-e000-000000000101'
 
       - name: Verify PowerShell
         run: pwsh -c '$PSVersionTable'

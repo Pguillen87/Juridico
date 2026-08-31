@@ -16,7 +16,9 @@ import {
   returnReportToDraftAction,
   submitReportAction,
 } from '../actions';
+import { generateFinalPdfReportAction } from '../f13-actions';
 import { ReportActionForm } from '../report-action-form';
+import { F13DeliveryPanel } from '../f13-delivery-panel';
 
 function shortId(value: string | null): string {
   return value ? value.slice(0, 8) : '—';
@@ -225,6 +227,62 @@ export default async function ReportDetailPage({
             </p>
           ) : null}
         </header>
+
+        {report.status === 'approved' &&
+        canApprove &&
+        report.approved_version_id &&
+        report.approved_hash ? (
+          <section
+            className="rounded-xl border border-emerald-200 bg-white p-6 shadow-sm"
+            aria-labelledby="f13-artifact-heading"
+          >
+            <h2
+              id="f13-artifact-heading"
+              className="text-lg font-semibold text-slate-950"
+            >
+              Artefato PDF aprovado
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              A geração usa exclusivamente a versão aprovada persistida. O hash
+              de conteúdo identifica a versão jurídica; o hash do arquivo será
+              calculado após a renderização.
+            </p>
+            <p className="mt-3 font-mono text-xs text-slate-700">
+              Versão {shortId(report.approved_version_id)} · approved hash{' '}
+              {report.approved_hash.slice(0, 16)}…
+            </p>
+            <ReportActionForm action={generateFinalPdfReportAction}>
+              <input type="hidden" name="reportId" value={report.id} />
+              <input
+                type="hidden"
+                name="reportVersionId"
+                value={report.approved_version_id}
+              />
+              <input
+                type="hidden"
+                name="approvedHash"
+                value={report.approved_hash}
+              />
+              <button
+                type="submit"
+                className="mt-4 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+              >
+                Gerar PDF local
+              </button>
+            </ReportActionForm>
+          </section>
+        ) : null}
+
+        {report.status === 'approved' &&
+        canApprove &&
+        report.approved_version_id &&
+        report.approved_hash ? (
+          <F13DeliveryPanel
+            reportId={report.id}
+            clientId={report.client_id}
+            reportVersionId={report.approved_version_id}
+          />
+        ) : null}
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -553,7 +611,8 @@ export default async function ReportDetailPage({
           <p className="mt-2 text-sm text-slate-600">
             Esta tela não gera PDF, não cria arquivo final, não envia relatório,
             não possui destinatário externo e não alcança o estado{' '}
-            <code>sent</code>. A Fase 13 permanece fora do escopo.
+            <code>sent</code>. A Fase 13 cobre apenas operações locais e
+            simuladas; nenhum envio real é executado.
           </p>
           <p className="mt-2 text-xs text-slate-500">
             Fonte da versão: {shortId(currentVersion?.id ?? null)} · projeções
