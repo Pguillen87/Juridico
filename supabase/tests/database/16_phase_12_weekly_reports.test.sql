@@ -192,17 +192,22 @@ SELECT ok(:'generated_report_id' IS NOT NULL, 'geração cria weekly_report sint
 SELECT ok(:'generated_version_id' IS NOT NULL, 'geração cria a primeira versão');
 SELECT is((SELECT content_hash FROM public.report_version WHERE id = :'generated_version_id'), public.phase12_hash_version('report-v1', '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', (SELECT structured_content FROM public.report_version WHERE id = :'generated_version_id'), (SELECT source_manifest FROM public.report_version WHERE id = :'generated_version_id')), 'hash da versão é verificável');
 SELECT is((SELECT hash_algorithm_version FROM public.report_version WHERE id = :'generated_version_id'), 'phase12-hash-v2-epoch-us', 'versão nova identifica o algoritmo canônico');
-SET LOCAL TIME ZONE 'UTC';
+SELECT current_setting('TimeZone') AS original_timezone,
+       current_setting('DateStyle') AS original_datestyle
+  \gset saved_
+SET TIME ZONE 'UTC';
 SELECT public.phase12_hash_version('report-v1', '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', (SELECT structured_content FROM public.report_version WHERE id = :'generated_version_id'), (SELECT source_manifest FROM public.report_version WHERE id = :'generated_version_id')) AS hash_utc \gset
-SET LOCAL TIME ZONE 'America/Sao_Paulo';
+SET TIME ZONE 'America/Sao_Paulo';
 SELECT public.phase12_hash_version('report-v1', '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', (SELECT structured_content FROM public.report_version WHERE id = :'generated_version_id'), (SELECT source_manifest FROM public.report_version WHERE id = :'generated_version_id')) AS hash_sao_paulo \gset
-SET LOCAL TIME ZONE 'Asia/Tokyo';
+SET TIME ZONE 'Asia/Tokyo';
 SELECT public.phase12_hash_version('report-v1', '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', (SELECT structured_content FROM public.report_version WHERE id = :'generated_version_id'), (SELECT source_manifest FROM public.report_version WHERE id = :'generated_version_id')) AS hash_tokyo \gset
-SET LOCAL DateStyle = 'ISO, MDY';
+SET DateStyle = 'ISO, MDY';
 SELECT public.phase12_hash_version('report-v1', '2026-08-21 20:00:00+00', '2026-08-28 20:00:00+00', (SELECT structured_content FROM public.report_version WHERE id = :'generated_version_id'), (SELECT source_manifest FROM public.report_version WHERE id = :'generated_version_id')) AS hash_datestyle \gset
-SELECT is(:'hash_utc', :'hash_sao_paulo', 'hash idêntico em UTC e America/Sao_Paulo');
-SELECT is(:'hash_utc', :'hash_tokyo', 'hash idêntico em UTC e Asia/Tokyo');
-SELECT is(:'hash_utc', :'hash_datestyle', 'hash idêntico sob DateStyle ISO');
+SELECT is(:'hash_utc'::text, :'hash_sao_paulo'::text, 'hash idêntico em UTC e America/Sao_Paulo');
+SELECT is(:'hash_utc'::text, :'hash_tokyo'::text, 'hash idêntico em UTC e Asia/Tokyo');
+SELECT is(:'hash_utc'::text, :'hash_datestyle'::text, 'hash idêntico sob DateStyle ISO');
+SELECT set_config('TimeZone', :'saved_original_timezone', false);
+SELECT set_config('DateStyle', :'saved_original_datestyle', false);
 SELECT is((SELECT jsonb_array_length(structured_content->'processes'->0->'changed') FROM public.report_version WHERE id = :'generated_version_id'), 1, 'alteração vem da comparação persistida');
 SELECT ok((SELECT structured_content->'processes'->0->'changed'->0->>'detected_change_id' IS NOT NULL FROM public.report_version WHERE id = :'generated_version_id'), 'alteração mantém referência à detecção persistida');
 SELECT is((SELECT jsonb_array_length(structured_content->'processes'->0->'unchanged') FROM public.report_version WHERE id = :'generated_version_id'), 0, 'ausência de alteração não é inventada');
