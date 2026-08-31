@@ -10,7 +10,9 @@ vi.mock('@/lib/auth/guards', () => ({
   requirePermission: mocks.requirePermission,
 }));
 vi.mock('@/lib/supabase/server', () => ({ createClient: mocks.createClient }));
-vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: mocks.createClient }));
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: mocks.createClient,
+}));
 vi.mock('@/lib/reports/pdf-renderer', () => ({
   createPlaywrightPdfRenderer: mocks.renderer,
 }));
@@ -87,12 +89,10 @@ describe('F13 report actions', () => {
       ],
     });
     mocks.renderer.mockResolvedValue({
-      render: vi
-        .fn()
-        .mockResolvedValue({
-          bytes: Buffer.from('%PDF-1.7\\nfixture'),
-          artifactSha256: 'b'.repeat(64),
-        }),
+      render: vi.fn().mockResolvedValue({
+        bytes: Buffer.from('%PDF-1.7\\nfixture'),
+        artifactSha256: 'b'.repeat(64),
+      }),
     });
     await generateFinalPdfAction(
       form({
