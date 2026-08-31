@@ -151,6 +151,7 @@ mkdir -p "${F10_PROJECT_DIR}"
 cp -R "${ROOT_DIR}/supabase" "${F10_PROJECT_DIR}/supabase"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_reports.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 
 mkdir -p "${PRE_F12_PROJECT_DIR}"

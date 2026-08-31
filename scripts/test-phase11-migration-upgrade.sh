@@ -171,6 +171,7 @@ rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000003_phase_11_failures_n
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000004_phase_11_failures_notifications_hardening.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_reports.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 
 echo 'phase11-upgrade=apply-canonical-00003'
