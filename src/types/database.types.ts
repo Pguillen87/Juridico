@@ -1645,6 +1645,7 @@ export type Database = {
           created_at: string;
           created_by: string | null;
           creation_kind: string;
+          hash_algorithm_version: string;
           id: string;
           office_id: string;
           previous_version_id: string | null;
@@ -1661,6 +1662,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           creation_kind: string;
+          hash_algorithm_version?: string;
           id?: string;
           office_id: string;
           previous_version_id?: string | null;
@@ -1677,6 +1679,7 @@ export type Database = {
           created_at?: string;
           created_by?: string | null;
           creation_kind?: string;
+          hash_algorithm_version?: string;
           id?: string;
           office_id?: string;
           previous_version_id?: string | null;
@@ -2360,6 +2363,16 @@ export type Database = {
         }[];
       };
       phase12_hash_version: {
+        Args: {
+          p_period_end_utc: string;
+          p_period_start_utc: string;
+          p_schema_version: string;
+          p_source_manifest: Json;
+          p_structured_content: Json;
+        };
+        Returns: string;
+      };
+      phase12_hash_version_legacy: {
         Args: {
           p_period_end_utc: string;
           p_period_start_utc: string;
