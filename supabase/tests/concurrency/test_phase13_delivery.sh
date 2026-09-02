@@ -41,7 +41,7 @@ for n in 1 2; do psql_cmd -c "SET ROLE service_role; SELECT public.phase13_recor
 psql_cmd -c "SET ROLE service_role; SELECT public.phase13_record_delivery_attempt('$DELIVERY',3,'unknown_outcome','{}');" >/dev/null
 [[ "$(psql_cmd -c "SELECT count(*) FROM public.email_delivery_attempt WHERE delivery_id='$DELIVERY';")" == 3 ]]
 # 3 unknown outcome reconciliation is explicit and auditable.
-auth "$LAWYER" "SELECT public.phase13_reconcile_unknown_delivery('$DELIVERY',true,'synthetic provider lookup');" >/dev/null
+psql_cmd -c "SET ROLE service_role; SELECT public.phase13_reconcile_unknown_delivery_with_evidence('$DELIVERY','positive_confirmation','synthetic provider lookup');" >/dev/null
 [[ "$(psql_cmd -c "SELECT status FROM public.email_delivery WHERE id='$DELIVERY';")" == delivered ]]
 # 4 resend creates an isolated delivery and does not mutate the original attempts.
 NEW_DELIVERY="$(auth "$LAWYER" "SELECT public.phase13_resend_delivery('$DELIVERY','f13-resend-1','synthetic resend');" | tail -n 1)"

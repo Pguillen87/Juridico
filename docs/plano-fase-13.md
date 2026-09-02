@@ -14,9 +14,9 @@ A Fase 13 é trabalhada na branch `phase-13-pdf-delivery`, sobre o domínio de r
 
 ## 2. Implementação atual
 
-A migration aditiva `20260827000007_phase_13_pdf_delivery.sql` começa literalmente com `SET lock_timeout = '2s';`. Ela cria o bucket privado local `private-reports` e as tabelas `client_contact`, `report_artifact`, `email_delivery`, `email_delivery_attempt` e `email_delivery_retry_command`. Os artefatos carregam hash aprovado, hash do arquivo, fingerprint de geração, tamanho e URI privada; a URI aceita somente o formato `private://private-reports/...`.
+A migration histórica `20260827000007_phase_13_pdf_delivery.sql` começa literalmente com `SET lock_timeout = '2s';`. Ela cria o bucket privado local `private-reports` e as tabelas `client_contact`, `report_artifact`, `email_delivery`, `email_delivery_attempt` e `email_delivery_retry_command`. Os artefatos carregam hash aprovado, hash do arquivo, fingerprint de geração, tamanho e URI privada; a URI aceita somente o formato `private://private-reports/...`.
 
-As funções `phase13_*` revalidam no banco o actor `lawyer`, o escritório e o estado aprovado do relatório. A criação do artefato exige objeto já presente no storage privado e é idempotente por fingerprint. O envio é apenas autorizado/registrado no domínio: exige contato ativo e confirmado, copia hashes e URI imutáveis, usa chave de idempotência e separa `pending`, `processing`, `delivered`, `retry_available`, `failed` e `unknown_outcome`. Claims de tentativa são exclusivos de `service_role`; reconciliação e retry são explícitos.
+As funções `phase13_*` revalidam no banco o actor `lawyer`, o escritório e o estado aprovado do relatório. A criação do artefato exige objeto já presente no storage privado e é idempotente por fingerprint. O envio é apenas autorizado/registrado no domínio: exige contato ativo e confirmado, copia hashes e URI imutáveis, usa chave de idempotência e separa `pending`, `processing`, `delivered`, `retry_available`, `failed` e `unknown_outcome`. Claims de tentativa são exclusivos de `service_role`; reconciliação e retry são explícitos. A migration aditiva `20260827000008_phase_13_delivery_hardening.sql` restringe grants de contato e exige evidência do FakeEmailProvider para reconciliação.
 
 `src/lib/reports/pdf-renderer.ts` valida magic bytes `%PDF-`, SHA-256, hash aprovado, tamanho máximo e invariantes de snapshot. O renderer Playwright usa Chromium já instalado, sem provisionar browser ou rede. `src/lib/delivery/email-provider.ts` expõe somente o contrato e `FakeEmailProvider`, com respostas sintéticas e resultado `unknown_outcome` não convertido silenciosamente em falha.
 
@@ -26,9 +26,9 @@ As tabelas F13 têm RLS, DML direto revogado e leitura browser bloqueada. Trigge
 
 ## 4. Validação e CI
 
-`check-phase13-migration-history.sh` confirma os blobs aprovados de 00005 (`c8f13774c0707d8502c6348283f2adf0e2673149`) e 00006 (`2b61ff7a1e857e5ee395a602dda20d83498e6720`), o primeiro comando da 00007 e a imutabilidade das migrations F9–F12. `test-phase13-migration-upgrade.sh` compara fingerprint completo, tipos gerados e pgTAP entre reset completo e upgrade incremental F12→00007.
+`check-phase13-migration-history.sh` confirma os blobs aprovados de 00005 (`c8f13774c0707d8502c6348283f2adf0e2673149`) e 00006 (`2b61ff7a1e857e5ee395a602dda20d83498e6720`), o primeiro comando da 00007 e a imutabilidade das migrations F9–F12. `test-phase13-migration-upgrade.sh` compara fingerprint, tipos gerados e pgTAP entre reset completo equivalente até F12 e upgrade incremental F12→00007→00008; migrations futuras são isoladas nos dois caminhos do gate F12.
 
-O App CI preserva todos os gates existentes e adiciona os gates de histórico e upgrade F13. Não há gate de concorrência F13 neste recorte porque nenhum script de concorrência F13 existe.
+O App CI preserva todos os gates existentes e adiciona os gates de histórico e upgrade F13. O App CI executa também o script de concorrência F13 e a suíte E2E local com fixture sintética opt-in.
 
 ## 5. Adiamentos explícitos
 

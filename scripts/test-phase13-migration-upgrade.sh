@@ -6,8 +6,14 @@ PRETTIER=(npx --no-install prettier)
 TMP_DIR="$(mktemp -d)"
 MIGRATION_00007="${ROOT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
 MIGRATION_00007_BACKUP="${TMP_DIR}/20260827000007_phase_13_pdf_delivery.sql"
+MIGRATION_00008="${ROOT_DIR}/supabase/migrations/20260827000008_phase_13_delivery_hardening.sql"
+MIGRATION_00008_BACKUP="${TMP_DIR}/20260827000008_phase_13_delivery_hardening.sql"
 FINGERPRINT_SQL="${TMP_DIR}/fingerprint.sql"
-cleanup() { if [[ ! -f "${MIGRATION_00007}" && -f "${MIGRATION_00007_BACKUP}" ]]; then cp "${MIGRATION_00007_BACKUP}" "${MIGRATION_00007}"; fi; rm -rf "${TMP_DIR}"; }
+cleanup() {
+  if [[ ! -f "${MIGRATION_00007}" && -f "${MIGRATION_00007_BACKUP}" ]]; then cp "${MIGRATION_00007_BACKUP}" "${MIGRATION_00007}"; fi
+  if [[ ! -f "${MIGRATION_00008}" && -f "${MIGRATION_00008_BACKUP}" ]]; then cp "${MIGRATION_00008_BACKUP}" "${MIGRATION_00008}"; fi
+  rm -rf "${TMP_DIR}"
+}
 trap cleanup EXIT
 cat >"${FINGERPRINT_SQL}" <<'SQL'
 SELECT md5(coalesce(string_agg(table_name||'|'||column_name||'|'||data_type||'|'||is_nullable, E'\n' ORDER BY table_name, ordinal_position), '') || coalesce((SELECT string_agg(version, ',' ORDER BY version) FROM supabase_migrations.schema_migrations WHERE version >= '20260827000007'), '')) AS fingerprint
@@ -33,10 +39,12 @@ run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
 printf 'full_reset_fingerprint=%s\nfull_reset_pgTap=PASS\n' "${full_fingerprint}"
 printf '%s\n' 'phase13-upgrade=prepare-f12-schema'
 cp "${MIGRATION_00007}" "${MIGRATION_00007_BACKUP}"
-rm "${MIGRATION_00007}"
+cp "${MIGRATION_00008}" "${MIGRATION_00008_BACKUP}"
+rm "${MIGRATION_00007}" "${MIGRATION_00008}"
 run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
 cp "${MIGRATION_00007_BACKUP}" "${MIGRATION_00007}"
-printf '%s\n' 'phase13-upgrade=apply-00007'
+cp "${MIGRATION_00008_BACKUP}" "${MIGRATION_00008}"
+printf '%s\n' 'phase13-upgrade=apply-00007-and-00008'
 run_supabase db push --local --workdir "${ROOT_DIR}" --yes >/dev/null
 upgrade_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/upgrade-types.ts"

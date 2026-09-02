@@ -1,4 +1,4 @@
-SELECT plan(33);
+SELECT plan(43);
 
 SELECT ok(EXISTS (SELECT 1 FROM storage.buckets WHERE id='private-reports' AND public=false), 'private report bucket exists');
 SELECT ok(to_regclass('public.client_contact') IS NOT NULL, 'client contact exists');
@@ -33,5 +33,15 @@ SELECT ok(NOT has_function_privilege('authenticated','public.phase13_claim_deliv
 SELECT ok(EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.email_delivery'::regclass AND pg_get_constraintdef(oid) ILIKE '%processing%'), 'processing delivery state is constrained');
 SELECT ok(EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.email_delivery_attempt'::regclass AND pg_get_constraintdef(oid) ILIKE '%attempt_number >= 1%' AND pg_get_constraintdef(oid) ILIKE '%attempt_number <= 3%'), 'attempt number is capped at three');
 SELECT ok(EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='public.email_delivery_attempt'::regclass AND tgname='phase13_attempt_append_only'), 'attempt mutation guard exists');
+SELECT ok(has_function_privilege('authenticated','public.phase13_create_client_contact(uuid,text,text)'::regprocedure,'EXECUTE'), 'lawyer contact create boundary is callable');
+SELECT ok(has_function_privilege('authenticated','public.phase13_confirm_client_contact(uuid)'::regprocedure,'EXECUTE'), 'lawyer contact confirm boundary is callable');
+SELECT ok(has_function_privilege('authenticated','public.phase13_deactivate_client_contact(uuid)'::regprocedure,'EXECUTE'), 'lawyer contact deactivate boundary is callable');
+SELECT ok(NOT has_function_privilege('anon','public.phase13_create_client_contact(uuid,text,text)'::regprocedure,'EXECUTE'), 'anon cannot create contacts');
+SELECT ok(NOT has_function_privilege('anon','public.phase13_confirm_client_contact(uuid)'::regprocedure,'EXECUTE'), 'anon cannot confirm contacts');
+SELECT ok(NOT has_function_privilege('anon','public.phase13_deactivate_client_contact(uuid)'::regprocedure,'EXECUTE'), 'anon cannot deactivate contacts');
+SELECT ok(NOT has_function_privilege('authenticated','public.phase13_reconcile_unknown_delivery(uuid,boolean,text)'::regprocedure,'EXECUTE'), 'browser cannot choose reconciliation result');
+SELECT ok(EXISTS (SELECT 1 FROM pg_proc WHERE proname='phase13_reconcile_unknown_delivery_with_evidence'), 'provider evidence reconciliation boundary exists');
+SELECT ok(NOT has_function_privilege('authenticated','public.phase13_reconcile_unknown_delivery_with_evidence(uuid,text,text)'::regprocedure,'EXECUTE'), 'browser cannot call evidence reconciliation backend');
+SELECT ok(EXISTS (SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20260827000008'), 'additive hardening migration applied');
 
 SELECT * FROM finish();

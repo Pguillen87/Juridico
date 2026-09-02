@@ -19,14 +19,20 @@ vi.mock('@/lib/reports/pdf-renderer', () => ({
 vi.mock('@/lib/reports/server', () => ({
   getReportDetail: mocks.getReportDetail,
 }));
+const providerSend = vi.hoisted(() => vi.fn());
+const providerReconcile = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/delivery/email-provider', () => ({
-  FakeEmailProvider: class {},
+  FakeEmailProvider: class {
+    send = providerSend;
+    reconcile = providerReconcile;
+  },
 }));
 
 import {
   authorizeSendAction,
   createClientContactAction,
   generateFinalPdfAction,
+  executeFakeDeliveryAction,
   reconcileUnknownDeliveryAction,
 } from './f13-actions';
 
@@ -42,6 +48,13 @@ describe('F13 report actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requirePermission.mockResolvedValue({ profile: { role: 'lawyer' } });
+    providerSend.mockResolvedValue({
+      status: 'delivered',
+      retryable: false,
+      providerResponse: 'synthetic delivered',
+      idempotencyKey: 'k',
+    });
+    providerReconcile.mockResolvedValue({ status: 'still_unknown' });
     mocks.createClient.mockResolvedValue({
       rpc: vi.fn().mockResolvedValue({ data: id(9), error: null }),
     });
@@ -140,10 +153,44 @@ describe('F13 report actions', () => {
     );
   });
 
-  it('validates reconciliation reason and boolean', async () => {
+  it('does not finalize a delivery when the atomic claim is lost', async () => {
+    const rpc = vi.fn(async (name: string) => {
+      if (name === 'phase13_get_delivery_for_send')
+        return {
+          data: [
+            {
+              delivery_id: id(10),
+              attempt_number: 1,
+              recipient: 'client@example.test',
+              subject: 'Report',
+              artifact_hash: 'a'.repeat(64),
+              storage_bucket: 'private-reports',
+              storage_object_key: 'object.pdf',
+            },
+          ],
+          error: null,
+        };
+      if (name === 'phase13_claim_delivery_attempt')
+        return { data: null, error: { message: 'delivery is not claimable' } };
+      return { data: id(99), error: null };
+    });
+    mocks.createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      executeFakeDeliveryAction(form({ deliveryId: id(10) }))
+    ).resolves.toEqual({ error: 'Não foi possível concluir a operação.' });
+
+    expect(providerSend).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith(
+      'phase13_record_delivery_attempt',
+      expect.anything()
+    );
+  });
+
+  it('validates reconciliation without accepting a browser delivered boolean', async () => {
     await expect(
       reconcileUnknownDeliveryAction(
-        form({ deliveryId: id(1), delivered: 'maybe', reason: '' })
+        form({ deliveryId: id(1), delivered: 'true', reason: 'human says so' })
       )
     ).resolves.toEqual({ error: 'Os dados da reconciliação são inválidos.' });
   });

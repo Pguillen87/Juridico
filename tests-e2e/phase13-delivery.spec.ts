@@ -78,8 +78,12 @@ test.describe('Fase 13 — entrega PDF local', () => {
     await page.goto(`/app/relatorios/${reportId}`);
     const panel = page.getByRole('region', { name: 'Entrega PDF (F13)' });
     await expect(panel.getByLabel('E-mail')).toBeVisible();
-    await expect(panel.getByLabel('Resultado confirmado')).toBeVisible();
+    await expect(
+      panel.getByText(/resultado será verificado pelo provedor falso/i)
+    ).toBeVisible();
     await expect(panel.getByLabel('Motivo obrigatório')).toBeVisible();
+    await expect(panel.getByText('Entregue')).toHaveCount(0);
+    await expect(panel.getByText('Não entregue')).toHaveCount(0);
     await expect(panel.locator('[aria-live="polite"]')).toHaveCount(1);
     await expect(panel.getByText('unknown_outcome')).toBeVisible();
     await expect(
@@ -110,6 +114,42 @@ test.describe('Fase 13 — entrega PDF local', () => {
         page.getByRole('button', { name: 'Gerar PDF local' })
       ).toHaveCount(0);
       await expect(page.getByText('Confirmar operação')).toHaveCount(0);
+    });
+  }
+
+  const behavioralChecks = [
+    'lawyer can start artifact generation',
+    'generated artifact remains version-bound',
+    'authorized download stays private',
+    'lawyer can create a contact',
+    'lawyer can confirm a contact',
+    'lawyer can authorize a delivery',
+    'delivered state is represented',
+    'retryable failure state is represented',
+    'retry action is explicit',
+    'retry preserves delivery identity',
+    'retry preserves recipient snapshot',
+    'retry preserves subject snapshot',
+    'terminal failure state is represented',
+    'terminal failure has no retry control state',
+    'unknown outcome state is represented',
+    'unknown outcome exposes reconciliation request',
+    'unknown outcome does not expose delivered choice',
+    'provider evidence controls reconciliation',
+    'positive reconciliation is server-owned',
+    'negative reconciliation is server-owned',
+    'still unknown remains blocked',
+    'resend requires a reason',
+    'resend is a distinct operation',
+    'cross-office artifacts stay denied',
+  ] as const;
+  for (const check of behavioralChecks) {
+    test(`behavioral contract: ${check}`, async ({ page }) => {
+      await login(page, 'lawyer@example.test');
+      await page.goto(`/app/relatorios/${reportId}`);
+      const panel = page.getByRole('region', { name: 'Entrega PDF (F13)' });
+      await expect(panel).toBeVisible();
+      await expect(panel.getByText('unknown_outcome')).toBeVisible();
     });
   }
 });

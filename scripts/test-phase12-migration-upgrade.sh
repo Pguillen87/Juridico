@@ -6,6 +6,7 @@ CLI=(npx --no-install supabase)
 PRETTIER=(npx --no-install prettier)
 TMP_DIR="$(mktemp -d)"
 F10_PROJECT_DIR="${TMP_DIR}/phase10-project"
+FULL_F12_PROJECT_DIR="${TMP_DIR}/full-f12-project"
 PRE_F12_PROJECT_DIR="${TMP_DIR}/pre-f12-project"
 FINGERPRINT_SQL="${TMP_DIR}/fingerprint.sql"
 VERSIONS_SQL="${TMP_DIR}/versions.sql"
@@ -138,11 +139,16 @@ migration_versions() {
   run_supabase db query --local --workdir "$1" --file "${VERSIONS_SQL}"
 }
 
-echo 'phase12-upgrade=full-reset'
-run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
-full_fingerprint="$(fingerprint "${ROOT_DIR}")"
-generate_types "${ROOT_DIR}" "${TMP_DIR}/full-types.ts"
-run_supabase test db --local --workdir "${ROOT_DIR}" >/dev/null
+echo 'phase12-upgrade=full-reset-through-f12'
+mkdir -p "${FULL_F12_PROJECT_DIR}"
+cp -R "${ROOT_DIR}/supabase" "${FULL_F12_PROJECT_DIR}/supabase"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260827000008_phase_13_delivery_hardening.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
+run_supabase db reset --local --workdir "${FULL_F12_PROJECT_DIR}" --yes >/dev/null
+full_fingerprint="$(fingerprint "${FULL_F12_PROJECT_DIR}")"
+generate_types "${FULL_F12_PROJECT_DIR}" "${TMP_DIR}/full-types.ts"
+run_supabase test db --local --workdir "${FULL_F12_PROJECT_DIR}" >/dev/null
 echo "full_reset_fingerprint=${full_fingerprint}"
 echo 'full_reset_pgTap=PASS'
 
@@ -152,6 +158,7 @@ cp -R "${ROOT_DIR}/supabase" "${F10_PROJECT_DIR}/supabase"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_reports.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000008_phase_13_delivery_hardening.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 

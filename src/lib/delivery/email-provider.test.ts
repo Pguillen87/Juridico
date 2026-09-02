@@ -38,6 +38,22 @@ describe('fake email provider contracts', () => {
     expect(result.providerResponse).toContain('timeout');
   });
 
+  it.each([
+    ['positive_confirmation', 'delivery-101'],
+    ['negative_confirmation', 'delivery-105'],
+    ['still_unknown', 'delivery-106'],
+  ] as const)(
+    'returns provider reconciliation evidence %s',
+    async (status, reference) => {
+      await expect(
+        new FakeEmailProvider().reconcile(reference)
+      ).resolves.toMatchObject({
+        status,
+        providerReference: reference,
+      });
+    }
+  );
+
   it('rejects invalid recipients before delivery', async () => {
     const provider = new FakeEmailProvider({ outcome: 'delivered' });
     await expect(provider.send({ ...message, to: 'invalid' })).rejects.toThrow(

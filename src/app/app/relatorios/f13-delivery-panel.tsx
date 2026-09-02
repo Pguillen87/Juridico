@@ -22,11 +22,13 @@ type ActionState = {
   success?: boolean;
   error?: string;
   message?: string;
+  status?: string;
 } | null;
 type Action = (data: FormData) => Promise<{
   success?: boolean;
   error?: string;
   message?: string;
+  status?: string;
 }>;
 
 function ActionForm({
@@ -38,15 +40,15 @@ function ActionForm({
   action: Action;
   children: ReactNode;
   confirm?: string;
-  onSuccess?: () => void;
+  onSuccess?: (state: ActionState) => void;
 }) {
   const [state, submit, pending] = useActionState(
     async (_previous: ActionState, data: FormData) => action(data),
     null
   );
   useEffect(() => {
-    if (state?.success) onSuccess?.();
-  }, [onSuccess, state?.success]);
+    if (state?.success) onSuccess?.(state);
+  }, [onSuccess, state]);
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     if (confirm && !window.confirm(confirm)) event.preventDefault();
   };
@@ -199,7 +201,7 @@ export function F13DeliveryPanel({
             <ActionForm
               action={authorizeSendAction}
               confirm="Autorizar a entrega deste PDF aprovado?"
-              onSuccess={() => setStatus('pending')}
+              onSuccess={(result) => setStatus(result?.status ?? 'pending')}
             >
               <input type="hidden" name="reportId" value={reportId} />
               <input
@@ -215,7 +217,7 @@ export function F13DeliveryPanel({
             <ActionForm
               action={executeFakeDeliveryAction}
               confirm="Executar a entrega simulada agora?"
-              onSuccess={() => setStatus('delivered')}
+              onSuccess={(result) => setStatus(result?.status ?? 'delivered')}
             >
               <Field label="ID da entrega" name="deliveryId" />
             </ActionForm>
@@ -230,7 +232,7 @@ export function F13DeliveryPanel({
             <ActionForm
               action={retryDeliveryAction}
               confirm="Solicitar uma nova tentativa manual?"
-              onSuccess={() => setStatus('pending')}
+              onSuccess={(result) => setStatus(result?.status ?? 'pending')}
             >
               <Field label="ID da entrega" name="deliveryId" />
               <Field label="Chave de idempotência" name="idempotencyKey" />
@@ -240,17 +242,10 @@ export function F13DeliveryPanel({
               confirm="Registrar a reconciliação deste resultado desconhecido?"
             >
               <Field label="ID da entrega" name="deliveryId" />
-              <label className="block text-sm font-medium text-slate-700">
-                Resultado confirmado
-                <select
-                  name="delivered"
-                  required
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                >
-                  <option value="true">Entregue</option>
-                  <option value="false">Não entregue</option>
-                </select>
-              </label>
+              <p className="text-sm text-slate-600">
+                O resultado será verificado pelo provedor falso local; o
+                advogado apenas solicita a verificação.
+              </p>
               <label className="block text-sm font-medium text-slate-700">
                 Motivo
                 <textarea
@@ -266,7 +261,7 @@ export function F13DeliveryPanel({
             <ActionForm
               action={resendDeliveryAction}
               confirm="Reenviar intencionalmente? O motivo será registrado na auditoria."
-              onSuccess={() => setStatus('pending')}
+              onSuccess={(result) => setStatus(result?.status ?? 'pending')}
             >
               <Field label="ID da entrega original" name="deliveryId" />
               <Field label="Chave de idempotência" name="idempotencyKey" />

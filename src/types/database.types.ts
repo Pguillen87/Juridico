@@ -2830,6 +2830,10 @@ export type Database = {
         Args: { p_delivered: boolean; p_delivery_id: string; p_reason: string };
         Returns: undefined;
       };
+      phase13_reconcile_unknown_delivery_with_evidence: {
+        Args: { p_delivery_id: string; p_evidence: string; p_reason: string };
+        Returns: string;
+      };
       phase13_record_delivery_attempt: {
         Args: {
           p_attempt_number: number;

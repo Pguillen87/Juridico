@@ -38,6 +38,7 @@ type ActionState = {
   readonly success?: boolean;
   readonly error?: string;
   readonly message?: string;
+  readonly status?: string;
   readonly contactId?: unknown;
   readonly artifactId?: unknown;
   readonly deliveryId?: unknown;
@@ -75,9 +76,7 @@ const sendSchema = z
 const retrySchema = z
   .object({ deliveryId: uuid, idempotencyKey: key })
   .strict();
-const reconcileSchema = z
-  .object({ deliveryId: uuid, delivered: z.enum(['true', 'false']), reason })
-  .strict();
+const reconcileSchema = z.object({ deliveryId: uuid, reason }).strict();
 const resendSchema = z
   .object({ deliveryId: uuid, idempotencyKey: key, reason })
   .strict();
@@ -116,7 +115,7 @@ function safeError(error: unknown): string {
   if (message.includes('invalid') || message.includes('required'))
     return 'Os dados informados são inválidos.';
   if (message.includes('unknown') || message.includes('reconciliation'))
-    return 'A entrega precisa de reconciliação manual.';
+    return 'A entrega precisa de verificação do provedor falso local.';
   if (message.includes('retry'))
     return 'A entrega não pode ser repetida neste momento.';
   return 'Não foi possível concluir a operação.';
@@ -267,18 +266,18 @@ export async function executeFakeDeliveryAction(
           | undefined)
       : undefined;
     if (!row) return { error: 'A entrega não está disponível para execução.' };
-    claimedDeliveryId = row.delivery_id;
-    claimedAttempt = row.attempt_number;
     const claim = await (createAdminClient() as unknown as F13RpcClient).rpc(
       'phase13_claim_delivery_attempt',
       { p_delivery_id: row.delivery_id }
     );
     if (claim.error) throw new Error(claim.error.message);
+    claimedDeliveryId = row.delivery_id;
+    claimedAttempt = row.attempt_number;
     const artifact = await createAdminClient()
       .storage.from(row.storage_bucket)
       .download(row.storage_object_key);
     if (artifact.error || !artifact.data)
-      return { error: 'O artefato privado não está disponível.' };
+      throw new Error('O artefato privado não está disponível.');
     const bytes = new Uint8Array(await artifact.data.arrayBuffer());
     const downloadedHash = createHash('sha256').update(bytes).digest('hex');
     if (
@@ -286,7 +285,9 @@ export async function executeFakeDeliveryAction(
       Buffer.from(bytes).subarray(0, 5).toString() !== '%PDF-'
     )
       throw new Error('Integridade do artefato privado não confirmada.');
-    const result = await new FakeEmailProvider().send({
+    const result = await new FakeEmailProvider({
+      outcome: FakeEmailProvider.outcomeForDelivery(row.delivery_id),
+    }).send({
       idempotencyKey: `${row.delivery_id}:${row.attempt_number}`,
       to: row.recipient,
       subject: row.subject,
@@ -311,7 +312,13 @@ export async function executeFakeDeliveryAction(
       }
     );
     if (recorded.error) throw new Error(recorded.error.message);
-    return { success: true, deliveryId: row.delivery_id };
+    const status =
+      result.status === 'retryable_failure'
+        ? 'retry_available'
+        : result.status === 'terminal_failure'
+          ? 'failed'
+          : result.status;
+    return { success: true, deliveryId: row.delivery_id, status };
   } catch (error) {
     if (claimedDeliveryId && claimedAttempt > 0) {
       await (createAdminClient() as unknown as F13RpcClient).rpc(
@@ -368,16 +375,27 @@ export async function retryDeliveryAction(
 export async function reconcileUnknownDeliveryAction(
   formData: FormData
 ): Promise<ActionState> {
-  return deliveryAction(
-    formData,
-    reconcileSchema,
-    'phase13_reconcile_unknown_delivery',
-    (v) => ({
-      p_delivery_id: v.deliveryId,
-      p_delivered: v.delivered === 'true',
-      p_reason: v.reason,
-    })
-  );
+  try {
+    await lawyer('authorize_send');
+    const parsed = reconcileSchema.safeParse(values(formData));
+    if (!parsed.success)
+      return { error: 'Os dados da reconciliação são inválidos.' };
+    const evidence = FakeEmailProvider.reconciliationForReference(
+      parsed.data.deliveryId
+    );
+    const result = await (createAdminClient() as unknown as F13RpcClient).rpc(
+      'phase13_reconcile_unknown_delivery_with_evidence',
+      {
+        p_delivery_id: parsed.data.deliveryId,
+        p_evidence: evidence,
+        p_reason: parsed.data.reason,
+      }
+    );
+    if (result.error) throw new Error(result.error.message);
+    return { success: true, status: String(result.data ?? evidence) };
+  } catch (error) {
+    return { error: safeError(error) };
+  }
 }
 export async function resendDeliveryAction(
   formData: FormData
