@@ -9,7 +9,7 @@ CREATE OR REPLACE FUNCTION public.phase13_reconcile_unknown_delivery_with_eviden
 ) RETURNS TEXT LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public AS $$
 DECLARE d public.email_delivery%ROWTYPE; a public.user_profile; n INTEGER; next_status TEXT;
 BEGIN
-  IF current_user <> 'service_role' OR p_evidence NOT IN ('positive_confirmation','negative_confirmation','still_unknown')
+  IF current_setting('role', true) <> 'service_role' OR p_evidence NOT IN ('positive_confirmation','negative_confirmation','still_unknown')
      OR p_reason IS NULL OR char_length(btrim(p_reason)) NOT BETWEEN 1 AND 500 THEN
     RAISE EXCEPTION 'invalid reconciliation evidence' USING ERRCODE='22023';
   END IF;
@@ -19,7 +19,7 @@ BEGIN
   next_status := CASE WHEN p_evidence='positive_confirmation' THEN 'delivered' WHEN p_evidence='negative_confirmation' AND n < 3 THEN 'retry_available' WHEN p_evidence='negative_confirmation' THEN 'failed' ELSE 'unknown_outcome' END;
   IF next_status = 'unknown_outcome' THEN RETURN next_status; END IF;
   PERFORM set_config('juridico.phase13_internal','1',true);
-  UPDATE public.email_delivery SET status=next_status, sent_at=CASE WHEN next_status='delivered' THEN clock_timestamp() ELSE NULL END, reconciled_at=clock_timestamp() WHERE id=d.id;
+  UPDATE public.email_delivery SET status=next_status, sent_at=CASE WHEN next_status='delivered' THEN clock_timestamp() ELSE NULL END, reconciled_at=clock_timestamp(), reconciled_by=d.created_by WHERE id=d.id;
   SELECT up.* INTO a FROM public.user_profile up WHERE up.id=d.created_by;
   PERFORM public.phase13_write_audit('email_delivery.reconciled','email_delivery',d.id,d.office_id,a.id,jsonb_build_object('before_status','unknown_outcome','after_status',next_status,'reason',btrim(p_reason),'result',p_evidence,'correlation_id',gen_random_uuid()));
   RETURN next_status;
