@@ -28,14 +28,14 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 
 - **Branch**: `phase-13-pdf-delivery`
 - **HEAD inicial verificado**: `4e007069e48e18e245bb7483b845658d705de3b3`
-- **HEAD atual**: `4e0a3102f7c3f91bd981d412b2335ecdcc602b84`
+- **SHA técnico aprovado F13**: `4240cff95db072d7c742f4615f18b64cd89473ac`
 - **Fase**: Fase 13 (PDF local + armazenamento privado + entrega fake/local). **ENCERRADA**.
 
 ## Estado das macrofases
 
 - Fase 1 a Fase 12: IMPLEMENTADO, TESTADO e ENCERRADO.
-- **Fase 13**: IMPLEMENTADA, TESTADA, ENCERRADA. CI run **33898710578** (SHA **4e0a3102...**) concluiu `success`.
-- Fase 14: NÃO INICIADO (proibido iniciar nesta sessão).
+- **Fase 13**: IMPLEMENTADA, TESTADA e ENCERRADA no escopo local/sandbox. CI técnico run **33913819841** (Run #207, SHA `4240cff95db072d7c742f4615f18b64cd89473ac`) concluiu `success`.
+- **Fase 14**: NÃO INICIADA (proibido iniciar nesta sessão; próxima ação é planejamento próprio da Fase 14 somente após autorização humana).
 
 ## Invariantes críticos
 
@@ -76,24 +76,19 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 
 ## Estado atual da Fase 13
 
-- Entidades criadas: `client_contact`, `report_artifact`, `email_delivery`, `email_delivery_attempt`.
+- Entidades criadas: `client_contact`, `report_artifact`, `email_delivery`, `email_delivery_attempt`, `email_delivery_retry_command`.
 - Bucket privado `private-reports` e gerador de PDF via Playwright local.
 - Entregador fake local `FakeEmailProvider` com fluxo de idempotência, retry manual (máx. 3) e reconciliação de `unknown_outcome`.
-- Status da fase: FASE13_BLOQUEADA.
+- PDF Playwright local/sandbox.
+- Storage privado local.
+- Nenhum provider real, nenhum envio real, nenhum deploy.
+- Status da fase: IMPLEMENTADA, TESTADA e ENCERRADA no escopo local/sandbox.
 
-## Diagnóstico do gate Auth E2E (RESOLVIDO)
+## Hardenings finais de CI na Fase 13
 
-- No script `scripts/run-auth-e2e.mjs`, a execução invocava `playwright test` sem delimitar `--project=chromium`.
-- Correção aplicada no commit `04bc4d3`: adição de `--project=chromium` na chamada do Playwright.
-- Evidência remota no Run ID `33896171966`: **Auth E2E Tests passou com sucesso (verde)**, executando exclusivamente o projeto `chromium`.
-
-## Novo bloqueio identificado no CI remoto
-
-- **Run ID**: `33896171966`
-- **Head SHA**: `d0e3a2d3b25916f8ef192b45e9a4f6645fc86762`
-- **Primeiro gate vermelho**: `Supabase DB Tests (pgTAP)`
-- **Primeiro erro relevante**: Colisão de dados e chaves residuais de execução prévia nos testes de banco pgTAP (`duplicate key value violates unique constraint "query_execution_pkey"` no teste 15, e violação de idempotência / contagens de versão no teste 16 decorrentes de ausência de reset entre o gate Auth E2E e o gate pgTAP no workflow).
-- Conforme regra de handoff, **não iniciar sequência de correções adicionais**. Parar e submeter relatório para auditoria externa.
+1. **Isolamento do Auth E2E**: Execução do Auth E2E restrita estritamente ao projeto `chromium` em `scripts/run-auth-e2e.mjs`.
+2. **Reset pós-Auth E2E**: Inclusão de reset do Supabase no workflow do GitHub Actions (`app-ci.yml`) imediatamente após os testes Auth E2E para evitar poluição de dados residuais nos testes pgTAP.
+3. **Propagação de ambiente no Playwright**: Leitura determinística das credenciais locais do Supabase via `readLocalSupabaseEnv` e injeção tipada no `webServer.env` em `playwright.config.ts`.
 
 ## Como atualizar este arquivo
 

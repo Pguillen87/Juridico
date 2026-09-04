@@ -45,11 +45,20 @@ Rollback operacional significa bloquear novas ações F13 e preservar relatório
 ## 6. Fechamento factual
 
 - **Baseline F12 SHA**: `fcbf3c76521ce98f1a2e266282866077cdac3719`
-- **Final SHA (fase 13)**: `4e0a3102f7c3f91bd981d412b2335ecdcc602b84`
-- **CI run ID**: `33898710578` – **conclusion**: `success`
+- **SHA técnico aprovado da Fase 13**: `4240cff95db072d7c742f4615f18b64cd89473ac`
+- **CI técnico**: `33913819841` (Run #207) – **conclusion**: `success`
+- **Evidência técnica confirmada**:
+  - Auth E2E isolado no projeto `chromium` (`scripts/run-auth-e2e.mjs`);
+  - Reset do Supabase pós Auth E2E para evitar contaminação do pgTAP no CI;
+  - Propagação determinística do ambiente Supabase local ao webServer Playwright (`readLocalSupabaseEnv`);
+  - Phase 13 E2E local: 32/32 PASS;
+  - Auth E2E local: 34/34 PASS;
+  - CI Phase 13 E2E (local synthetic fixture): PASS.
 - **Gates verdes**:
   - Secret Scan
+  - Dependency Audit
   - Migration History F9–F13
+  - Repository Hygiene
   - Format Check
   - Lint
   - Typecheck
@@ -58,11 +67,16 @@ Rollback operacional significa bloquear novas ações F13 e preservar relatório
   - Phase 11 Migration Upgrade
   - Phase 12 Migration Upgrade
   - Phase 13 Migration Upgrade
+  - Install Playwright Browsers
   - Auth E2E Tests
   - Reset Supabase after Auth E2E
+  - Verify PoC
   - Supabase DB Lint
   - Supabase DB Tests (pgTAP)
-  - Phase 13 Concurrency
-  - Phase 13 E2E
+  - Concurrency Tests (Last Owner, F9, F10, F11, F12, F13)
+  - Bootstrap Phase 13 local E2E fixture
+  - Phase 13 E2E (local synthetic fixture)
+  - Verify PowerShell
+  - Concurrency Tests (Admin Rate Limit, Phase 5, Phase 6)
   - Supabase DB Types Check
-- **Ambiente**: sandbox/local only; nenhum provedor real, storage remoto, e‑mail ou deployment foram utilizados.
+- **Ambiente e Deferimentos**: sandbox/local only; **provider real**, **e-mail/SMTP real**, **storage remoto**, **produção**, **staging**, **retenção/expurgo automático**, **credenciais reais** e **envio real** permanecem explicitamente **DEFERIDOS**.
