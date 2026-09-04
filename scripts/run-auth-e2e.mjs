@@ -107,11 +107,11 @@ try {
           process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
         process.env.NEXT_PUBLIC_SUPABASE_URL = localEnv.API_URL;
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = localEnv.ANON_KEY;
-        const e2eRun = run('npx --no-install playwright test', 'npx', [
-          '--no-install',
-          'playwright',
-          'test',
-        ]);
+        const e2eRun = run(
+          'npx --no-install playwright test --project=chromium',
+          'npx',
+          ['--no-install', 'playwright', 'test', '--project=chromium']
+        );
         if (e2eRun.error) {
           process.stderr.write(
             `Falha ao iniciar Auth E2E: ${e2eRun.error.message}\n`
