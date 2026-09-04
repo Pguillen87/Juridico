@@ -28,12 +28,13 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 
 - **Branch**: `phase-13-pdf-delivery`
 - **HEAD inicial verificado**: `4e007069e48e18e245bb7483b845658d705de3b3`
+- **HEAD atual após correção**: `d0e3a2d3b25916f8ef192b45e9a4f6645fc86762`
 - **Fase**: Fase 13 (PDF local + armazenamento privado + entrega fake/local). Não encerrada.
 
 ## Estado das macrofases
 
 - Fase 1 a Fase 12: IMPLEMENTADO, TESTADO e ENCERRADO.
-- Fase 13: IMPLEMENTADO, PARCIAL (bloqueio de runner isolado corrigido localmente; aguardando CI remoto).
+- Fase 13: IMPLEMENTADO, BLOQUEADO (Auth E2E resolvido e verde no CI; novo bloqueio identificado no gate subsequente Supabase DB Tests pgTAP).
 - Fase 14: NÃO INICIADO (proibido iniciar nesta sessão).
 
 ## Invariantes críticos
@@ -78,20 +79,21 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 - Entidades criadas: `client_contact`, `report_artifact`, `email_delivery`, `email_delivery_attempt`.
 - Bucket privado `private-reports` e gerador de PDF via Playwright local.
 - Entregador fake local `FakeEmailProvider` com fluxo de idempotência, retry manual (máx. 3) e reconciliação de `unknown_outcome`.
-- Status da fase: aguardando CI remoto pós-isolamento da suíte Auth E2E.
+- Status da fase: FASE13_BLOQUEADA.
 
-## Diagnóstico confirmado e correção aplicada
+## Diagnóstico do gate Auth E2E (RESOLVIDO)
 
-- No script `scripts/run-auth-e2e.mjs`, a execução invocava `npx --no-install playwright test` sem delimitar `--project=chromium`.
-- Por consequência, a suíte Auth rodava também os testes de `tests-e2e/phase13-delivery.spec.ts` (projeto `phase13`), os quais falhavam por ausência da fixture sintética (`PHASE13_E2E_FIXTURE=1`), bloqueando o CI no Run ID `33674065960`.
-- Correção aplicada: adição explícita de `--project=chromium` na chamada do Playwright em `scripts/run-auth-e2e.mjs`.
-- Teste local: `npm run auth:e2e` validado com 34 testes `[chromium]` passando e 0 testes de F13 executados nesta suíte.
+- No script `scripts/run-auth-e2e.mjs`, a execução invocava `playwright test` sem delimitar `--project=chromium`.
+- Correção aplicada no commit `04bc4d3`: adição de `--project=chromium` na chamada do Playwright.
+- Evidência remota no Run ID `33896171966`: **Auth E2E Tests passou com sucesso (verde)**, executando exclusivamente o projeto `chromium`.
 
-## Próxima ação objetiva
+## Novo bloqueio identificado no CI remoto
 
-- Realizar commits delimitados e push para `phase-13-pdf-delivery`.
-- Acompanhar execução do App CI no GitHub para o novo SHA.
-- Retornar relatório factual e evidências para auditoria externa.
+- **Run ID**: `33896171966`
+- **Head SHA**: `d0e3a2d3b25916f8ef192b45e9a4f6645fc86762`
+- **Primeiro gate vermelho**: `Supabase DB Tests (pgTAP)`
+- **Primeiro erro relevante**: Colisão de dados e chaves residuais de execução prévia nos testes de banco pgTAP (`duplicate key value violates unique constraint "query_execution_pkey"` no teste 15, e violação de idempotência / contagens de versão no teste 16 decorrentes de ausência de reset entre o gate Auth E2E e o gate pgTAP no workflow).
+- Conforme regra de handoff, **não iniciar sequência de correções adicionais**. Parar e submeter relatório para auditoria externa.
 
 ## Como atualizar este arquivo
 
