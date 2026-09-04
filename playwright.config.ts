@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { readLocalSupabaseEnv } from './scripts/local-supabase-env.mjs';
 
 export default defineConfig({
   testDir: './tests-e2e',
@@ -31,12 +32,19 @@ export default defineConfig({
     command: process.env.PLAYWRIGHT_START_COMMAND ?? 'npm run dev',
     url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === 'true',
-    env: {
-      NEXT_PUBLIC_SUPABASE_URL:
-        process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321',
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    },
+    env: (() => {
+      const { API_URL, ANON_KEY, SERVICE_ROLE_KEY } =
+        readLocalSupabaseEnv() as Record<string, string | undefined>;
+      return {
+        NEXT_PUBLIC_SUPABASE_URL:
+          API_URL ||
+          process.env.NEXT_PUBLIC_SUPABASE_URL ||
+          'http://127.0.0.1:54321',
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+          ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
+        SUPABASE_SERVICE_ROLE_KEY:
+          SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      };
+    })(),
   },
 });
