@@ -120,6 +120,9 @@ jobs:
         env:
           JURIDICO_E2E_PASSWORD: 'TestOnly-Local-123!'
 
+      - name: Reset Supabase after Auth E2E
+        run: npm run db:reset
+
       - name: Verify PoC
         run: |
           npm ci --prefix poc
