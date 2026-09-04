@@ -1,4 +1,4 @@
-﻿# Juridico — Contexto operacional
+# Juridico — Contexto operacional
 
 ## Produto em uma frase
 
@@ -28,13 +28,13 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 
 - **Branch**: `phase-13-pdf-delivery`
 - **HEAD inicial verificado**: `4e007069e48e18e245bb7483b845658d705de3b3`
-- **HEAD atual após correção**: `d0e3a2d3b25916f8ef192b45e9a4f6645fc86762`
-- **Fase**: Fase 13 (PDF local + armazenamento privado + entrega fake/local). Não encerrada.
+- **HEAD atual**: `4e0a3102f7c3f91bd981d412b2335ecdcc602b84`
+- **Fase**: Fase 13 (PDF local + armazenamento privado + entrega fake/local). **ENCERRADA**.
 
 ## Estado das macrofases
 
 - Fase 1 a Fase 12: IMPLEMENTADO, TESTADO e ENCERRADO.
-- Fase 13: IMPLEMENTADO, BLOQUEADO (Auth E2E resolvido e verde no CI; novo bloqueio identificado no gate subsequente Supabase DB Tests pgTAP).
+- **Fase 13**: IMPLEMENTADA, TESTADA, ENCERRADA. CI run **33898710578** (SHA **4e0a3102...**) concluiu `success`.
 - Fase 14: NÃO INICIADO (proibido iniciar nesta sessão).
 
 ## Invariantes críticos

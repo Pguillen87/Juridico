@@ -41,3 +41,28 @@ A autorização de envio registra intenção e permite execução posterior cont
 ## 5. Rollback e limites
 
 Rollback operacional significa bloquear novas ações F13 e preservar relatórios, artefatos, deliveries, tentativas e auditorias existentes. Não se apagam evidências nem se reescrevem migrations históricas. Qualquer alteração futura deve ser aditiva, revisada e manter o primeiro comando `SET lock_timeout = '2s';`.
+
+## 6. Fechamento factual
+
+- **Baseline F12 SHA**: `fcbf3c76521ce98f1a2e266282866077cdac3719`
+- **Final SHA (fase 13)**: `4e0a3102f7c3f91bd981d412b2335ecdcc602b84`
+- **CI run ID**: `33898710578` – **conclusion**: `success`
+- **Gates verdes**:
+  - Secret Scan
+  - Migration History F9–F13
+  - Format Check
+  - Lint
+  - Typecheck
+  - Unit Tests
+  - Supabase DB Reset
+  - Phase 11 Migration Upgrade
+  - Phase 12 Migration Upgrade
+  - Phase 13 Migration Upgrade
+  - Auth E2E Tests
+  - Reset Supabase after Auth E2E
+  - Supabase DB Lint
+  - Supabase DB Tests (pgTAP)
+  - Phase 13 Concurrency
+  - Phase 13 E2E
+  - Supabase DB Types Check
+- **Ambiente**: sandbox/local only; nenhum provedor real, storage remoto, e‑mail ou deployment foram utilizados.
