@@ -14,12 +14,18 @@ import {
   type ProviderResultV1,
 } from '@/lib/providers/contract';
 import { failurePolicy, sanitizeProviderMessage } from '@/lib/providers/errors';
-import { createDefaultProviderGateway } from '@/lib/providers/registry-server';
+import {
+  createDefaultProviderGateway,
+  createDefaultProviderRegistry,
+} from '@/lib/providers/registry-server';
 import {
   PAYLOAD_SANITIZATION_VERSION,
   sanitizeRawProviderPayload,
 } from '@/lib/providers/payload';
-import type { ProviderExecutionWithPayload } from '@/lib/providers/registry';
+import type {
+  ProviderExecutionWithPayload,
+  ProviderGateway,
+} from '@/lib/providers/registry';
 import {
   compareAndPersistSnapshot,
   type PersistedComparison,
@@ -48,9 +54,9 @@ type QueryJobClaim = {
   readonly execution_id: string;
   readonly office_id: string;
   readonly process_id: string;
-  readonly provider_id: 'datajud_sandbox';
+  readonly provider_id: 'datajud_sandbox' | 'datajud_public';
   readonly capability: 'process_observation';
-  readonly job_kind: 'scheduled' | 'manual_reprocess';
+  readonly job_kind: 'scheduled' | 'manual_reprocess' | 'manual_refresh';
   readonly subject_ref: string;
   readonly request_fingerprint: string;
   readonly correlation_id: string;
@@ -95,9 +101,11 @@ export type WorkerRunResult =
 
 type WorkerOptions = {
   readonly client?: MonitoringRpcClient;
+  readonly providerGateway?: ProviderGateway;
   readonly providerInput?: DataJudProviderInput;
   readonly workerId?: string;
   readonly leaseDurationMs?: number;
+  readonly targetJobId?: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -125,9 +133,11 @@ function claimFrom(value: unknown): QueryJobClaim | null {
     requiredStrings.some(
       (key) => typeof row[key] !== 'string' || row[key] === ''
     ) ||
-    row.provider_id !== 'datajud_sandbox' ||
+    !['datajud_sandbox', 'datajud_public'].includes(String(row.provider_id)) ||
     row.capability !== 'process_observation' ||
-    (row.job_kind !== 'scheduled' && row.job_kind !== 'manual_reprocess') ||
+    !['scheduled', 'manual_reprocess', 'manual_refresh'].includes(
+      String(row.job_kind)
+    ) ||
     typeof row.attempt_number !== 'number' ||
     !Number.isInteger(row.attempt_number) ||
     row.attempt_number < 1 ||
@@ -205,11 +215,16 @@ function buildRequest(
 async function executeProvider(
   claim: QueryJobClaim,
   workerId: string,
-  providerInput: DataJudProviderInput | undefined
+  providerInput: DataJudProviderInput | undefined,
+  providerGateway?: ProviderGateway
 ): Promise<ProviderExecutionWithPayload> {
-  const gateway = createDefaultProviderGateway();
+  const gateway = providerGateway ?? createDefaultProviderGateway();
   const request = buildRequest(claim, workerId);
-  return gateway.observeWithPayload(claim.provider_id, request, providerInput);
+  const input =
+    claim.provider_id === 'datajud_sandbox'
+      ? (providerInput ?? { scenario: 'success' })
+      : undefined;
+  return gateway.observeWithPayload(claim.provider_id, request, input);
 }
 
 export async function runMonitoringWorkerOnce(
@@ -219,10 +234,18 @@ export async function runMonitoringWorkerOnce(
   const leaseDurationMs = options.leaseDurationMs ?? PHASE9_LEASE_DURATION_MS;
   const client =
     options.client ?? (createAdminClient() as unknown as MonitoringRpcClient);
-  const claimResponse = await client.rpc('phase9_claim_query_job', {
-    p_worker_id: workerId,
-    p_lease_duration_ms: leaseDurationMs,
-  });
+
+  const claimResponse = options.targetJobId
+    ? await client.rpc('realignment1_claim_query_job', {
+        p_worker_id: workerId,
+        p_target_job_id: options.targetJobId,
+        p_lease_duration_ms: leaseDurationMs,
+      })
+    : await client.rpc('phase9_claim_query_job', {
+        p_worker_id: workerId,
+        p_lease_duration_ms: leaseDurationMs,
+      });
+
   if (claimResponse.error)
     throw new Error('Não foi possível reivindicar o job.');
   const claim = claimFrom(claimResponse.data);
@@ -233,14 +256,21 @@ export async function runMonitoringWorkerOnce(
     execution = await executeProvider(
       claim,
       workerId,
-      options.providerInput ?? { scenario: 'success' }
+      options.providerInput ?? { scenario: 'success' },
+      options.providerGateway
     );
-  } catch {
+  } catch (err) {
+    console.error('Worker provider execution failed:', err);
+    const registry = createDefaultProviderRegistry();
+    const fallbackDescriptor =
+      registry.getProvider(claim.provider_id)?.descriptor ??
+      createDataJudProvider().descriptor;
+
     execution = {
       result: {
         kind: 'failure',
         status: 'technical_failure',
-        provider: createDataJudProvider().descriptor,
+        provider: fallbackDescriptor,
         source: 'datajud',
         contractVersion: PROVIDER_CONTRACT_VERSION,
         capability: claim.capability,
@@ -250,7 +280,7 @@ export async function runMonitoringWorkerOnce(
         sourceMetadata: {
           sourceType: 'datajud',
           providerId: claim.provider_id,
-          adapterVersion: createDataJudProvider().descriptor.adapterVersion,
+          adapterVersion: fallbackDescriptor.adapterVersion,
           contractVersion: PROVIDER_CONTRACT_VERSION,
           observedAt: new Date().toISOString(),
           durationMs: 0,

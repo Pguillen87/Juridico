@@ -86,12 +86,14 @@ export interface ProviderSourceMetadata {
   readonly adapterVersion: string;
   readonly contractVersion: typeof PROVIDER_CONTRACT_VERSION;
   readonly observedAt: string;
+  readonly sourceUpdatedAt?: string;
   readonly durationMs?: number;
 }
 
 export interface ProviderEvidence {
   readonly evidenceRef: string;
-  readonly evidenceType: 'manual_note' | 'synthetic_fixture';
+  readonly evidenceType:
+    'manual_note' | 'synthetic_fixture' | 'provider_response';
   readonly observedAt: string;
 }
 

@@ -8,3 +8,6 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+
+# Supabase local runtime artifacts; source migrations and tests remain formatted/tracked.
+supabase/.temp/**

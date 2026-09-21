@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { displayReportStatus, type ReportStatus } from '@/lib/reports/contract';
 import { listReports, requireReportAccess } from '@/lib/reports/server';
+import { createClient } from '@/lib/supabase/server';
 
 function textParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -20,6 +21,7 @@ export default async function ReportsPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requireReportAccess();
+  const supabase = await createClient();
   const params = searchParams ? await searchParams : {};
   const status = textParam(params.status);
   const clientId = textParam(params.clientId);
@@ -31,28 +33,70 @@ export default async function ReportsPage({
     ...(from ? { periodStart: from } : {}),
     ...(to ? { periodEnd: to } : {}),
   });
+  const [
+    { data: clients, error: clientsError },
+    { data: parties, error: partiesError },
+  ] = await Promise.all([
+    supabase.from('client').select('id,party_id').eq('status', 'active'),
+    supabase.from('party').select('id,display_name'),
+  ]);
+  if (clientsError || partiesError) {
+    throw new Error('Não foi possível carregar os clientes dos relatórios.');
+  }
+  const partyById = new Map(
+    (parties ?? []).map((party) => [party.id, party.display_name])
+  );
+  const clientNameById = new Map(
+    (clients ?? []).map((client) => [
+      client.id,
+      partyById.get(client.party_id) ?? 'Cliente',
+    ])
+  );
 
   return (
     <main className="min-h-screen bg-slate-100">
       <nav className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-4">
-          <div>
-            <Link href="/app" className="font-semibold text-slate-950">
-              Juridico
+          <div className="flex items-center gap-6">
+            <Link href="/app" className="group">
+              <span className="font-semibold text-slate-950 group-hover:text-sky-700">
+                Juridico
+              </span>
+              <p className="text-xs text-slate-500">Início</p>
             </Link>
-            <p className="text-xs text-slate-500">Área protegida</p>
+            <div className="flex items-center gap-4 text-sm font-medium">
+              <Link
+                className="text-slate-700 hover:text-sky-700"
+                href="/app/processos"
+              >
+                Processos
+              </Link>
+              <Link
+                className="text-slate-700 hover:text-sky-700"
+                href="/app/clientes"
+              >
+                Clientes e partes
+              </Link>
+              <Link
+                className="text-slate-700 hover:text-sky-700"
+                href="/app/falhas"
+              >
+                Central de falhas
+              </Link>
+              <Link
+                className="font-semibold text-sky-700"
+                href="/app/relatorios"
+              >
+                Relatórios
+              </Link>
+            </div>
           </div>
-          <div className="flex gap-4 text-sm">
-            <Link
-              className="text-sky-700 hover:underline"
-              href="/app/processos"
-            >
-              Processos
-            </Link>
-            <Link className="text-sky-700 hover:underline" href="/app/falhas">
-              Falhas
-            </Link>
-          </div>
+          <Link
+            href="/app"
+            className="text-sm font-semibold text-sky-700 hover:underline"
+          >
+            Voltar ao Início
+          </Link>
         </div>
       </nav>
 
@@ -81,13 +125,19 @@ export default async function ReportsPage({
             className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
           >
             <label className="text-sm font-medium text-slate-700">
-              Cliente por ID
-              <input
+              Cliente
+              <select
                 name="clientId"
                 defaultValue={clientId}
-                placeholder="UUID do cliente"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-              />
+                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+              >
+                <option value="">Todos os clientes</option>
+                {(clients ?? []).map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {partyById.get(client.party_id) ?? 'Cliente'}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="text-sm font-medium text-slate-700">
               Período desde
@@ -159,7 +209,8 @@ export default async function ReportsPage({
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold text-slate-950">
-                        Cliente {shortId(report.client_id)} · período semanal
+                        {clientNameById.get(report.client_id) ?? 'Cliente'} ·
+                        período semanal
                       </h3>
                       <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
                         {displayReportStatus(report.status)}

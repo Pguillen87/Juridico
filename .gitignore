@@ -47,3 +47,6 @@ poc/evidence/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase local runtime artifacts; migrations, SQL tests and scripts remain tracked.
+supabase/.temp/**

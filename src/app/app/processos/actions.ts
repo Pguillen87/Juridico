@@ -74,6 +74,8 @@ export async function createProcessAction(formData: FormData) {
       p_is_public: parsed.data.isPublic === 'public',
     });
     if (error) return { error: safeError(error.message) };
+    revalidatePath('/app');
+    revalidatePath('/app/clientes');
     revalidatePath('/app/processos');
     return { success: true, processId: data };
   } catch (error) {
@@ -103,6 +105,58 @@ export async function setProcessMonitoringStatusAction(formData: FormData) {
       }
     );
     if (error) return { error: safeError(error.message) };
+    revalidatePath('/app/processos');
+    return { success: true };
+  } catch (error) {
+    return {
+      error: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+const refreshSchema = z.object({
+  processId: z.string().uuid(),
+});
+
+export async function requestProcessRefreshAction(formData: FormData) {
+  try {
+    await requirePermission('manage_monitoring', {
+      redirectOnDenied: false,
+    });
+    const parsed = refreshSchema.safeParse({
+      processId: formData.get('processId'),
+    });
+    if (!parsed.success) {
+      return { error: 'Informe um processo válido para atualização.' };
+    }
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc(
+      'realignment1_request_process_refresh',
+      {
+        p_process_id: parsed.data.processId,
+      }
+    );
+    if (error) return { error: safeError(error.message) };
+
+    const job = Array.isArray(data) ? data[0] : data;
+    if (
+      job?.job_id &&
+      (job.status === 'pending' || job.status === 'retry_scheduled')
+    ) {
+      try {
+        const { runMonitoringWorkerOnce } =
+          await import('@/lib/monitoring/worker');
+        await runMonitoringWorkerOnce({ targetJobId: job.job_id });
+      } catch (workerErr) {
+        console.error(
+          'Falha ao executar worker síncrono para o job alvo:',
+          workerErr
+        );
+      }
+    }
+
+    revalidatePath('/app');
+    revalidatePath('/app/clientes');
     revalidatePath('/app/processos');
     return { success: true };
   } catch (error) {

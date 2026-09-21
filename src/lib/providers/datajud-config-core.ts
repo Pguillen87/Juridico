@@ -8,13 +8,14 @@ const dataJudConfigurationSchema = z.object({
 
 export type DataJudConfiguration =
   | {
-      readonly mode: 'fake';
-      readonly credentialState: 'absent' | 'present';
+      readonly mode: 'live';
+      readonly credentialState: 'present';
       readonly endpointConfigured: boolean;
     }
   | {
       readonly mode: 'disabled';
-      readonly reason: 'real_transport_disabled' | 'invalid_endpoint';
+      readonly reason:
+        'real_transport_disabled' | 'invalid_endpoint' | 'missing_credential';
       readonly credentialState: 'absent' | 'present';
       readonly endpointConfigured: boolean;
     };
@@ -27,19 +28,12 @@ export function getDataJudConfiguration(
     DATAJUD_API_URL: source.DATAJUD_API_URL,
     DATAJUD_API_KEY: source.DATAJUD_API_KEY,
   });
-  const mode = values.DATAJUD_TRANSPORT_MODE ?? 'fake';
+  const mode = values.DATAJUD_TRANSPORT_MODE ?? 'disabled';
   const credentialState = values.DATAJUD_API_KEY
     ? ('present' as const)
     : ('absent' as const);
   const endpointConfigured = values.DATAJUD_API_URL !== undefined;
-  if (mode !== 'fake') {
-    return {
-      mode: 'disabled',
-      reason: 'real_transport_disabled',
-      credentialState,
-      endpointConfigured,
-    };
-  }
+
   if (endpointConfigured) {
     const parsedEndpoint = z.string().url().safeParse(values.DATAJUD_API_URL);
     if (!parsedEndpoint.success) {
@@ -51,5 +45,27 @@ export function getDataJudConfiguration(
       };
     }
   }
-  return { mode: 'fake', credentialState, endpointConfigured };
+
+  if (mode === 'live') {
+    if (credentialState === 'absent') {
+      return {
+        mode: 'disabled',
+        reason: 'missing_credential',
+        credentialState,
+        endpointConfigured,
+      };
+    }
+    return {
+      mode: 'live',
+      credentialState: 'present',
+      endpointConfigured,
+    };
+  }
+
+  return {
+    mode: 'disabled',
+    reason: 'real_transport_disabled',
+    credentialState,
+    endpointConfigured,
+  };
 }

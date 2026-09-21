@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI=(npx --no-install supabase)
 PRETTIER=(npx --no-install prettier)
-TMP_DIR="$(mktemp -d)"
+source "${ROOT_DIR}/scripts/lib/native-cli-path.sh"
+TMP_DIR="$(mktemp -d "${ROOT_DIR}/.migration-upgrade.XXXXXX")"
 F10_PROJECT_DIR="${TMP_DIR}/phase10-project"
 FULL_F12_PROJECT_DIR="${TMP_DIR}/full-f12-project"
 PRE_F12_PROJECT_DIR="${TMP_DIR}/pre-f12-project"
@@ -78,7 +79,7 @@ SELECT md5(concat_ws(E'\n',
   ), ''),
   coalesce((
     SELECT string_agg(
-      n.nspname || '.' || c.relname || '|' || pol.polname || '|' || pol.polcmd::text || '|' || pol.polpermissive::text || '|' || pol.polroles::text || '|' || coalesce(pg_get_expr(pol.polqual, pol.polrelid), '') || '|' || coalesce(pg_get_expr(pol.polwithcheck, pol.polrelid), ''),
+      n.nspname || '.' || c.relname || '|' || pol.polname || '|' || pol.polcmd::text || '|' || pol.polpermissive::text || '|' || coalesce((SELECT string_agg(r.rolname, ',' ORDER BY r.rolname) FROM pg_roles r WHERE r.oid = ANY(pol.polroles)), '') || '|' || coalesce(pg_get_expr(pol.polqual, pol.polrelid), '') || '|' || coalesce(pg_get_expr(pol.polwithcheck, pol.polrelid), ''),
       E'\n'
       ORDER BY n.nspname, c.relname, pol.polname
     )
@@ -116,14 +117,14 @@ WHERE version >= '20260827000005'
 ORDER BY version;
 SQL
 
-run_supabase() { "${CLI[@]}" "$@"; }
+run_supabase() { run_supabase_with_native_paths "$@"; }
 
 fingerprint() {
   local workdir="$1"
   local output="${TMP_DIR}/fingerprint-$(basename "${workdir}").txt"
-  run_supabase db query --local --workdir "${workdir}" --file "${FINGERPRINT_SQL}" >"${output}"
+  run_supabase_read_with_native_paths db query --local --workdir "${ROOT_DIR}" --file "${FINGERPRINT_SQL}" >"${output}"
   local value
-  value="$(grep -Eo '[0-9a-f]{32}' "${output}" | tail -1 || true)"
+  value="$(grep -Eo '"fingerprint"[[:space:]]*:[[:space:]]*"[0-9a-f]{32}"' "${output}" | grep -Eo '[0-9a-f]{32}' | tail -1 || true)"
   [[ "${value}" =~ ^[0-9a-f]{32}$ ]] || { cat "${output}" >&2; exit 1; }
   printf '%s' "${value}"
 }
@@ -131,12 +132,12 @@ fingerprint() {
 generate_types() {
   local workdir="$1"
   local output="$2"
-  run_supabase gen types typescript --local --workdir "${workdir}" >"${output}"
-  "${PRETTIER[@]}" --write "${output}" >/dev/null
+  run_supabase_read_with_native_paths gen types typescript --local --workdir "${ROOT_DIR}" >"${output}"
+  "${PRETTIER[@]}" --write "$(native_cli_path "${output}")" >/dev/null
 }
 
 migration_versions() {
-  run_supabase db query --local --workdir "$1" --file "${VERSIONS_SQL}"
+  run_supabase_read_with_native_paths db query --local --workdir "${ROOT_DIR}" --file "${VERSIONS_SQL}"
 }
 
 echo 'phase12-upgrade=full-reset-through-f12'
@@ -144,8 +145,15 @@ mkdir -p "${FULL_F12_PROJECT_DIR}"
 cp -R "${ROOT_DIR}/supabase" "${FULL_F12_PROJECT_DIR}/supabase"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260827000008_phase_13_delivery_hardening.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260920000001_client_portfolio_read_model.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260905000001_realignment1_manual_refresh.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
 run_supabase db reset --local --workdir "${FULL_F12_PROJECT_DIR}" --yes >/dev/null
+wait_for_supabase_readiness "${ROOT_DIR}"
 full_fingerprint="$(fingerprint "${FULL_F12_PROJECT_DIR}")"
 generate_types "${FULL_F12_PROJECT_DIR}" "${TMP_DIR}/full-types.ts"
 run_supabase test db --local --workdir "${FULL_F12_PROJECT_DIR}" >/dev/null
@@ -159,8 +167,15 @@ rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000005_phase_12_weekly_rep
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000007_phase_13_pdf_delivery.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260827000008_phase_13_delivery_hardening.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000001_client_portfolio_read_model.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260905000001_realignment1_manual_refresh.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
+wait_for_supabase_readiness "${ROOT_DIR}"
 
 mkdir -p "${PRE_F12_PROJECT_DIR}"
 cp -R "${F10_PROJECT_DIR}/supabase" "${PRE_F12_PROJECT_DIR}/supabase"
@@ -181,6 +196,7 @@ upgrade_fingerprint="$(fingerprint "${PRE_F12_PROJECT_DIR}")"
 generate_types "${PRE_F12_PROJECT_DIR}" "${TMP_DIR}/upgrade-types.ts"
 run_supabase test db --local --workdir "${PRE_F12_PROJECT_DIR}" >/dev/null
 run_supabase db reset --local --workdir "${ROOT_DIR}" --yes >/dev/null
+wait_for_supabase_readiness "${ROOT_DIR}"
 
 if [[ "${full_fingerprint}" != "${upgrade_fingerprint}" ]]; then
   echo "Fingerprint de reset completo diverge do upgrade Fase 11→00005→00006: ${full_fingerprint} != ${upgrade_fingerprint}." >&2

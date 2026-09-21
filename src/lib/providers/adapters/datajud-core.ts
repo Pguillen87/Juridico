@@ -28,7 +28,7 @@ const providerIdentity = {
 } as const;
 
 export type DataJudTransportFailureCode =
-  'timeout' | 'network' | 'dns' | 'aborted';
+  'timeout' | 'network' | 'dns' | 'aborted' | 'not_configured';
 
 export interface DataJudTransportRequest {
   readonly subjectRef: string;

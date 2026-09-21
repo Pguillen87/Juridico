@@ -79,4 +79,35 @@ describe('Fase 9 monitoring action', () => {
       error: 'Você não tem autorização para esta operação.',
     });
   });
+
+  it('solicita atualização manual via RPC com validação segura de actor e processo', async () => {
+    const { requestProcessRefreshAction } = await import('./actions');
+    mocks.requirePermission.mockResolvedValueOnce({
+      profile: { id: 'user-123', role: 'lawyer' },
+    });
+    mocks.rpc.mockResolvedValueOnce({
+      data: [{ job_id: 'job-123', is_reused: false }],
+      error: null,
+    });
+
+    await expect(
+      requestProcessRefreshAction(
+        form({
+          processId: '91000000-0000-4000-8000-000000000008',
+        })
+      )
+    ).resolves.toEqual({
+      success: true,
+    });
+
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      'realignment1_request_process_refresh',
+      {
+        p_process_id: '91000000-0000-4000-8000-000000000008',
+      }
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/app');
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/app/clientes');
+    expect(mocks.revalidatePath).toHaveBeenCalledWith('/app/processos');
+  });
 });

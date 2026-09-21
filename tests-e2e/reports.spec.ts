@@ -45,14 +45,14 @@ test.describe('Relatórios semanais — Fase 12', () => {
   }) => {
     await login(page, 'lawyer@example.test');
     await page.goto('/app/relatorios');
-    await page.getByLabel('Cliente por ID').fill(clientIds.list);
+    await page.getByLabel('Cliente').selectOption(clientIds.list);
     await page.getByLabel('Status').selectOption('draft');
     await page.getByRole('button', { name: 'Aplicar filtros' }).click();
     await expect(page).toHaveURL(
       /clientId=d1200000-0000-4000-b000-000000000001/
     );
     await expect(
-      page.getByText('Cliente d1200000 · período semanal')
+      page.getByText('Relatório E2E list · período semanal')
     ).toBeVisible();
     await expect(page.locator('article').getByText('Rascunho')).toBeVisible();
     await expect(

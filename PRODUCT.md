@@ -18,7 +18,10 @@ O sistema representará uma cliente principal e suas três filhas, além de fami
 
 ## Product Purpose
 
-A aplicação deverá automatizar o monitoramento programado de processos judiciais, registrar o histórico das consultas, preservar respostas originais, normalizar dados, comparar snapshots, detectar movimentações ou alterações, impedir duplicações, alertar o advogado e preparar relatório semanal para revisão e aprovação humana.
+O produto atual começa pela carteira conhecida: cliente, processos cadastrados
+manualmente, consulta individual por CNJ, histórico, normalização, comparação,
+novidades e relatório. Scheduler, alertas e automações amplas permanecem
+infraestrutura reutilizável ou evolução posterior.
 
 O sucesso do produto depende de tornar claramente visíveis os processos consultados com alteração, sem alteração, com fonte indisponível, não encontrados, não suportados, sujeitos a limite de requisições, timeout, falha técnica ou revisão manual. Uma consulta que falhou nunca poderá ser apresentada como processo sem movimentação.
 
@@ -28,19 +31,28 @@ O produto será uma central de acompanhamento jurídico orientada à rastreabili
 
 ## Operating Context
 
-O advogado atualmente abre cada processo manualmente para verificar novas movimentações. A aplicação deverá substituí-la por consultas agendadas, com fuso operacional provisório `America/Sao_Paulo` e horários iniciais provisórios de 08:00, 13:00 e 18:00. Esses valores são configuráveis e exigem validação do advogado.
+O advogado cadastra processos conhecidos e pode solicitar uma atualização
+individual. A consulta agendada automática não faz parte da primeira versão
+operacional.
 
 A primeira fonte automática prevista é a API Pública do DataJud. O sistema também terá um `ManualProvider` para processos que não possam ser consultados automaticamente. Outros conectores, como DJEN, PJe, eproc, ESAJ e Projudi, são futuros e não serão implementados no MVP.
 
-Toda sexta-feira, o sistema deverá preparar um relatório em modo rascunho. O fechamento inicial provisório é sexta-feira às 17:00 no fuso `America/Sao_Paulo`. O advogado deverá revisar, editar, adicionar observações, retirar conteúdo inadequado, aprovar ou cancelar, gerar PDF, confirmar destinatário e enviar por e-mail.
+Relatórios existentes continuam disponíveis para revisão, aprovação e geração de
+PDF conforme as regras já implementadas. Envio real permanece fora do escopo.
 
 ## Capabilities and Constraints
 
-O MVP deverá abranger autenticação, recuperação de senha, um escritório, usuários básicos, cadastro de clientes, cadastro de partes, importação de processos por CSV, cadastro manual de processos, associação entre partes e processos, validação de CNJ, monitoramento configurável, execução agendada, histórico, snapshots, normalização, comparação, deduplicação, detecção de alterações, alertas por e-mail, central de falhas, reprocessamento manual, relatório semanal, revisão, aprovação, PDF, envio, auditoria, controle de acesso, segurança básica, testes críticos e documentação de operação e recuperação.
+O escopo operacional atual abrange autenticação, escritório, usuários, clientes,
+partes, processos manuais/CSV, validação CNJ, consulta individual, histórico,
+snapshots, normalização, comparação, detecção de alterações, central de falhas,
+relatórios, aprovação, PDF, auditoria e controle de acesso. Scheduler de
+produção, descoberta externa, notificações e envio real são futuros.
 
 O modelo de partes deverá ser comum e não limitar a associação a uma categoria restrita de pessoa relacionada. A entidade `party` representará pessoa física, pessoa jurídica, cliente principal, filha, familiar, representante e qualquer outra parte. `client` apontará para a parte principal; `client_related_party` registrará relações; `process_party` fará a associação N:N entre processo e parte.
 
-A primeira fonte automática será o DataJud Público, e o provedor manual será o fallback. Cada provedor deverá declarar capacidades opcionais, como dados básicos, movimentações, partes, publicações, documentos e processos sigilosos. Processos sigilosos não serão consultados automaticamente no MVP.
+A consulta de processo público conhecido usa o provider DataJud Público quando
+configurado. O provider foi implementado localmente e testado com mock explícito;
+não há validação live. Processos sigilosos não são consultados automaticamente.
 
 Consultas, comparações, deduplicação e detecção serão determinísticas. A IA poderá organizar movimentações, sugerir resumos, simplificar linguagem processual e sugerir textos de relatório, sempre em rascunho. A IA não será fonte oficial, não inventará fatos, não alterará datas, não emitirá parecer, não determinará prazos e não enviará conteúdo sem aprovação do advogado.
 
@@ -52,7 +64,8 @@ Respostas brutas e snapshots serão imutáveis. A retenção inicial proposta pa
 
 ## Evidence on Hand
 
-A especificação do projeto define objetivos, fluxos, entidades, restrições de segurança, primeira fonte DataJud e relatório semanal. O diretório não possui código ou configuração de aplicação. Há documentação de planejamento, criada na fase anterior e revisada nesta etapa.
+O repositório contém a aplicação e sua infraestrutura operacional. Documentos de
+fases anteriores permanecem como histórico quando necessário.
 
 Não existem números CNJ aprovados para consulta. A prova de conceito usará de cinco a dez processos públicos reais somente após fornecimento e aprovação explícita. Não serão usados processos inventados.
 

@@ -2,7 +2,9 @@
 
 ## Produto em uma frase
 
-Aplicação administrativa web com controle rigoroso de autorização (D-022) e isolamento multi-tenant para acompanhamento rastreável de processos judiciais, geração de relatórios semanais aprovados, artefatos PDF privados e entregas locais rastreáveis.
+Aplicação administrativa web com controle rigoroso de autorização (D-022) e
+isolamento multi-tenant para a carteira conhecida de clientes e processos:
+cliente → processos manuais → consulta CNJ individual → novidades → relatório.
 
 ## Stack e ambiente local
 
@@ -20,6 +22,16 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 - `docs/plano-fase-12.md` e `docs/relatorio-fase-12.md`: Baseline aprovada da Fase 12.
 - `docs/plano-fase-13.md` e `docs/relatorio-fase-13.md`: Planejamento e relatório factual da Fase 13.
 
+## Produto atual
+
+- Cliente já cadastrado possui processos conhecidos vinculados por `client_id`.
+- A carteira mostra quantidade, lista, situação, última consulta, novidades e
+  a ação **Atualizar agora** por processo.
+- O Realinhamento 1 consulta um único processo conhecido, normaliza, cria
+  snapshot, compara e alimenta o read model.
+- CPF/CNPJ e descoberta automática de processos: **DEFERIDO / EVOLUÇÃO FUTURA**.
+- DataJud Público: **IMPLEMENTADO LOCALMENTE / TESTADO COM MOCK / NÃO TESTADO LIVE**.
+
 ## Baseline aprovada
 
 - **Fase 12**: Encerrada e aprovada no commit `fcbf3c76521ce98f1a2e266282866077cdac3719`.
@@ -35,6 +47,7 @@ Aplicação administrativa web com controle rigoroso de autorização (D-022) e 
 
 - Fase 1 a Fase 12: IMPLEMENTADO, TESTADO e ENCERRADO.
 - **Fase 13**: IMPLEMENTADA, TESTADA e ENCERRADA no escopo local/sandbox. CI técnico run **33913819841** (Run #207, SHA `4240cff95db072d7c742f4615f18b64cd89473ac`) concluiu `success`.
+- **Realinhamento 1 (Consulta de Processo / DataJud)**: IMPLEMENTADO LOCALMENTE / TESTADO COM MOCK / NÃO PUBLICADO / NÃO TESTADO LIVE. É a consulta individual de processo conhecido, não a UX final de descoberta de carteira.
 - **Fase 14**: NÃO INICIADA (proibido iniciar nesta sessão; próxima ação é planejamento próprio da Fase 14 somente após autorização humana).
 
 ## Invariantes críticos

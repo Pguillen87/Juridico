@@ -16,6 +16,7 @@ import {
 } from './snapshots';
 import { runMonitoringSchedulerTick } from './scheduler';
 import { runMonitoringWorkerOnce, type MonitoringRpcClient } from './worker';
+import { createTestProviderGateway } from '@/lib/providers/registry-test';
 
 const observation: ProviderResultV1 = {
   kind: 'observation',
@@ -192,6 +193,7 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
 
     const result = await runMonitoringWorkerOnce({
       client,
+      providerGateway: createTestProviderGateway(),
       workerId: 'phase9-worker-test',
       providerInput: { scenario: 'success' },
     });
@@ -229,6 +231,95 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
     expect(result.status === 'completed' && result.comparison).toMatchObject({
       status: 'completed',
       value: { result: 'not_comparable', reasonCode: 'first_snapshot' },
+    });
+  });
+
+  it('executa claim estritamente direcionado quando targetJobId é fornecido', async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [
+          {
+            job_id: '91000000-0000-4000-d000-000000000099',
+            execution_id: '91000000-0000-4000-e000-000000000099',
+            office_id: '91000000-0000-4000-8000-000000000001',
+            process_id: '91000000-0000-4000-8000-000000000008',
+            provider_id: 'datajud_sandbox',
+            capability: 'process_observation',
+            job_kind: 'manual_refresh',
+            subject_ref: '91000000000000000011',
+            request_fingerprint: 'a'.repeat(64),
+            correlation_id: 'job-manual-refresh-corr-001',
+            attempt_number: 1,
+            lease_token: '91000000-0000-4000-f000-000000000001',
+            lease_expires_at: '2026-01-01T11:00:30.000Z',
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            job_id: '91000000-0000-4000-d000-000000000099',
+            execution_id: '91000000-0000-4000-e000-000000000099',
+            job_status: 'succeeded',
+            exchange_id: '91000000-0000-4000-8000-000000000099',
+            snapshot_id: '91000000-0000-4000-9000-000000000099',
+            next_attempt_at: null,
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            snapshot_role: 'current',
+            id: '91000000-0000-4000-9000-000000000099',
+            office_id: '91000000-0000-4000-8000-000000000001',
+            process_id: '91000000-0000-4000-8000-000000000008',
+            provider_id: 'datajud_sandbox',
+            source: 'datajud',
+            normalizer_version: '1.0.0',
+            normalized_data: observation.data,
+            missing_fields: observation.missingFields,
+            snapshot_hash: snapshotHash(observation.data),
+            created_at: '2026-01-01T11:00:00.000Z',
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            comparison_id: '91000000-0000-4000-1100-000000000099',
+            detected_change_id: null,
+            result: 'not_comparable',
+            reason_code: 'first_snapshot',
+            changed_fields: [],
+            normalized_diff: { entries: [] },
+            comparison_hash: 'b'.repeat(64),
+            replayed: false,
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: 0, error: null });
+
+    const client: MonitoringRpcClient = { rpc };
+
+    const result = await runMonitoringWorkerOnce({
+      client,
+      providerGateway: createTestProviderGateway(),
+      workerId: 'targeted-worker-test',
+      targetJobId: '91000000-0000-4000-d000-000000000099',
+      providerInput: { scenario: 'success' },
+    });
+
+    expect(result.status).toBe('completed');
+    expect(rpc).toHaveBeenNthCalledWith(1, 'realignment1_claim_query_job', {
+      p_worker_id: 'targeted-worker-test',
+      p_target_job_id: '91000000-0000-4000-d000-000000000099',
+      p_lease_duration_ms: 30_000,
     });
   });
 });

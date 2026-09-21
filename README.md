@@ -1,16 +1,20 @@
 # Juridico
 
-Aplicação web para monitoramento automatizado de processos judiciais.
+Aplicação web para acompanhamento rastreável da carteira de processos de um escritório.
 
-## Fase Atual: 4A - Identidade, Supabase e RLS
+## Estado atual: carteira conhecida e consulta individual
 
-Esta branch (`phase-4-auth-rls`) contém a fundação de identidade, autorização e banco de dados local utilizando Supabase, policies RLS (Row Level Security) e testes automatizados.
+O produto atual trabalha com clientes e processos cadastrados manualmente. Cada
+processo conhecido pode ser consultado individualmente pelo CNJ, normalizado,
+comparado com a consulta anterior e incluído em relatório. A fundação de
+identidade, autorização, Supabase, RLS e testes continua sendo reutilizada.
 
 ## Requisitos
 
 - Node.js 22 LTS (ver `.node-version`)
 - Docker e Docker Compose (para execução local via contêineres e Supabase CLI)
-- Chave da API do DataJud (para a PoC)
+- Chave do DataJud não é necessária para os testes locais; o provider público
+  permanece explicitamente não configurado até uma homologação autorizada.
 
 ## Desenvolvimento local com Supabase
 
@@ -75,14 +79,12 @@ A aplicação Next.js também está configurada para rodar localmente utilizando
 - `npm run test`: Executa os testes unitários com Vitest.
 - `npm run e2e`: Executa os testes E2E com Playwright.
 
-## Prova de Conceito (PoC)
+## Consulta individual e escopo futuro
 
-A Prova de Conceito (PoC) da integração com a API do DataJud encontra-se no diretório `poc/`. Para executá-la:
-
-1. Acesse o diretório: `cd poc`
-2. Instale as dependências: `npm ci`
-3. Configure o `.env` dentro da pasta `poc/` com sua `DATAJUD_API_KEY`.
-4. Execute os testes: `npm test`
+O Realinhamento 1 prepara a consulta individual de um processo conhecido.
+O DataJud foi testado localmente com mocks injetados nos testes, mas não foi
+testado live. Descoberta de processos por CPF/CNPJ é evolução futura e depende
+de uma fonte externa ainda não definida; não é implementada nesta versão.
 
 ## CI/CD
 

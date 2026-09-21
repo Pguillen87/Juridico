@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     'playwright-report/**',
     'test-results/**',
     'next-env.d.ts',
+    // Supabase local runtime artifacts only; do not ignore source, migrations or tests.
+    'supabase/.temp/**',
   ]),
 ]);
 

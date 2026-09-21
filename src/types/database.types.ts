@@ -2298,6 +2298,10 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      get_client_portfolio_read_model: {
+        Args: { p_client_id?: string };
+        Returns: Json[];
+      };
       get_process_import_preview: {
         Args: { p_preview_id: string };
         Returns: {
@@ -2387,6 +2391,26 @@ export type Database = {
           result: string;
         }[];
       };
+      phase10_compare_process_snapshot_v2_legacy: {
+        Args: {
+          p_changed_fields: Json;
+          p_comparison_version: string;
+          p_current_snapshot_id: string;
+          p_normalized_diff: Json;
+          p_reason_code: string;
+          p_result: string;
+        };
+        Returns: {
+          changed_fields: Json;
+          comparison_hash: string;
+          comparison_id: string;
+          detected_change_id: string;
+          normalized_diff: Json;
+          reason_code: string;
+          replayed: boolean;
+          result: string;
+        }[];
+      };
       phase10_get_snapshot_pair_compatible_internal: {
         Args: { p_current_snapshot_id: string };
         Returns: {
@@ -2422,6 +2446,14 @@ export type Database = {
       phase10_resolve_compatible_previous_snapshot: {
         Args: { p_current_snapshot_id: string };
         Returns: string;
+      };
+      phase10_snapshot_is_complete: {
+        Args: {
+          p_missing_fields: Json;
+          p_normalized_data: Json;
+          p_provider_id: string;
+        };
+        Returns: boolean;
       };
       phase10_write_system_audit: {
         Args: {
@@ -3002,6 +3034,39 @@ export type Database = {
       provider_payload_has_sensitive_key: {
         Args: { p_value: Json };
         Returns: boolean;
+      };
+      realignment1_claim_query_job: {
+        Args: {
+          p_lease_duration_ms?: number;
+          p_target_job_id: string;
+          p_worker_id: string;
+        };
+        Returns: {
+          attempt_number: number;
+          capability: string;
+          correlation_id: string;
+          execution_id: string;
+          job_id: string;
+          job_kind: string;
+          lease_expires_at: string;
+          lease_token: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          subject_ref: string;
+        }[];
+      };
+      realignment1_request_process_refresh: {
+        Args: { p_process_id: string };
+        Returns: {
+          created_at: string;
+          is_reused: boolean;
+          job_id: string;
+          office_id: string;
+          process_id: string;
+          status: string;
+        }[];
       };
       record_invite_audit_internal: {
         Args: {

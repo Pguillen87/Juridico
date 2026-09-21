@@ -56,6 +56,7 @@ const METADATA_KEYS = new Set([
   'adapterVersion',
   'contractVersion',
   'observedAt',
+  'sourceUpdatedAt',
   'durationMs',
 ]);
 const DATA_KEYS = new Set([
@@ -215,7 +216,7 @@ function evidence(value: unknown): void {
   nonEmpty(value.evidenceRef, 'Evidência de provider inválida.');
   allowlisted(
     value.evidenceType,
-    ['manual_note', 'synthetic_fixture'],
+    ['manual_note', 'synthetic_fixture', 'provider_response'],
     'Evidência de provider inválida.'
   );
   isoDate(value.observedAt, 'Evidência de provider inválida.');

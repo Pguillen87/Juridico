@@ -71,7 +71,7 @@ async function openProcesses(page: Page) {
   await page.goto('/app/processos', { waitUntil: 'networkidle' });
   await page.reload({ waitUntil: 'networkidle' });
   await expect(
-    page.getByRole('heading', { name: 'Processos e importação CSV' })
+    page.getByRole('heading', { name: 'Processos da carteira' })
   ).toBeVisible();
 }
 
@@ -105,7 +105,7 @@ test.describe('Fase 6 — processos, vínculos e CSV', () => {
       .first();
     await expect(processArticle).toBeVisible();
     await expect(
-      processArticle.getByText('Monitoramento: paused')
+      processArticle.getByText('Este processo ainda não foi atualizado.')
     ).toBeVisible();
 
     await selectOptionByText(processArticle.getByLabel('Parte'), partyName);
@@ -253,5 +253,107 @@ test.describe('Fase 6 — processos, vínculos e CSV', () => {
     await login(page, 'auditor@example.test');
     await page.goto('/app/processos');
     await expect(page).toHaveURL(/\/app\?error=forbidden$/);
+  });
+
+  test('Realinhamento 1 — lawyer aciona "Atualizar agora" em processo público ativo', async ({
+    page,
+  }) => {
+    const suffix = Date.now().toString();
+    const clientName = `Cliente R1 ${suffix}`;
+    const partyName = `Parte R1 ${suffix}`;
+    const processCnj = syntheticCnj();
+    const processCanonical = processCnj.replace(/\D/g, '');
+
+    await login(page, 'lawyer@example.test');
+    await createClientAndParty(page, clientName, partyName);
+    await openProcesses(page);
+
+    await selectOptionByText(
+      page.locator('select[name="clientId"]'),
+      clientName
+    );
+    await page.getByLabel('Número CNJ').fill(processCnj);
+    await page.getByLabel('Tribunal').fill('TJPR');
+    await page.getByRole('button', { name: 'Cadastrar processo' }).click();
+
+    const processCard = page
+      .locator('article')
+      .filter({ hasText: processCanonical })
+      .first();
+    await expect(processCard).toBeVisible();
+
+    const refreshButton = processCard.getByRole('button', {
+      name: 'Atualizar agora',
+    });
+    await expect(refreshButton).toBeVisible();
+    await expect(refreshButton).toBeEnabled();
+
+    await refreshButton.click();
+
+    await expect(
+      processCard.getByRole('button', {
+        name: /Atualizar agora|Tentar novamente/,
+      })
+    ).toBeVisible();
+  });
+
+  test('Realinhamento 1 — processo sigiloso não exibe botão de atualização manual', async ({
+    page,
+  }) => {
+    const suffix = (Date.now() + 1).toString();
+    const clientName = `Cliente Sigiloso R1 ${suffix}`;
+    const partyName = `Parte Sigilosa R1 ${suffix}`;
+    const processCnj = syntheticCnj();
+    const processCanonical = processCnj.replace(/\D/g, '');
+
+    await login(page, 'lawyer@example.test');
+    await createClientAndParty(page, clientName, partyName);
+    await openProcesses(page);
+
+    await selectOptionByText(
+      page.locator('select[name="clientId"]'),
+      clientName
+    );
+    await page.getByLabel('Número CNJ').fill(processCnj);
+    await page.getByLabel('Tribunal').fill('TJPR');
+    await page
+      .locator('select[name="isPublic"]')
+      .selectOption({ label: 'Sigiloso' });
+    await page.getByRole('button', { name: 'Cadastrar processo' }).click();
+
+    const processCard = page
+      .locator('article')
+      .filter({ hasText: processCanonical })
+      .first();
+    await expect(processCard).toBeVisible();
+
+    await expect(
+      processCard.getByRole('button', { name: 'Atualizar agora' })
+    ).toHaveCount(0);
+    await expect(
+      processCard.locator('p').filter({ hasText: /· Sigiloso ·/ })
+    ).toBeVisible();
+  });
+
+  test('Realinhamento 1 — responsividade em viewports 360, 390, 768 e 1440', async ({
+    page,
+  }) => {
+    await login(page, 'lawyer@example.test');
+    await page.goto('/app/processos');
+
+    for (const width of [360, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      await expect(
+        page.getByRole('heading', { name: 'Processos da carteira' })
+      ).toBeVisible();
+
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      const clientWidth = await page.evaluate(
+        () => document.documentElement.clientWidth
+      );
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 20);
+    }
   });
 });

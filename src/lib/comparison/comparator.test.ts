@@ -235,4 +235,63 @@ describe('comparison core', () => {
       canonicalizeComparison({ a: { c: true, d: 'x' }, b: 2 })
     );
   });
+
+  it('compara snapshots de datajud_public sem partes nem sistema com sucesso', () => {
+    const publicData1 = {
+      processRef: '0000001-23.2023.8.26.0100',
+      tribunal: 'TJSP',
+      movements: [
+        {
+          movementRef: 'mov-1',
+          date: '2026-08-01T10:00:00.000Z',
+          description: 'Distribuição',
+          missingFields: [],
+        },
+      ],
+    };
+
+    const publicData2 = {
+      processRef: '0000001-23.2023.8.26.0100',
+      tribunal: 'TJSP',
+      movements: [
+        {
+          movementRef: 'mov-1',
+          date: '2026-08-01T10:00:00.000Z',
+          description: 'Distribuição',
+          missingFields: [],
+        },
+        {
+          movementRef: 'mov-2',
+          date: '2026-09-01T14:00:00.000Z',
+          description: 'Despacho Proferido',
+          missingFields: [],
+        },
+      ],
+    };
+
+    const prev = makeSnapshot(
+      {
+        id: 'snap-public-1',
+        providerId: 'datajud_public',
+        missingFields: ['parties', 'system'],
+      },
+      publicData1
+    );
+
+    const curr = makeSnapshot(
+      {
+        id: 'snap-public-2',
+        providerId: 'datajud_public',
+        missingFields: ['parties', 'system'],
+        createdAt: '2026-09-02T10:00:00.000Z',
+      },
+      publicData2
+    );
+
+    const result = compareSnapshots(prev, curr);
+    expect(result.result).toBe('changed');
+    expect(result.reasonCode).toBeNull();
+    expect(result.changedFields).toEqual(['/movements/by-ref/mov-2']);
+    expect(result.normalizedDiff.entries[0].changeType).toBe('movement_added');
+  });
 });

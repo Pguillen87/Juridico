@@ -329,16 +329,67 @@ function normalizeData(
   return normalized;
 }
 
-function snapshotHasIncompleteFields(snapshot: ComparisonSnapshot): boolean {
-  const topLevel = normalizedMissingFields(snapshot.missingFields);
-  if (topLevel.length > 0) return true;
-  const data = normalizeData(snapshot.normalizedData);
-  if (!data.tribunal || !data.system || !data.movements || !data.parties)
-    return true;
+export interface ComparisonProfile {
+  readonly requiredTopLevelFields: readonly string[];
+  readonly requiredProcessFields: readonly string[];
+  readonly compareParties: boolean;
+  readonly compareSystem: boolean;
+}
+
+const COMPARISON_PROFILES: Record<string, ComparisonProfile> = {
+  datajud_sandbox: {
+    requiredTopLevelFields: ['tribunal', 'system', 'movements', 'parties'],
+    requiredProcessFields: ['tribunal', 'system', 'movements', 'parties'],
+    compareParties: true,
+    compareSystem: true,
+  },
+  datajud_public: {
+    requiredTopLevelFields: ['tribunal', 'movements'],
+    requiredProcessFields: ['tribunal', 'movements'],
+    compareParties: false,
+    compareSystem: false,
+  },
+};
+
+export function getComparisonProfile(providerId: string): ComparisonProfile {
   return (
-    data.movements.some((movement) => movement.missingFields.length > 0) ||
-    data.parties.some((party) => party.missingFields.length > 0)
+    COMPARISON_PROFILES[providerId] ?? {
+      requiredTopLevelFields: ['tribunal', 'system', 'movements', 'parties'],
+      requiredProcessFields: ['tribunal', 'system', 'movements', 'parties'],
+      compareParties: true,
+      compareSystem: true,
+    }
   );
+}
+
+function snapshotHasIncompleteFields(snapshot: ComparisonSnapshot): boolean {
+  const profile = getComparisonProfile(snapshot.providerId);
+  const topLevel = normalizedMissingFields(snapshot.missingFields);
+  if (
+    topLevel.some((field) => profile.requiredTopLevelFields.includes(field))
+  ) {
+    return true;
+  }
+  const data = normalizeData(snapshot.normalizedData);
+  if (profile.requiredProcessFields.includes('tribunal') && !data.tribunal)
+    return true;
+  if (profile.requiredProcessFields.includes('system') && !data.system)
+    return true;
+  if (profile.requiredProcessFields.includes('movements') && !data.movements)
+    return true;
+  if (profile.requiredProcessFields.includes('parties') && !data.parties)
+    return true;
+
+  if (
+    profile.compareParties &&
+    data.parties?.some((party) => party.missingFields.length > 0)
+  ) {
+    return true;
+  }
+  if (data.movements?.some((movement) => movement.missingFields.length > 0)) {
+    return true;
+  }
+  return false;
 }
 
 function outputFor(
@@ -554,6 +605,7 @@ export function compareSnapshots(
     );
   }
 
+  const profile = getComparisonProfile(current.providerId);
   const before = normalizeData(previous.normalizedData);
   const after = normalizeData(current.normalizedData);
   if (before.processRef !== after.processRef) {
@@ -561,7 +613,9 @@ export function compareSnapshots(
   }
   const entries: ComparisonDiffEntry[] = [];
   compareScalar(entries, '/tribunal', before.tribunal, after.tribunal);
-  compareScalar(entries, '/system', before.system, after.system);
+  if (profile.compareSystem) {
+    compareScalar(entries, '/system', before.system, after.system);
+  }
   compareKeyedCollection(
     entries,
     before.movements ?? [],
@@ -573,17 +627,19 @@ export function compareSnapshots(
     'movement_updated',
     ['date', 'description']
   );
-  compareKeyedCollection(
-    entries,
-    before.parties ?? [],
-    after.parties ?? [],
-    'partyRef',
-    '/parties',
-    'party_added',
-    'party_removed',
-    'party_updated',
-    ['role']
-  );
+  if (profile.compareParties) {
+    compareKeyedCollection(
+      entries,
+      before.parties ?? [],
+      after.parties ?? [],
+      'partyRef',
+      '/parties',
+      'party_added',
+      'party_removed',
+      'party_updated',
+      ['role']
+    );
+  }
   entries.sort((left, right) => left.path.localeCompare(right.path));
   return outputFor(
     version,
