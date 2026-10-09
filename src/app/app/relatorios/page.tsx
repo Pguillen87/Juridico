@@ -7,10 +7,6 @@ function textParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
 
-function shortId(value: string | null): string {
-  return value ? value.slice(0, 8) : '—';
-}
-
 function formatDate(value: string | null): string {
   return value ? new Date(value).toLocaleString('pt-BR') : '—';
 }
@@ -75,7 +71,7 @@ export default async function ReportsPage({
                 className="text-slate-700 hover:text-sky-700"
                 href="/app/clientes"
               >
-                Clientes e partes
+                Clientes
               </Link>
               <Link
                 className="text-slate-700 hover:text-sky-700"
@@ -227,9 +223,7 @@ export default async function ReportsPage({
                       · {report.timezone}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Relatório {shortId(report.id)} · versão atual{' '}
-                      {shortId(report.current_version_id)} · atualizado{' '}
-                      {formatDate(report.updated_at)}
+                      Atualizado {formatDate(report.updated_at)}
                     </p>
                   </div>
                   <Link
@@ -243,7 +237,9 @@ export default async function ReportsPage({
                   <div className="rounded-md bg-slate-50 p-3">
                     <dt className="text-slate-500">Versão aprovada</dt>
                     <dd className="font-semibold text-slate-950">
-                      {shortId(report.approved_version_id)}
+                      {report.approved_version_id
+                        ? 'Disponível'
+                        : 'Não aprovado'}
                     </dd>
                   </div>
                   <div className="rounded-md bg-slate-50 p-3">

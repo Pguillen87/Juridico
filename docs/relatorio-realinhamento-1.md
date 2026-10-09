@@ -31,6 +31,14 @@ O **Realinhamento 1** implementa localmente o fluxo vertical de atualização so
 5. **Testes Automatizados**:
    - Os testes unitários, de integração, banco e E2E usam dados sintéticos e fixture HTTP local, sem chamadas de rede externas.
 
+6. **Extensão da carteira**:
+   - `20260921152859_client_portfolio_batch_refresh.sql` adiciona o lote pai,
+     jobs filhos, progresso protegido por RLS e detalhes sob demanda.
+   - A action **Atualizar carteira** somente enfileira processos públicos e
+     ativos já vinculados ao cliente; não executa descoberta por CPF/CNPJ.
+   - O read model expõe metadados documentados, último andamento e estado da
+     consulta sem renderizar provider, job, lease, snapshot ou UUID técnico.
+
 ## Limites de produto
 
 - A primeira versão operacional é centrada em cliente, carteira, processos

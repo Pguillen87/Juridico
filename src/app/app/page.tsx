@@ -43,7 +43,7 @@ export default async function AppPage() {
                 className="text-slate-700 hover:text-sky-700"
                 href="/app/clientes"
               >
-                Clientes e partes
+                Clientes
               </Link>
               <Link
                 className="text-slate-700 hover:text-sky-700"
@@ -143,8 +143,8 @@ export default async function AppPage() {
                 Operação de processos
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Cadastre processos, revise vínculos pendentes e importe um CSV
-                com prévia transacional.
+                Cadastre processos, consulte a carteira e importe um CSV com
+                prévia transacional.
               </p>
               <Link
                 className="mt-5 inline-flex rounded-md bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800"
@@ -154,12 +154,10 @@ export default async function AppPage() {
               </Link>
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-              <h2 className="text-lg font-semibold text-slate-950">
-                Clientes e partes
-              </h2>
+              <h2 className="text-lg font-semibold text-slate-950">Clientes</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Cadastre clientes, partes relacionadas e gerencie vínculos do
-                seu escritório.
+                Cadastre clientes, acompanhe a quantidade de processos e abra
+                cada carteira em uma grade simples.
               </p>
               <Link
                 className="mt-5 inline-flex rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800"

@@ -80,7 +80,7 @@ export default async function FailuresPage({
                 className="text-slate-700 hover:text-sky-700"
                 href="/app/clientes"
               >
-                Clientes e partes
+                Clientes
               </Link>
               <Link className="font-semibold text-sky-700" href="/app/falhas">
                 Central de falhas

@@ -117,6 +117,17 @@ describe('DataJud Public Adapter', () => {
             _source: {
               numeroProcesso: '00000012320238260100',
               siglaTribunal: 'TJSP',
+              dataAjuizamento: '2026-01-10',
+              grau: 'G1',
+              nivelSigilo: 0,
+              formato: { codigo: 1, nome: 'Eletrônico' },
+              sistema: { codigo: 1, nome: 'PJe' },
+              classe: { codigo: 1116, nome: 'Ação de cobrança' },
+              assuntos: [{ codigo: 1234, nome: 'Obrigações' }],
+              orgaoJulgador: {
+                codigo: 100,
+                nome: '1ª Vara Cível',
+              },
               dataHoraUltimaAtualizacao: '2026-09-01T15:30:00.000Z',
               movimentos: [
                 {
@@ -148,9 +159,24 @@ describe('DataJud Public Adapter', () => {
     expect(result.status).toBe('observed');
     expect(result.provider.providerId).toBe(DATAJUD_PUBLIC_PROVIDER_ID);
     expect(result.data.tribunal).toBe('TJSP');
+    expect(result.data.basicData).toEqual({
+      filingDate: '2026-01-10T00:00:00.000Z',
+      degree: 'G1',
+      secrecyLevel: '0',
+      format: { code: '1', name: 'Eletrônico' },
+      system: { code: '1', name: 'PJe' },
+      processClass: { code: '1116', name: 'Ação de cobrança' },
+      subjects: [{ code: '1234', name: 'Obrigações' }],
+      court: { code: '100', name: '1ª Vara Cível' },
+    });
     expect(result.data.movements).toHaveLength(1);
+    expect(result.data.movements?.[0]).toMatchObject({
+      code: '60',
+      type: 'Expedição de Termo',
+      court: { code: '100', name: '1ª Vara Cível' },
+    });
     expect(result.data.movements?.[0].description).toBe('Expedição de Termo');
-    expect(result.missingFields).toEqual(['parties', 'system']);
+    expect(result.missingFields).toEqual(['parties']);
     expect(result.sourceMetadata.sourceUpdatedAt).toBe(
       '2026-09-01T15:30:00.000Z'
     );

@@ -11,3 +11,10 @@ test-results/
 
 # Supabase local runtime artifacts; source migrations and tests remain formatted/tracked.
 supabase/.temp/**
+
+# Local checkouts and generated lawyer review artifacts.
+Juridico-git-tmp/**
+Juridico-phase3-ci-2/**
+Juridico-phase8-run/**
+Juridico-phase9-run/**
+outputs/**

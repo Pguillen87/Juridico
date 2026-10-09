@@ -14,6 +14,9 @@ import {
 
 const localEnv = readLocalSupabaseEnv();
 applyLocalSupabaseEnv(localEnv);
+const authE2ePort = process.env.AUTH_E2E_PORT ?? '3000';
+const authE2eBaseUrl =
+  process.env.AUTH_E2E_BASE_URL ?? `http://localhost:${authE2ePort}`;
 
 function run(commandLine, command, args) {
   if (process.platform === 'win32') {
@@ -43,7 +46,7 @@ const previousEnvLocal = hadEnvLocal
 const envLocalContents = [
   `NEXT_PUBLIC_SUPABASE_URL=${localEnv.API_URL}`,
   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${localEnv.ANON_KEY}`,
-  'NEXT_PUBLIC_SITE_URL=http://localhost:3000',
+  `NEXT_PUBLIC_SITE_URL=${authE2eBaseUrl}`,
   `JURIDICO_E2E_PASSWORD=${process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!'}`,
   '',
 ].join('\n');
@@ -101,7 +104,8 @@ try {
         process.env.PLAYWRIGHT_START_COMMAND =
           'node .next/standalone/server.js';
         process.env.HOSTNAME = 'localhost';
-        process.env.PORT = '3000';
+        process.env.PORT = authE2ePort;
+        process.env.PLAYWRIGHT_BASE_URL = authE2eBaseUrl;
         process.env.PLAYWRIGHT_REUSE_SERVER = 'false';
         process.env.JURIDICO_E2E_PASSWORD =
           process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';

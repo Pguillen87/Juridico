@@ -149,9 +149,16 @@ rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260920000001_client_portfol
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260905000001_realignment1_manual_refresh.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260921152859_client_portfolio_batch_refresh.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260922013204_process_deactivation_visibility.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260922200803_portfolio_grid_filters.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/migrations/20260922202628_portfolio_grid_read_model_fields.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
 rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/20_client_portfolio_batch_refresh.test.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/21_client_process_deactivation.test.sql"
+rm -f "${FULL_F12_PROJECT_DIR}/supabase/tests/database/22_portfolio_grid_filters.test.sql"
 run_supabase db reset --local --workdir "${FULL_F12_PROJECT_DIR}" --yes >/dev/null
 wait_for_supabase_readiness "${ROOT_DIR}"
 full_fingerprint="$(fingerprint "${FULL_F12_PROJECT_DIR}")"
@@ -171,9 +178,16 @@ rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000001_client_portfolio_re
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260905000001_realignment1_manual_refresh.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260921152859_client_portfolio_batch_refresh.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260922013204_process_deactivation_visibility.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260922200803_portfolio_grid_filters.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260922202628_portfolio_grid_read_model_fields.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/20_client_portfolio_batch_refresh.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/21_client_process_deactivation.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/22_portfolio_grid_filters.test.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 wait_for_supabase_readiness "${ROOT_DIR}"
 
@@ -185,7 +199,7 @@ cp "${ROOT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_harde
   "${PRE_F12_PROJECT_DIR}/supabase/migrations/20260827000006_phase_12_weekly_reports_hardening.sql"
 
 echo 'phase12-upgrade=apply-00005-and-00006'
-run_supabase db push --local --workdir "${PRE_F12_PROJECT_DIR}" --yes >/dev/null
+run_supabase db push --local --workdir "${PRE_F12_PROJECT_DIR}" --yes --include-all >/dev/null
 versions="$(migration_versions "${PRE_F12_PROJECT_DIR}")"
 if ! grep -Fq '20260827000005' <<<"${versions}" || ! grep -Fq '20260827000006' <<<"${versions}"; then
   echo 'As migrations 00005 e 00006 não foram aplicadas no caminho incremental.' >&2

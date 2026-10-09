@@ -2,12 +2,21 @@
 
 Aplicação web para acompanhamento rastreável da carteira de processos de um escritório.
 
-## Estado atual: carteira conhecida e consulta individual
+## Estado atual: carteira conhecida, consulta e atualização em lote
 
 O produto atual trabalha com clientes e processos cadastrados manualmente. Cada
 processo conhecido pode ser consultado individualmente pelo CNJ, normalizado,
-comparado com a consulta anterior e incluído em relatório. A fundação de
-identidade, autorização, Supabase, RLS e testes continua sendo reutilizada.
+comparado com a consulta anterior e incluído em relatório. A carteira também
+permite solicitar uma atualização única para todos os processos públicos e
+ativos do cliente; cada processo continua sendo executado individualmente pelo
+worker. A fundação de identidade, autorização, Supabase, RLS e testes continua
+sendo reutilizada.
+
+A tela operacional de processos é uma grade simples, semelhante a uma
+planilha: busca, filtros, inclusão, seleção e exportação compatível com Excel.
+As colunas principais mantêm uma informação por célula; campos técnicos podem
+ser habilitados em `Colunas` quando necessário. Partes e vínculos continuam
+preservados no domínio e no histórico, mas não aparecem na operação principal.
 
 ## Requisitos
 
@@ -15,6 +24,8 @@ identidade, autorização, Supabase, RLS e testes continua sendo reutilizada.
 - Docker e Docker Compose (para execução local via contêineres e Supabase CLI)
 - Chave do DataJud não é necessária para os testes locais; o provider público
   permanece explicitamente não configurado até uma homologação autorizada.
+- Os testes E2E usam somente a fixture HTTP local em `127.0.0.1:54325` e CNJs
+  sintéticos. Nenhuma consulta live ao DataJud é feita por esta versão.
 
 ## Desenvolvimento local com Supabase
 
@@ -79,12 +90,14 @@ A aplicação Next.js também está configurada para rodar localmente utilizando
 - `npm run test`: Executa os testes unitários com Vitest.
 - `npm run e2e`: Executa os testes E2E com Playwright.
 
-## Consulta individual e escopo futuro
+## Consulta individual, carteira e escopo futuro
 
-O Realinhamento 1 prepara a consulta individual de um processo conhecido.
-O DataJud foi testado localmente com mocks injetados nos testes, mas não foi
-testado live. Descoberta de processos por CPF/CNPJ é evolução futura e depende
-de uma fonte externa ainda não definida; não é implementada nesta versão.
+O Realinhamento 1 prepara a consulta individual de um processo conhecido. A
+carteira agrega quantidade, lista resumida, último andamento, novidades,
+histórico separado e atualização assíncrona em lote. O DataJud foi testado
+localmente com mocks e fixture HTTP explícitos, mas não foi testado live.
+Descoberta de processos por CPF/CNPJ é evolução futura e depende de uma fonte
+externa ainda não definida; não é implementada nesta versão.
 
 ## CI/CD
 

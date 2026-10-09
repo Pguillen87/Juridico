@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "Juridico-git-tmp",
+    "Juridico-phase3-ci-2",
+    "Juridico-phase8-run",
+    "Juridico-phase9-run"
+  ]
 }

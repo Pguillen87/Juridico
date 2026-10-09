@@ -25,12 +25,23 @@ cliente → processos manuais → consulta CNJ individual → novidades → rela
 ## Produto atual
 
 - Cliente já cadastrado possui processos conhecidos vinculados por `client_id`.
-- A carteira mostra quantidade, lista, situação, última consulta, novidades e
-  a ação **Atualizar agora** por processo.
+- A carteira mostra quantidade, lista em formato tabular, metadados disponíveis,
+  último andamento, situação do cadastro, última consulta, novidades e as ações
+  **Atualizar agora** por processo e **Atualizar carteira** por cliente.
+- A tela principal usa uma grade horizontal/vertical semelhante a uma planilha,
+  com uma informação por célula, busca, filtros, seleção e exportação CSV
+  compatível com Excel. Não há colunas congeladas nem agrupamentos expansíveis
+  dentro das linhas.
+- A operação principal não exibe partes, vínculos ou IDs técnicos. O domínio,
+  as tabelas, RPCs, auditoria, relatórios e testes históricos de partes são
+  preservados para rastreabilidade e compatibilidade.
+- Os detalhes completos e o histórico de movimentações são carregados sob
+  demanda; a atualização da carteira cria jobs individuais por processo.
 - O Realinhamento 1 consulta um único processo conhecido, normaliza, cria
   snapshot, compara e alimenta o read model.
 - CPF/CNPJ e descoberta automática de processos: **DEFERIDO / EVOLUÇÃO FUTURA**.
 - DataJud Público: **IMPLEMENTADO LOCALMENTE / TESTADO COM MOCK / NÃO TESTADO LIVE**.
+- Fixture HTTP E2E: **LOCAL / SINTÉTICA / LIMITADA A 127.0.0.1 / SEM DADOS REAIS**.
 
 ## Baseline aprovada
 
@@ -39,7 +50,7 @@ cliente → processos manuais → consulta CNJ individual → novidades → rela
 ## Branch/fase atualmente em desenvolvimento
 
 - **Branch**: `phase-13-pdf-delivery`
-- **HEAD inicial verificado**: `4e007069e48e18e245bb7483b845658d705de3b3`
+- **HEAD inicial desta execução**: `bfadb594b65a55d6cfc915d33f2c4509b99a4e77`
 - **SHA técnico aprovado F13**: `4240cff95db072d7c742f4615f18b64cd89473ac`
 - **Fase**: Fase 13 (PDF local + armazenamento privado + entrega fake/local). **ENCERRADA**.
 
@@ -48,6 +59,8 @@ cliente → processos manuais → consulta CNJ individual → novidades → rela
 - Fase 1 a Fase 12: IMPLEMENTADO, TESTADO e ENCERRADO.
 - **Fase 13**: IMPLEMENTADA, TESTADA e ENCERRADA no escopo local/sandbox. CI técnico run **33913819841** (Run #207, SHA `4240cff95db072d7c742f4615f18b64cd89473ac`) concluiu `success`.
 - **Realinhamento 1 (Consulta de Processo / DataJud)**: IMPLEMENTADO LOCALMENTE / TESTADO COM MOCK / NÃO PUBLICADO / NÃO TESTADO LIVE. É a consulta individual de processo conhecido, não a UX final de descoberta de carteira.
+- **Carteira em lote**: IMPLEMENTADA LOCALMENTE como atualização assíncrona de
+  processos públicos e ativos já cadastrados; não é descoberta por CPF/CNPJ.
 - **Fase 14**: NÃO INICIADA (proibido iniciar nesta sessão; próxima ação é planejamento próprio da Fase 14 somente após autorização humana).
 
 ## Invariantes críticos
@@ -85,7 +98,7 @@ cliente → processos manuais → consulta CNJ individual → novidades → rela
 - `npm run lint`, `npm run typecheck`, `npm run test`, `npm run build`.
 - Scripts de validação de histórico de migração (`check-phase*-migration-history.sh`).
 - Testes de upgrade e concorrência no PostgreSQL (`test-phase*-migration-upgrade.sh`, pgTAP, scripts bash/ps1).
-- Playwright E2E: suíte `chromium` para autenticação histórica (`npm run auth:e2e`) e suíte `phase13` para entrega de PDF (`tests-e2e/phase13-delivery.spec.ts`).
+- Playwright E2E: suíte `chromium` para autenticação histórica (`npm run auth:e2e`), suíte `phase13` para entrega de PDF (`tests-e2e/phase13-delivery.spec.ts`) e carteira/R1 (`tests-e2e/portfolio.spec.ts`).
 
 ## Estado atual da Fase 13
 

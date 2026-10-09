@@ -11,6 +11,13 @@ import {
   type ParsedCsv,
 } from '@/lib/processes/csv';
 import { normalizeName } from '@/lib/processes/names';
+import { getDataJudConfiguration } from '@/lib/providers/datajud-config-core';
+import {
+  getClientPortfolioProcessDetail,
+  getClientPortfolioRefreshProgress,
+  type ClientPortfolioProcessDetail,
+  type ClientPortfolioRefreshProgress,
+} from '@/lib/clients/portfolio';
 
 const processSchema = z.object({
   clientId: z.string().uuid(),
@@ -118,6 +125,40 @@ const refreshSchema = z.object({
   processId: z.string().uuid(),
 });
 
+const portfolioRefreshSchema = z.object({
+  clientId: z.string().uuid(),
+});
+
+const selectedProcessesRefreshSchema = z
+  .array(z.string().uuid())
+  .min(1)
+  .max(200);
+
+export type PortfolioRefreshActionResult =
+  | {
+      success: true;
+      state: 'queued' | 'already_running';
+      eligibleCount: number;
+      skippedCount: number;
+    }
+  | {
+      success: false;
+      state: 'not_configured' | 'permission_denied' | 'technical_failure';
+      message: string;
+    };
+
+export type PortfolioProgressActionResult =
+  | { success: true; progress: ClientPortfolioRefreshProgress | null }
+  | { success: false; message: string };
+
+export type PortfolioBatchRunActionResult =
+  | { success: true; progress: ClientPortfolioRefreshProgress | null }
+  | { success: false; message: string };
+
+export type PortfolioProcessDetailActionResult =
+  | { success: true; detail: ClientPortfolioProcessDetail | null }
+  | { success: false; message: string };
+
 export async function requestProcessRefreshAction(formData: FormData) {
   try {
     await requirePermission('manage_monitoring', {
@@ -146,12 +187,18 @@ export async function requestProcessRefreshAction(formData: FormData) {
       try {
         const { runMonitoringWorkerOnce } =
           await import('@/lib/monitoring/worker');
-        await runMonitoringWorkerOnce({ targetJobId: job.job_id });
+        const workerResult = await runMonitoringWorkerOnce({
+          targetJobId: job.job_id,
+        });
+        if (workerResult.status === 'stale_or_rejected') {
+          return { error: 'Não foi possível concluir a consulta.' };
+        }
       } catch (workerErr) {
         console.error(
           'Falha ao executar worker síncrono para o job alvo:',
           workerErr
         );
+        return { error: 'Não foi possível concluir a consulta.' };
       }
     }
 
@@ -162,6 +209,332 @@ export async function requestProcessRefreshAction(formData: FormData) {
   } catch (error) {
     return {
       error: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+export type SelectedProcessesRefreshActionResult =
+  | {
+      success: true;
+      selectedCount: number;
+      completedCount: number;
+      failedCount: number;
+    }
+  | {
+      success: false;
+      state: 'not_configured' | 'permission_denied' | 'technical_failure';
+      message: string;
+    };
+
+async function runWithConcurrency<T>(
+  values: readonly string[],
+  concurrency: number,
+  task: (value: string) => Promise<T>
+) {
+  const results = new Array<T>(values.length);
+  let nextIndex = 0;
+
+  async function consume() {
+    while (nextIndex < values.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await task(values[currentIndex]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, values.length) }, () =>
+      consume()
+    )
+  );
+  return results;
+}
+
+export async function requestSelectedProcessesRefreshAction(
+  formData: FormData
+): Promise<SelectedProcessesRefreshActionResult> {
+  try {
+    await requirePermission('manage_monitoring', {
+      redirectOnDenied: false,
+    });
+    const processIds = Array.from(
+      new Set(
+        formData
+          .getAll('processId')
+          .filter((value): value is string => typeof value === 'string')
+      )
+    );
+    const parsed = selectedProcessesRefreshSchema.safeParse(processIds);
+    if (!parsed.success) {
+      return {
+        success: false,
+        state: 'technical_failure',
+        message: 'Selecione pelo menos um processo válido para atualizar.',
+      };
+    }
+    const configuration = getDataJudConfiguration();
+    if (configuration.mode !== 'live') {
+      return {
+        success: false,
+        state: 'not_configured',
+        message:
+          'A consulta da fonte ainda não está configurada neste ambiente.',
+      };
+    }
+
+    const results = await runWithConcurrency(parsed.data, 2, async (id) => {
+      const request = new FormData();
+      request.set('processId', id);
+      return requestProcessRefreshAction(request);
+    });
+    const failedCount = results.filter(
+      (result) => !('success' in result && result.success)
+    ).length;
+    const completedCount = results.length - failedCount;
+    if (completedCount === 0) {
+      return {
+        success: false,
+        state: 'technical_failure',
+        message: 'Não foi possível atualizar os processos selecionados.',
+      };
+    }
+    revalidatePath('/app');
+    revalidatePath('/app/clientes');
+    revalidatePath('/app/processos');
+    return {
+      success: true,
+      selectedCount: results.length,
+      completedCount,
+      failedCount,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      state: 'technical_failure',
+      message: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+export async function deactivateProcessAction(formData: FormData) {
+  try {
+    await requirePermission('create_process', { redirectOnDenied: false });
+    const parsed = refreshSchema.safeParse({
+      processId: formData.get('processId'),
+    });
+    if (!parsed.success) {
+      return { error: 'Informe um processo válido para exclusão.' };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase.rpc('deactivate_legal_process', {
+      p_id: parsed.data.processId,
+    });
+    if (error) return { error: safeError(error.message) };
+
+    revalidatePath('/app');
+    revalidatePath('/app/clientes');
+    revalidatePath('/app/processos');
+    return { success: true };
+  } catch (error) {
+    return {
+      error: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+export async function requestClientPortfolioRefreshAction(
+  formData: FormData
+): Promise<PortfolioRefreshActionResult> {
+  try {
+    await requirePermission('manage_monitoring', {
+      redirectOnDenied: false,
+    });
+    const parsed = portfolioRefreshSchema.safeParse({
+      clientId: formData.get('clientId'),
+    });
+    if (!parsed.success) {
+      return {
+        success: false,
+        state: 'technical_failure',
+        message: 'Selecione um cliente válido para atualizar a carteira.',
+      };
+    }
+    const configuration = getDataJudConfiguration();
+    if (configuration.mode !== 'live') {
+      return {
+        success: false,
+        state: 'not_configured',
+        message:
+          'A consulta da fonte ainda não está configurada neste ambiente.',
+      };
+    }
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc(
+      'realignment1_request_client_portfolio_refresh',
+      { p_client_id: parsed.data.clientId }
+    );
+    if (error) {
+      if (error.message.includes('permission denied')) {
+        return {
+          success: false,
+          state: 'permission_denied',
+          message: 'Você não tem autorização para atualizar esta carteira.',
+        };
+      }
+      return {
+        success: false,
+        state: 'technical_failure',
+        message: safeError(error.message),
+      };
+    }
+    const result = Array.isArray(data) ? data[0] : data;
+    if (
+      !result ||
+      (result.state !== 'queued' &&
+        result.state !== 'already_running' &&
+        result.state !== 'completed') ||
+      typeof result.eligible_count !== 'number' ||
+      typeof result.skipped_count !== 'number'
+    ) {
+      return {
+        success: false,
+        state: 'technical_failure',
+        message: 'Não foi possível iniciar a atualização da carteira.',
+      };
+    }
+    revalidatePath('/app');
+    revalidatePath('/app/clientes');
+    revalidatePath('/app/processos');
+    return {
+      success: true,
+      state: result.state === 'completed' ? 'already_running' : result.state,
+      eligibleCount: result.eligible_count,
+      skippedCount: result.skipped_count,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      state: 'technical_failure',
+      message: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+export async function getClientPortfolioRefreshProgressAction(
+  clientId: string
+): Promise<PortfolioProgressActionResult> {
+  try {
+    await requirePermission('view_operational_data', {
+      redirectOnDenied: false,
+    });
+    const parsed = portfolioRefreshSchema.shape.clientId.safeParse(clientId);
+    if (!parsed.success) {
+      return { success: false, message: 'Cliente inválido.' };
+    }
+    const supabase = await createClient();
+    const progress = await getClientPortfolioRefreshProgress(
+      supabase,
+      parsed.data
+    );
+    return { success: true, progress };
+  } catch (error) {
+    return {
+      success: false,
+      message: safeError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+export async function runClientPortfolioRefreshBatchAction(
+  clientId: string
+): Promise<PortfolioBatchRunActionResult> {
+  try {
+    await requirePermission('manage_monitoring', {
+      redirectOnDenied: false,
+    });
+    const parsed = portfolioRefreshSchema.shape.clientId.safeParse(clientId);
+    if (!parsed.success) {
+      return { success: false, message: 'Cliente inválido.' };
+    }
+
+    const supabase = await createClient();
+    const { data: batch, error: batchError } = await supabase
+      .from('process_refresh_batch')
+      .select('id,status')
+      .eq('client_id', parsed.data)
+      .in('status', ['queued', 'running'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (batchError || !batch) {
+      return {
+        success: false,
+        message: 'Não há uma atualização de carteira pendente.',
+      };
+    }
+
+    const { runMonitoringWorkerOnce } = await import('@/lib/monitoring/worker');
+    const workerIdPrefix = `portfolio-${Date.now()}`;
+    const maxRounds = 200;
+    for (let round = 0; round < maxRounds; round += 1) {
+      const results = await Promise.allSettled([
+        runMonitoringWorkerOnce({
+          batchId: batch.id,
+          workerId: `${workerIdPrefix}-1`,
+        }),
+        runMonitoringWorkerOnce({
+          batchId: batch.id,
+          workerId: `${workerIdPrefix}-2`,
+        }),
+      ]);
+      const failed = results.some((result) => result.status === 'rejected');
+      if (failed) break;
+      const idle = results.every(
+        (result) =>
+          result.status === 'fulfilled' && result.value.status === 'idle'
+      );
+      if (idle) break;
+    }
+
+    const progress = await getClientPortfolioRefreshProgress(
+      supabase,
+      parsed.data
+    );
+    revalidatePath('/app');
+    revalidatePath('/app/clientes');
+    revalidatePath('/app/processos');
+    return { success: true, progress };
+  } catch (error) {
+    console.error('Falha ao executar lote da carteira:', error);
+    return {
+      success: false,
+      message: 'Não foi possível concluir a atualização da carteira.',
+    };
+  }
+}
+
+export async function getClientPortfolioProcessDetailAction(
+  processId: string
+): Promise<PortfolioProcessDetailActionResult> {
+  try {
+    await requirePermission('view_operational_data', {
+      redirectOnDenied: false,
+    });
+    const parsed = refreshSchema.safeParse({ processId });
+    if (!parsed.success)
+      return { success: false, message: 'Processo inválido.' };
+    const supabase = await createClient();
+    const detail = await getClientPortfolioProcessDetail(
+      supabase,
+      parsed.data.processId
+    );
+    return { success: true, detail };
+  } catch (error) {
+    return {
+      success: false,
+      message: safeError(error instanceof Error ? error.message : undefined),
     };
   }
 }

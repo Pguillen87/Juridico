@@ -1,7 +1,8 @@
 import { createServer } from 'node:http';
 
 const HOST = '127.0.0.1';
-const PORT = 54322;
+// 54322 is reserved by the local Supabase PostgreSQL container on Windows.
+const PORT = 54325;
 const EXPECTED_AUTHORIZATION = 'APIKey TestOnly-Local-123!';
 const requestsByProcess = new Map();
 
@@ -61,6 +62,17 @@ function exactEnvelope(processNumber, includeNewMovement) {
           _source: {
             numeroProcesso: processNumber,
             siglaTribunal: 'TJSP',
+            dataAjuizamento: '2026-01-15T00:00:00.000Z',
+            grau: 'G1',
+            nivelSigilo: 0,
+            formato: { codigo: '1', nome: 'Eletrônico' },
+            sistema: { codigo: '2', nome: 'PJe' },
+            classe: { codigo: '1106', nome: 'Procedimento Comum Cível' },
+            assuntos: [{ codigo: '1234', nome: 'Direito sintético' }],
+            orgaoJulgador: {
+              codigo: '100',
+              nome: '1ª Vara Cível Sintética',
+            },
             dataHoraUltimaAtualizacao: includeNewMovement
               ? '2026-09-20T12:00:00.000Z'
               : '2026-09-20T10:00:00.000Z',

@@ -70,4 +70,57 @@ describe('client portfolio read model', () => {
       })
     ).toThrow('estado de processo');
   });
+
+  it('preserves process metadata and the most recent movement for the table', () => {
+    const model = parseClientPortfolioRow({
+      clientId: '00000000-0000-0000-0000-000000000001',
+      clientName: 'Cliente com detalhes',
+      processCount: 1,
+      noveltyCount: 0,
+      notUpdatedCount: 0,
+      failureCount: 0,
+      reviewCount: 0,
+      lastConsultedAt: '2026-09-20T12:00:00.000Z',
+      lastSourceUpdatedAt: '2026-09-20T11:00:00.000Z',
+      processes: [
+        {
+          processId: '00000000-0000-0000-0000-000000000002',
+          cnjNumber: '00000017320238260100',
+          tribunal: 'TJSP',
+          isPublic: true,
+          officeStatus: 'active',
+          sourceStatus: null,
+          monitoringState: 'unchanged',
+          processClass: 'Ação cível',
+          degree: '1',
+          court: '1ª Vara Cível',
+          filingDate: '2026-01-01T00:00:00.000Z',
+          secrecyLevel: '0',
+          system: 'PJe',
+          lastConsultedAt: '2026-09-20T12:00:00.000Z',
+          sourceUpdatedAt: '2026-09-20T11:00:00.000Z',
+          lastMovement: {
+            date: '2026-09-20T11:00:00.000Z',
+            code: '123',
+            type: 'Sentença',
+            description: 'Sentença disponibilizada',
+            court: '1ª Vara Cível',
+          },
+          hasNews: false,
+          newMovementCount: 0,
+          responsibleName: 'Advogado',
+          nextAction: 'Revisar sentença',
+        },
+      ],
+    });
+
+    expect(model.processes[0]).toMatchObject({
+      processClass: 'Ação cível',
+      degree: '1',
+      court: '1ª Vara Cível',
+      lastMovement: { type: 'Sentença', code: '123' },
+      responsibleName: 'Advogado',
+      nextAction: 'Revisar sentença',
+    });
+  });
 });

@@ -1,8 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const password = process.env.JURIDICO_E2E_PASSWORD ?? 'TestOnly-Local-123!';
+let sequence = 0;
 
-async function login(page: Page, email: string) {
+async function login(page: Page, email = 'lawyer@example.test') {
   await page.goto('/login');
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill(password);
@@ -10,350 +11,283 @@ async function login(page: Page, email: string) {
   await expect(page).toHaveURL(/\/app/);
 }
 
-async function createClientAndParty(
-  page: Page,
-  clientName: string,
-  partyName: string
-) {
-  await page.goto('/app/clientes');
-  await expect(
-    page.getByRole('heading', { name: 'Clientes, partes e vínculos' })
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Criar cliente' }).click();
-  await page.getByLabel('Nome').first().fill(clientName);
-  await page.getByLabel('Tipo').first().selectOption('person');
-  await page.getByRole('button', { name: 'Criar cliente' }).click();
-  const clientArticle = page
-    .locator('article')
-    .filter({ hasText: clientName })
-    .first();
-  await expect(
-    clientArticle.getByText(clientName, { exact: true })
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Criar parte' }).click();
-  await page.getByLabel('Nome').nth(1).fill(partyName);
-  await page.getByLabel('Tipo').nth(1).selectOption('person');
-  await page.getByRole('button', { name: 'Criar parte' }).click();
-  const partyRow = page
-    .locator('tbody tr')
-    .filter({ hasText: partyName })
-    .first();
-  await expect(partyRow.getByText(partyName, { exact: true })).toBeVisible();
-}
-
-async function selectOptionByText(select: Locator, text: string) {
-  const option = select.locator('option').filter({ hasText: text }).first();
-  await expect(option).toHaveCount(1, { timeout: 10_000 });
-  const value = await option.getAttribute('value');
-  if (!value) throw new Error(`Opção não encontrada: ${text}`);
-  await select.selectOption(value);
-}
-
 function formatSyntheticCnj(clean: string) {
   return `${clean.slice(0, 7)}-${clean.slice(7, 9)}.${clean.slice(9, 13)}.${clean.slice(13, 14)}.${clean.slice(14, 16)}.${clean.slice(16)}`;
 }
 
-function syntheticCnj() {
-  const sequence = String(1000000 + (Date.now() % 8000000)).padStart(7, '0');
-  const base = `${sequence}20268160000`;
-  const digits = String(
+function syntheticCnj(origin = '0001') {
+  sequence += 1;
+  const processSequence = String(
+    1000000 + ((Date.now() + sequence) % 8000000)
+  ).padStart(7, '0');
+  const base = `${processSequence}2026816${origin.padStart(4, '0')}`;
+  const checkDigits = String(
     98 - Number((BigInt(base) * BigInt(100)) % BigInt(97))
   ).padStart(2, '0');
-  return formatSyntheticCnj(`${sequence}${digits}20268160000`);
+  return formatSyntheticCnj(`${processSequence}${checkDigits}${base.slice(7)}`);
 }
 
-function invalidSyntheticCnj() {
-  const clean = syntheticCnj().replace(/\D/g, '');
-  return formatSyntheticCnj(`${clean.slice(0, 7)}00${clean.slice(9)}`);
+async function createClient(page: Page, name: string) {
+  await page.goto('/app/clientes', { waitUntil: 'networkidle' });
+  await page.getByLabel('Nome do cliente').fill(name);
+  await page.getByRole('button', { name: 'Criar cliente' }).click();
+  const card = page.locator('article').filter({ hasText: name }).first();
+  await expect(card.getByText(name, { exact: true })).toBeVisible();
+  const href = await card
+    .getByRole('link', { name: 'Abrir carteira' })
+    .getAttribute('href');
+  if (!href) throw new Error(`Carteira não encontrada para ${name}.`);
+  const clientId = new URL(href, 'http://localhost').searchParams.get(
+    'clientId'
+  );
+  if (!clientId) throw new Error(`Cliente sem identificador: ${name}.`);
+  return { card, clientId };
 }
 
-async function openProcesses(page: Page) {
-  await page.goto('/app/processos', { waitUntil: 'networkidle' });
-  await page.reload({ waitUntil: 'networkidle' });
-  await expect(
-    page.getByRole('heading', { name: 'Processos da carteira' })
-  ).toBeVisible();
+async function openProcessForm(page: Page, clientId: string) {
+  await page.goto(`/app/processos?clientId=${clientId}&add=1`, {
+    waitUntil: 'networkidle',
+  });
+  const form = page.getByTestId('process-create-form');
+  await expect(form.locator('select[name="clientId"]')).toHaveValue(clientId);
+  return form;
 }
 
-test.describe('Fase 6 — processos, vínculos e CSV', () => {
-  test.describe.configure({ mode: 'serial' });
+async function createProcess(
+  page: Page,
+  clientId: string,
+  cnj: string,
+  isPublic = true
+) {
+  const form = await openProcessForm(page, clientId);
+  await form.getByLabel('Número CNJ').fill(cnj);
+  await form.getByLabel('Tribunal').fill('TJSP');
+  await form.getByLabel('Sistema').fill('PJe');
+  if (!isPublic) {
+    await form.locator('select[name="isPublic"]').selectOption('private');
+  }
+  await form.getByRole('button', { name: 'Cadastrar processo' }).click();
+  const row = page
+    .locator(`tr[data-process-cnj="${cnj.replace(/\D/g, '')}"]`)
+    .first();
+  await expect(row).toBeVisible();
+  return row;
+}
 
-  test('lawyer cria processo, vínculo pending e executa confirmação e rejeição', async ({
+function processRow(page: Page, cnj: string): Locator {
+  return page
+    .locator(`tr[data-process-cnj="${cnj.replace(/\D/g, '')}"]`)
+    .first();
+}
+
+test.describe('Processos — carteira operacional', () => {
+  test.describe.configure({ mode: 'serial', timeout: 120_000 });
+
+  test('apresenta a grade como planilha, com células sem agrupamento', async ({
     page,
   }) => {
-    const suffix = Date.now().toString();
-    const clientName = `Cliente Processo E2E ${suffix}`;
-    const partyName = `Parte Processo E2E ${suffix}`;
-    const rejectedName = `Parte Rejeitada E2E ${suffix}`;
-    const processCnj = syntheticCnj();
-    const processCanonical = processCnj.replace(/\D/g, '');
-    await login(page, 'lawyer@example.test');
-    await createClientAndParty(page, clientName, partyName);
-    await openProcesses(page);
+    await login(page);
+    const client = await createClient(page, `Cliente grade ${Date.now()}`);
+    const cnj = syntheticCnj('0031');
+    await createProcess(page, client.clientId, cnj);
 
-    await selectOptionByText(
-      page.locator('select[name="clientId"]'),
-      clientName
+    const table = page.getByTestId('processes-spreadsheet');
+    const visibleHeaders = table.locator('thead th:not([hidden])');
+    await expect(visibleHeaders).toHaveText([
+      'Selecionar',
+      'Processo',
+      'Cliente',
+      'Status do cadastro',
+      'Visibilidade',
+      'Estado da consulta',
+      'Tribunal',
+      'Tipo do andamento',
+      'Data do andamento',
+      'Descrição do andamento',
+      'Última consulta',
+      'Atualização da fonte',
+      'Novas movimentações',
+      'Ações',
+    ]);
+
+    const row = processRow(page, cnj);
+    await expect(row.getByText('Ativo', { exact: true })).toHaveCount(1);
+    await expect(row.getByText('Público', { exact: true })).toHaveCount(1);
+    await expect(
+      row.getByText('Ainda não consultado', { exact: true })
+    ).toHaveCount(1);
+    await expect(page.getByText(/Partes|vínculos/i)).toHaveCount(0);
+    await expect(table.locator('tbody .sticky')).toHaveCount(0);
+    await expect(page.getByText('Ver detalhes e movimentações')).toHaveCount(0);
+
+    await page.locator('summary').filter({ hasText: 'Colunas' }).click();
+    const systemToggle = page.locator(
+      'input[data-portfolio-column-toggle="system"]'
     );
-    await page.getByLabel('Número CNJ').fill(processCnj);
-    await page.getByLabel('Tribunal').fill('TJPR');
-    await page.getByLabel('Sistema').fill('PJe');
-    await page.getByRole('button', { name: 'Cadastrar processo' }).click();
-    const processArticle = page
-      .locator('article')
-      .filter({ hasText: processCanonical })
-      .first();
-    await expect(processArticle).toBeVisible();
+    await expect(systemToggle).not.toBeChecked();
+    await systemToggle.check();
     await expect(
-      processArticle.getByText('Este processo ainda não foi atualizado.')
+      table.locator('thead th[data-portfolio-column="system"]')
     ).toBeVisible();
 
-    await selectOptionByText(processArticle.getByLabel('Parte'), partyName);
-    await processArticle.getByLabel('Papel').selectOption('plaintiff');
-    await processArticle
-      .getByRole('button', { name: 'Criar vínculo pendente' })
-      .click();
+    await row
+      .getByRole('checkbox', { name: `Selecionar processo ${cnj}` })
+      .check();
     await expect(
-      processArticle.getByText('confirmação: Pendente')
+      page.getByText('1 processo(s) selecionado(s)', { exact: true })
     ).toBeVisible();
-    await processArticle.getByRole('button', { name: 'Confirmar' }).click();
-    await expect(
-      processArticle.getByText('confirmação: Confirmado')
-    ).toBeVisible();
-
-    await page.goto('/app/clientes');
-    await page.getByRole('button', { name: 'Criar parte' }).click();
-    await page.getByLabel('Nome').nth(1).fill(rejectedName);
-    await page.getByLabel('Tipo').nth(1).selectOption('person');
-    await page.getByRole('button', { name: 'Criar parte' }).click();
-    await expect(page.getByText(rejectedName, { exact: true })).toBeVisible();
-    await openProcesses(page);
-    const refreshedProcess = page
-      .locator('article')
-      .filter({ hasText: processCanonical })
-      .first();
-    await selectOptionByText(
-      refreshedProcess.getByLabel('Parte'),
-      rejectedName
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Exportar para Excel' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(
+      /^carteira-processos-\d{4}-\d{2}-\d{2}\.csv$/
     );
-    await refreshedProcess.getByLabel('Papel').selectOption('defendant');
-    await refreshedProcess
-      .getByRole('button', { name: 'Criar vínculo pendente' })
+
+    const viewport = page.getByTestId('processes-spreadsheet-viewport');
+    await expect(viewport).toHaveCSS('overflow-x', 'scroll');
+    await expect(viewport).toHaveCSS('overflow-y', 'scroll');
+    await expect(
+      page.getByTestId('processes-spreadsheet-top-scroll')
+    ).toBeVisible();
+
+    await row
+      .getByRole('link', {
+        name: `Abrir histórico do processo ${cnj}`,
+      })
       .click();
+    await expect(page).toHaveURL(/\/app\/processos\/historico\?cnj=/);
     await expect(
-      refreshedProcess.getByText('confirmação: Pendente')
+      page.getByRole('heading', { name: 'Histórico do processo', exact: true })
     ).toBeVisible();
-    await refreshedProcess.getByRole('button', { name: 'Rejeitar' }).click();
     await expect(
-      refreshedProcess.getByText('confirmação: Rejeitado')
+      page.getByText('Nenhuma movimentação disponível')
     ).toBeVisible();
+    await expect(page.getByText(/Partes|vínculos/i)).toHaveCount(0);
+    await page.getByRole('link', { name: 'Voltar para a carteira' }).click();
+    await expect(page).toHaveURL(/\/app\/processos$/);
   });
 
-  test('operator cria processo e vínculo pending sem controles terminais', async ({
+  test('busca, filtra, cadastra sigiloso e mantém ações na última coluna', async ({
     page,
   }) => {
-    const suffix = Date.now().toString();
-    const clientName = `Operator Processo E2E ${suffix}`;
-    const partyName = `Operator Parte E2E ${suffix}`;
-    const processCnj = syntheticCnj();
-    const processCanonical = processCnj.replace(/\D/g, '');
-    await login(page, 'operator@example.test');
-    await createClientAndParty(page, clientName, partyName);
-    await openProcesses(page);
-    await selectOptionByText(
-      page.locator('select[name="clientId"]'),
-      clientName
-    );
-    await page.getByLabel('Número CNJ').fill(processCnj);
-    await page.getByLabel('Tribunal').fill('TJPR');
-    await page.getByRole('button', { name: 'Cadastrar processo' }).click();
-    const processArticle = page
-      .locator('article')
-      .filter({ hasText: processCanonical })
-      .first();
-    await expect(processArticle).toBeVisible();
-    await selectOptionByText(processArticle.getByLabel('Parte'), partyName);
-    await processArticle
-      .getByRole('button', { name: 'Criar vínculo pendente' })
-      .click();
-    await expect(
-      processArticle.getByText('confirmação: Pendente')
-    ).toBeVisible();
-    await expect(
-      processArticle.getByRole('button', { name: 'Confirmar' })
-    ).toHaveCount(0);
-    await expect(
-      processArticle.getByRole('button', { name: 'Rejeitar' })
-    ).toHaveCount(0);
-  });
+    await login(page);
+    const client = await createClient(page, `Cliente filtros ${Date.now()}`);
+    const publicCnj = syntheticCnj('0041');
+    const privateCnj = syntheticCnj('0042');
+    await createProcess(page, client.clientId, publicCnj);
+    await createProcess(page, client.clientId, privateCnj, false);
 
-  test('lawyer gera preview CSV, mantém ausência antes da confirmação e confirma o batch', async ({
-    page,
-  }) => {
-    const suffix = Date.now().toString();
-    const clientName = `CSV Cliente E2E ${suffix}`;
-    const partyName = `CSV Parte E2E ${suffix}`;
-    const importCnj = syntheticCnj();
-    const invalidCnj = invalidSyntheticCnj();
-    const importCanonical = importCnj.replace(/\D/g, '');
-    await login(page, 'lawyer@example.test');
-    await createClientAndParty(page, clientName, partyName);
-    await openProcesses(page);
-    const header =
-      'cnj,cliente,tribunal,sistema,parte,papel,publicidade,monitoramento,observacoes';
-    const invalidCsv = [
-      header,
-      `${invalidCnj},\"${clientName}\",TJPR,PJe,\"${partyName}\",plaintiff,público,pausado,\"linha inválida\"`,
-    ].join('\n');
-    await page.getByLabel('Arquivo CSV').setInputFiles({
-      name: 'processos-invalid.csv',
-      mimeType: 'text/csv',
-      buffer: Buffer.from(invalidCsv, 'utf8'),
+    await page.goto(`/app/processos?clientId=${client.clientId}`, {
+      waitUntil: 'networkidle',
     });
-    await page.getByRole('button', { name: 'Gerar prévia' }).click();
-    await expect(
-      page.getByText('A prévia encontrou erros; nenhuma linha foi gravada.')
-    ).toBeVisible();
-    await expect(page.getByText(invalidCnj)).toBeVisible();
+    const table = page.getByTestId('processes-spreadsheet');
+    await expect(table.locator('tbody tr[data-process-row]')).toHaveCount(2);
 
-    const csv = [
-      header,
-      `${importCnj},\"${clientName}\",TJPR,PJe,\"${partyName}\",plaintiff,público,pausado,\"importação, validada\"`,
-    ].join('\n');
-    await page.getByLabel('Arquivo CSV').setInputFiles({
-      name: 'processos.csv',
-      mimeType: 'text/csv',
-      buffer: Buffer.from(csv, 'utf8'),
-    });
-    await page.getByRole('button', { name: 'Gerar prévia' }).click();
-    await expect(page.getByText(/Prévia pronta:/)).toBeVisible();
+    await page.getByLabel('Buscar processo ou cliente').fill(publicCnj);
+    await page.getByRole('button', { name: 'Buscar' }).click();
+    await expect(table.locator('tbody tr[data-process-row]')).toHaveCount(1);
+    await expect(processRow(page, publicCnj)).toBeVisible();
+
+    await page.getByRole('link', { name: 'Limpar' }).click();
+    await expect(page).toHaveURL(/\/app\/processos$/);
+    const filterForm = page.getByTestId('client-portfolio-filter');
+    await filterForm.locator('input[name="q"]').fill('');
+    await filterForm
+      .locator('select[name="clientId"]')
+      .selectOption(client.clientId);
+    await filterForm
+      .locator('select[name="visibility"]')
+      .selectOption('private');
+    await page.getByRole('button', { name: 'Buscar' }).click();
+    await expect(table.locator('tbody tr[data-process-row]')).toHaveCount(1);
+    await expect(processRow(page, privateCnj)).toBeVisible();
     await expect(
-      page.locator('article').filter({ hasText: importCanonical })
+      processRow(page, privateCnj).getByRole('button', {
+        name: 'Atualizar agora',
+      })
     ).toHaveCount(0);
-    await page.getByRole('button', { name: 'Confirmar importação' }).click();
     await expect(
-      page.getByText(/Importação concluída: 1 processo/)
+      processRow(page, privateCnj).getByRole('cell', {
+        name: 'Sigiloso',
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      processRow(page, privateCnj).getByRole('button', {
+        name: 'Excluir processo',
+      })
     ).toBeVisible();
   });
 
-  test('reviewer lê processos mas não recebe formulário de mutação e auditor é bloqueado', async ({
+  test('importação CSV fica em uma área secundária', async ({ page }) => {
+    await login(page);
+    await page.goto('/app/processos');
+    await expect(
+      page.getByRole('heading', { name: 'Importar carteira CSV' })
+    ).toHaveCount(0);
+    await page.getByRole('link', { name: 'Importar carteira' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Importar carteira CSV' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Voltar para a carteira' })
+    ).toBeVisible();
+  });
+
+  test('mostra atualização de todos ao filtrar um cliente', async ({
+    page,
+  }) => {
+    await login(page);
+    const client = await createClient(
+      page,
+      `Cliente atualizar tudo ${Date.now()}`
+    );
+    await page.goto(`/app/processos?clientId=${client.clientId}`, {
+      waitUntil: 'networkidle',
+    });
+    await expect(
+      page.getByRole('button', { name: 'Atualizar todos' })
+    ).toBeVisible();
+  });
+
+  test('reviewer lê processos sem controles de mutação e auditor é bloqueado', async ({
     page,
   }) => {
     await login(page, 'reviewer@example.test');
-    await openProcesses(page);
+    await page.goto('/app/processos');
     await expect(
-      page.getByRole('heading', { name: 'Processos cadastrados' })
+      page.getByRole('heading', { name: 'Processos', exact: true })
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Cadastrar processo' })
     ).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: 'Gerar prévia' })
+      page.getByRole('link', { name: 'Importar carteira' })
     ).toHaveCount(0);
+
     await login(page, 'auditor@example.test');
     await page.goto('/app/processos');
     await expect(page).toHaveURL(/\/app\?error=forbidden$/);
   });
 
-  test('Realinhamento 1 — lawyer aciona "Atualizar agora" em processo público ativo', async ({
+  test('processo pode ser excluído da carteira sem apagar o histórico', async ({
     page,
   }) => {
-    const suffix = Date.now().toString();
-    const clientName = `Cliente R1 ${suffix}`;
-    const partyName = `Parte R1 ${suffix}`;
-    const processCnj = syntheticCnj();
-    const processCanonical = processCnj.replace(/\D/g, '');
+    await login(page);
+    const client = await createClient(page, `Cliente exclusão ${Date.now()}`);
+    const cnj = syntheticCnj('0051');
+    const row = await createProcess(page, client.clientId, cnj);
 
-    await login(page, 'lawyer@example.test');
-    await createClientAndParty(page, clientName, partyName);
-    await openProcesses(page);
-
-    await selectOptionByText(
-      page.locator('select[name="clientId"]'),
-      clientName
-    );
-    await page.getByLabel('Número CNJ').fill(processCnj);
-    await page.getByLabel('Tribunal').fill('TJPR');
-    await page.getByRole('button', { name: 'Cadastrar processo' }).click();
-
-    const processCard = page
-      .locator('article')
-      .filter({ hasText: processCanonical })
-      .first();
-    await expect(processCard).toBeVisible();
-
-    const refreshButton = processCard.getByRole('button', {
-      name: 'Atualizar agora',
-    });
-    await expect(refreshButton).toBeVisible();
-    await expect(refreshButton).toBeEnabled();
-
-    await refreshButton.click();
-
+    page.once('dialog', (dialog) => dialog.accept());
+    await row.getByRole('button', { name: 'Excluir processo' }).click();
+    await expect(row.getByText('Inativo', { exact: true })).toBeVisible();
+    await page.reload({ waitUntil: 'networkidle' });
+    await expect(processRow(page, cnj)).toBeVisible();
     await expect(
-      processCard.getByRole('button', {
-        name: /Atualizar agora|Tentar novamente/,
-      })
+      processRow(page, cnj).getByText('Inativo', { exact: true })
     ).toBeVisible();
-  });
-
-  test('Realinhamento 1 — processo sigiloso não exibe botão de atualização manual', async ({
-    page,
-  }) => {
-    const suffix = (Date.now() + 1).toString();
-    const clientName = `Cliente Sigiloso R1 ${suffix}`;
-    const partyName = `Parte Sigilosa R1 ${suffix}`;
-    const processCnj = syntheticCnj();
-    const processCanonical = processCnj.replace(/\D/g, '');
-
-    await login(page, 'lawyer@example.test');
-    await createClientAndParty(page, clientName, partyName);
-    await openProcesses(page);
-
-    await selectOptionByText(
-      page.locator('select[name="clientId"]'),
-      clientName
-    );
-    await page.getByLabel('Número CNJ').fill(processCnj);
-    await page.getByLabel('Tribunal').fill('TJPR');
-    await page
-      .locator('select[name="isPublic"]')
-      .selectOption({ label: 'Sigiloso' });
-    await page.getByRole('button', { name: 'Cadastrar processo' }).click();
-
-    const processCard = page
-      .locator('article')
-      .filter({ hasText: processCanonical })
-      .first();
-    await expect(processCard).toBeVisible();
-
     await expect(
-      processCard.getByRole('button', { name: 'Atualizar agora' })
+      processRow(page, cnj).getByRole('button', { name: 'Atualizar agora' })
     ).toHaveCount(0);
-    await expect(
-      processCard.locator('p').filter({ hasText: /· Sigiloso ·/ })
-    ).toBeVisible();
-  });
-
-  test('Realinhamento 1 — responsividade em viewports 360, 390, 768 e 1440', async ({
-    page,
-  }) => {
-    await login(page, 'lawyer@example.test');
-    await page.goto('/app/processos');
-
-    for (const width of [360, 390, 768, 1440]) {
-      await page.setViewportSize({ width, height: 800 });
-      await expect(
-        page.getByRole('heading', { name: 'Processos da carteira' })
-      ).toBeVisible();
-
-      const scrollWidth = await page.evaluate(
-        () => document.documentElement.scrollWidth
-      );
-      const clientWidth = await page.evaluate(
-        () => document.documentElement.clientWidth
-      );
-      expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 20);
-    }
   });
 });

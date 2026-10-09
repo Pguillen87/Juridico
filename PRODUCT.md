@@ -20,8 +20,17 @@ O sistema representará uma cliente principal e suas três filhas, além de fami
 
 O produto atual começa pela carteira conhecida: cliente, processos cadastrados
 manualmente, consulta individual por CNJ, histórico, normalização, comparação,
-novidades e relatório. Scheduler, alertas e automações amplas permanecem
-infraestrutura reutilizável ou evolução posterior.
+novidades e relatório. A carteira permite disparar uma atualização única para
+os processos públicos e ativos do cliente, criando jobs individuais e exibindo
+progresso sem expor a infraestrutura interna. Scheduler, alertas e automações
+amplas permanecem infraestrutura reutilizável ou evolução posterior.
+
+A experiência principal deve ser simples para o advogado: uma grade operacional
+semelhante a uma planilha, com busca, filtros, inclusão manual, seleção e
+exportação para Excel. Cada coluna representa uma informação isolada, como
+status do cadastro, visibilidade, estado da consulta, tipo/data/descrição do
+andamento e datas de consulta. Partes e vínculos são mantidos como estrutura
+interna e histórica, mas ficam ocultos da operação principal.
 
 O sucesso do produto depende de tornar claramente visíveis os processos consultados com alteração, sem alteração, com fonte indisponível, não encontrados, não suportados, sujeitos a limite de requisições, timeout, falha técnica ou revisão manual. Uma consulta que falhou nunca poderá ser apresentada como processo sem movimentação.
 
@@ -32,8 +41,9 @@ O produto será uma central de acompanhamento jurídico orientada à rastreabili
 ## Operating Context
 
 O advogado cadastra processos conhecidos e pode solicitar uma atualização
-individual. A consulta agendada automática não faz parte da primeira versão
-operacional.
+individual ou atualizar a carteira inteira em uma única ação. A atualização em
+lote é assíncrona e continua consultando cada processo separadamente. A
+consulta agendada automática não faz parte da primeira versão operacional.
 
 A primeira fonte automática prevista é a API Pública do DataJud. O sistema também terá um `ManualProvider` para processos que não possam ser consultados automaticamente. Outros conectores, como DJEN, PJe, eproc, ESAJ e Projudi, são futuros e não serão implementados no MVP.
 
@@ -45,14 +55,16 @@ PDF conforme as regras já implementadas. Envio real permanece fora do escopo.
 O escopo operacional atual abrange autenticação, escritório, usuários, clientes,
 partes, processos manuais/CSV, validação CNJ, consulta individual, histórico,
 snapshots, normalização, comparação, detecção de alterações, central de falhas,
-relatórios, aprovação, PDF, auditoria e controle de acesso. Scheduler de
-produção, descoberta externa, notificações e envio real são futuros.
+relatórios, aprovação, PDF, auditoria, controle de acesso, read model da
+carteira e atualização assíncrona em lote. Scheduler de produção, descoberta
+externa, notificações e envio real são futuros.
 
 O modelo de partes deverá ser comum e não limitar a associação a uma categoria restrita de pessoa relacionada. A entidade `party` representará pessoa física, pessoa jurídica, cliente principal, filha, familiar, representante e qualquer outra parte. `client` apontará para a parte principal; `client_related_party` registrará relações; `process_party` fará a associação N:N entre processo e parte.
 
 A consulta de processo público conhecido usa o provider DataJud Público quando
 configurado. O provider foi implementado localmente e testado com mock explícito;
-não há validação live. Processos sigilosos não são consultados automaticamente.
+fixture HTTP local e CNJs sintéticos; não há validação live. Processos sigilosos
+não são consultados automaticamente.
 
 Consultas, comparações, deduplicação e detecção serão determinísticas. A IA poderá organizar movimentações, sugerir resumos, simplificar linguagem processual e sugerir textos de relatório, sempre em rascunho. A IA não será fonte oficial, não inventará fatos, não alterará datas, não emitirá parecer, não determinará prazos e não enviará conteúdo sem aprovação do advogado.
 

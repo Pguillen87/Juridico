@@ -106,6 +106,7 @@ type WorkerOptions = {
   readonly workerId?: string;
   readonly leaseDurationMs?: number;
   readonly targetJobId?: string;
+  readonly batchId?: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -241,10 +242,16 @@ export async function runMonitoringWorkerOnce(
         p_target_job_id: options.targetJobId,
         p_lease_duration_ms: leaseDurationMs,
       })
-    : await client.rpc('phase9_claim_query_job', {
-        p_worker_id: workerId,
-        p_lease_duration_ms: leaseDurationMs,
-      });
+    : options.batchId
+      ? await client.rpc('realignment1_claim_client_portfolio_job', {
+          p_batch_id: options.batchId,
+          p_worker_id: workerId,
+          p_lease_duration_ms: leaseDurationMs,
+        })
+      : await client.rpc('phase9_claim_query_job', {
+          p_worker_id: workerId,
+          p_lease_duration_ms: leaseDurationMs,
+        });
 
   if (claimResponse.error)
     throw new Error('Não foi possível reivindicar o job.');

@@ -50,3 +50,13 @@ next-env.d.ts
 
 # Supabase local runtime artifacts; migrations, SQL tests and scripts remain tracked.
 supabase/.temp/**
+
+# Local checkouts nested in this workspace; each is a separate Git repository.
+/Juridico-git-tmp/
+/Juridico-phase3-ci-2/
+/Juridico-phase8-run/
+/Juridico-phase9-run/
+
+# Local lawyer material and generated review artifacts are not public source.
+/docs/RELATÓRIO DE PROCESSOS. MAIO.docx
+/outputs/

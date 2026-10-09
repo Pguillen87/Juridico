@@ -179,9 +179,16 @@ rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000001_client_portfolio_re
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260905000001_realignment1_manual_refresh.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260921152859_client_portfolio_batch_refresh.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260922013204_process_deactivation_visibility.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260922200803_portfolio_grid_filters.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/migrations/20260922202628_portfolio_grid_read_model_fields.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
 rm -f "${F10_PROJECT_DIR}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/20_client_portfolio_batch_refresh.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/21_client_process_deactivation.test.sql"
+rm -f "${F10_PROJECT_DIR}/supabase/tests/database/22_portfolio_grid_filters.test.sql"
 run_supabase db reset --local --workdir "${F10_PROJECT_DIR}" --yes >/dev/null
 wait_for_supabase_readiness "${ROOT_DIR}"
 
@@ -190,7 +197,11 @@ mkdir -p "${PRE_HARDENING_PROJECT_DIR}"
 cp -R "${F10_PROJECT_DIR}/supabase" "${PRE_HARDENING_PROJECT_DIR}/supabase"
 cp "${ROOT_DIR}/supabase/migrations/20260827000003_phase_11_failures_notifications.sql" \
   "${PRE_HARDENING_PROJECT_DIR}/supabase/migrations/20260827000003_phase_11_failures_notifications.sql"
-run_supabase db push --local --workdir "${PRE_HARDENING_PROJECT_DIR}" --yes >/dev/null
+if ! run_supabase db push --local --workdir "${PRE_HARDENING_PROJECT_DIR}" --yes --include-all >"${TMP_DIR}/phase11-pre-hardening-push.log" 2>&1; then
+  echo 'Falha ao aplicar a migration canônica 00003 no cenário pré-hardening.' >&2
+  tail -240 "${TMP_DIR}/phase11-pre-hardening-push.log" >&2
+  exit 1
+fi
 pre_hardening_versions="$(migration_versions "${PRE_HARDENING_PROJECT_DIR}")"
 if ! grep -Fq '20260827000003' <<<"${pre_hardening_versions}" \
   || grep -Fq '20260827000004' <<<"${pre_hardening_versions}"; then
@@ -203,7 +214,11 @@ echo "pre_hardening_00003_fingerprint=${pre_hardening_fingerprint}"
 echo 'pre_hardening_schema=PASS'
 
 echo 'phase11-upgrade=apply-incremental-00004'
-run_supabase db push --local --workdir "${ROOT_DIR}" --yes >/dev/null
+if ! run_supabase db push --local --workdir "${ROOT_DIR}" --yes --include-all >"${TMP_DIR}/phase11-incremental-push.log" 2>&1; then
+  echo 'Falha ao aplicar o upgrade incremental 00004.' >&2
+  tail -240 "${TMP_DIR}/phase11-incremental-push.log" >&2
+  exit 1
+fi
 upgrade_fingerprint="$(fingerprint "${ROOT_DIR}")"
 generate_types "${ROOT_DIR}" "${TMP_DIR}/upgrade-types.ts"
 dump_schema "${ROOT_DIR}" "${TMP_DIR}/upgrade-schema.sql"

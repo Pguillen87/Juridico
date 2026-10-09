@@ -63,17 +63,23 @@ const DATA_KEYS = new Set([
   'processRef',
   'tribunal',
   'system',
+  'basicData',
   'movements',
   'parties',
 ]);
-const ITEM_KEYS = new Set([
+const MOVEMENT_KEYS = new Set([
   'movementRef',
-  'partyRef',
-  'role',
+  'code',
+  'type',
   'date',
   'description',
+  'court',
+  'complements',
   'missingFields',
 ]);
+const PARTY_KEYS = new Set(['partyRef', 'role', 'missingFields']);
+const CODE_NAME_KEYS = new Set(['code', 'name']);
+const COMPLEMENT_KEYS = new Set(['name', 'description', 'value']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -96,6 +102,23 @@ function nonEmpty(value: unknown, message: string): asserts value is string {
 function isoDate(value: unknown, message: string): asserts value is string {
   nonEmpty(value, message);
   if (Number.isNaN(Date.parse(value))) throw new Error(message);
+}
+
+function nullableText(
+  value: unknown,
+  message: string
+): asserts value is string | null {
+  if (value !== null && (typeof value !== 'string' || value.trim() === '')) {
+    throw new Error(message);
+  }
+}
+
+function nullableIsoDate(
+  value: unknown,
+  message: string
+): asserts value is string | null {
+  if (value === null) return;
+  isoDate(value, message);
 }
 
 function allowlisted<T extends string>(
@@ -222,6 +245,64 @@ function evidence(value: unknown): void {
   isoDate(value.observedAt, 'Evidência de provider inválida.');
 }
 
+function codeName(value: unknown, message: string): void {
+  if (!isRecord(value)) throw new Error(message);
+  exactKeys(value, CODE_NAME_KEYS, message);
+  nullableText(value.code, message);
+  nullableText(value.name, message);
+}
+
+function normalizedBasicData(value: unknown): void {
+  if (!isRecord(value)) throw new Error('basicData normalizado inválido.');
+  exactKeys(
+    value,
+    new Set([
+      'filingDate',
+      'degree',
+      'secrecyLevel',
+      'format',
+      'system',
+      'processClass',
+      'subjects',
+      'court',
+    ]),
+    'basicData normalizado inválido.'
+  );
+  nullableIsoDate(value.filingDate, 'filingDate normalizado inválido.');
+  nullableText(value.degree, 'degree normalizado inválido.');
+  nullableText(value.secrecyLevel, 'secrecyLevel normalizado inválido.');
+  if (value.format !== null)
+    codeName(value.format, 'format normalizado inválido.');
+  if (value.system !== null)
+    codeName(value.system, 'system normalizado inválido.');
+  if (value.processClass !== null)
+    codeName(value.processClass, 'processClass normalizado inválido.');
+  if (!Array.isArray(value.subjects))
+    throw new Error('subjects normalizado inválido.');
+  value.subjects.forEach((subject) =>
+    codeName(subject, 'subject normalizado inválido.')
+  );
+  if (value.court !== null)
+    codeName(value.court, 'court normalizado inválido.');
+}
+
+function normalizedComplements(value: unknown): void {
+  if (!Array.isArray(value))
+    throw new Error('complements normalizado inválido.');
+  for (const complement of value) {
+    if (!isRecord(complement))
+      throw new Error('Complemento de movimento inválido.');
+    exactKeys(
+      complement,
+      COMPLEMENT_KEYS,
+      'Complemento de movimento inválido.'
+    );
+    nullableText(complement.name, 'Complemento de movimento inválido.');
+    nullableText(complement.description, 'Complemento de movimento inválido.');
+    nullableText(complement.value, 'Complemento de movimento inválido.');
+  }
+}
+
 function normalizedItems(
   value: unknown,
   key: 'movementRef' | 'partyRef'
@@ -231,9 +312,29 @@ function normalizedItems(
   for (const item of value) {
     if (!isRecord(item))
       throw new Error('Item normalizado de provider inválido.');
-    exactKeys(item, ITEM_KEYS, 'Item normalizado de provider inválido.');
+    exactKeys(
+      item,
+      key === 'movementRef' ? MOVEMENT_KEYS : PARTY_KEYS,
+      'Item normalizado de provider inválido.'
+    );
     nonEmpty(item[key], 'Item normalizado de provider inválido.');
     stringList(item.missingFields, 'missingFields normalizado inválido.');
+    if (key === 'movementRef') {
+      if (item.code !== undefined)
+        nonEmpty(item.code, 'Código de movimento inválido.');
+      if (item.type !== undefined)
+        nonEmpty(item.type, 'Tipo de movimento inválido.');
+      if (item.date !== undefined)
+        isoDate(item.date, 'Data de movimento inválida.');
+      if (item.description !== undefined)
+        nonEmpty(item.description, 'Descrição de movimento inválida.');
+      if (item.court !== undefined)
+        codeName(item.court, 'Órgão julgador de movimento inválido.');
+      if (item.complements !== undefined)
+        normalizedComplements(item.complements);
+    } else if (item.role !== undefined) {
+      nonEmpty(item.role, 'Papel de parte inválido.');
+    }
   }
 }
 
@@ -255,6 +356,7 @@ function observationData(
     'processRef',
     'tribunal',
     'system',
+    'basicData',
     'movements',
     'parties',
   ]);
@@ -269,7 +371,13 @@ function observationData(
   ) {
     throw new Error('Campos de observação são inconsistentes.');
   }
-  for (const field of ['tribunal', 'system', 'movements', 'parties']) {
+  for (const field of [
+    'tribunal',
+    'system',
+    'basicData',
+    'movements',
+    'parties',
+  ]) {
     const present = value[field] !== undefined;
     if (
       present !== returned.includes(field) ||
@@ -278,6 +386,7 @@ function observationData(
       throw new Error('Campos de observação são inconsistentes.');
     }
   }
+  if (value.basicData !== undefined) normalizedBasicData(value.basicData);
   if (value.movements !== undefined)
     normalizedItems(value.movements, 'movementRef');
   if (value.parties !== undefined) normalizedItems(value.parties, 'partyRef');

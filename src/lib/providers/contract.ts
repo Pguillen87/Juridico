@@ -97,10 +97,36 @@ export interface ProviderEvidence {
   readonly observedAt: string;
 }
 
+export interface NormalizedCodeName {
+  readonly code: string | null;
+  readonly name: string | null;
+}
+
+export interface NormalizedProcessBasicData {
+  readonly filingDate: string | null;
+  readonly degree: string | null;
+  readonly secrecyLevel: string | null;
+  readonly format: NormalizedCodeName | null;
+  readonly system: NormalizedCodeName | null;
+  readonly processClass: NormalizedCodeName | null;
+  readonly subjects: readonly NormalizedCodeName[];
+  readonly court: NormalizedCodeName | null;
+}
+
+export interface NormalizedMovementComplement {
+  readonly name: string | null;
+  readonly description: string | null;
+  readonly value: string | null;
+}
+
 export interface NormalizedMovement {
   readonly movementRef: string;
+  readonly code?: string;
+  readonly type?: string;
   readonly date?: string;
   readonly description?: string;
+  readonly court?: NormalizedCodeName;
+  readonly complements?: readonly NormalizedMovementComplement[];
   readonly missingFields: readonly string[];
 }
 
@@ -114,6 +140,7 @@ export interface NormalizedProcessObservation {
   readonly processRef: string;
   readonly tribunal?: string;
   readonly system?: string;
+  readonly basicData?: NormalizedProcessBasicData;
   readonly movements?: readonly NormalizedMovement[];
   readonly parties?: readonly NormalizedPartyObservation[];
 }

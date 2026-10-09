@@ -31,7 +31,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'node scripts/datajud-e2e-fixture-server.mjs',
-      url: 'http://127.0.0.1:54322/health',
+      url: 'http://127.0.0.1:54325/health',
       reuseExistingServer: false,
       timeout: 30_000,
     },
@@ -52,7 +52,7 @@ export default defineConfig({
           SUPABASE_SERVICE_ROLE_KEY:
             SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
           DATAJUD_TRANSPORT_MODE: 'live',
-          DATAJUD_API_URL: 'http://127.0.0.1:54322',
+          DATAJUD_API_URL: 'http://127.0.0.1:54325',
           DATAJUD_API_KEY: 'TestOnly-Local-123!',
         };
       })(),

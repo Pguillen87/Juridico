@@ -322,4 +322,23 @@ describe('Fase 9 — scheduler e worker backend-only', () => {
       p_lease_duration_ms: 30_000,
     });
   });
+
+  it('reivindica somente jobs do lote solicitado', async () => {
+    const rpc = vi.fn().mockResolvedValueOnce({ data: [], error: null });
+    const result = await runMonitoringWorkerOnce({
+      client: { rpc },
+      batchId: '91000000-0000-4000-b000-000000000099',
+      workerId: 'batch-worker-test',
+    });
+
+    expect(result).toEqual({ status: 'idle', workerId: 'batch-worker-test' });
+    expect(rpc).toHaveBeenCalledWith(
+      'realignment1_claim_client_portfolio_job',
+      {
+        p_batch_id: '91000000-0000-4000-b000-000000000099',
+        p_worker_id: 'batch-worker-test',
+        p_lease_duration_ms: 30_000,
+      }
+    );
+  });
 });

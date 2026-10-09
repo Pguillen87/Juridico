@@ -65,6 +65,14 @@ copy_post_f13_migrations() {
     "${target_dir}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
   cp "${ROOT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql" \
     "${target_dir}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
+  cp "${ROOT_DIR}/supabase/migrations/20260921152859_client_portfolio_batch_refresh.sql" \
+    "${target_dir}/supabase/migrations/20260921152859_client_portfolio_batch_refresh.sql"
+  cp "${ROOT_DIR}/supabase/migrations/20260922013204_process_deactivation_visibility.sql" \
+    "${target_dir}/supabase/migrations/20260922013204_process_deactivation_visibility.sql"
+  cp "${ROOT_DIR}/supabase/migrations/20260922200803_portfolio_grid_filters.sql" \
+    "${target_dir}/supabase/migrations/20260922200803_portfolio_grid_filters.sql"
+  cp "${ROOT_DIR}/supabase/migrations/20260922202628_portfolio_grid_read_model_fields.sql" \
+    "${target_dir}/supabase/migrations/20260922202628_portfolio_grid_read_model_fields.sql"
 }
 
 copy_post_f13_tests() {
@@ -75,6 +83,12 @@ copy_post_f13_tests() {
     "${target_dir}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
   cp "${ROOT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql" \
     "${target_dir}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
+  cp "${ROOT_DIR}/supabase/tests/database/20_client_portfolio_batch_refresh.test.sql" \
+    "${target_dir}/supabase/tests/database/20_client_portfolio_batch_refresh.test.sql"
+  cp "${ROOT_DIR}/supabase/tests/database/21_client_process_deactivation.test.sql" \
+    "${target_dir}/supabase/tests/database/21_client_process_deactivation.test.sql"
+  cp "${ROOT_DIR}/supabase/tests/database/22_portfolio_grid_filters.test.sql" \
+    "${target_dir}/supabase/tests/database/22_portfolio_grid_filters.test.sql"
 }
 
 echo 'phase13-upgrade=full-reset'
@@ -94,9 +108,16 @@ rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260905000001_realignment1_manual
 rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260920000001_client_portfolio_read_model.sql"
 rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260920000002_phase11_lint_hardening.sql"
 rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260920000003_phase10_public_comparison.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260921152859_client_portfolio_batch_refresh.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260922013204_process_deactivation_visibility.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260922200803_portfolio_grid_filters.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/migrations/20260922202628_portfolio_grid_read_model_fields.sql"
 rm -f "${F12_PROJECT_DIR}/supabase/tests/database/17_phase_13_pdf_delivery.test.sql"
 rm -f "${F12_PROJECT_DIR}/supabase/tests/database/18_realignment1_manual_refresh.test.sql"
 rm -f "${F12_PROJECT_DIR}/supabase/tests/database/19_client_portfolio_read_model.test.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/tests/database/20_client_portfolio_batch_refresh.test.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/tests/database/21_client_process_deactivation.test.sql"
+rm -f "${F12_PROJECT_DIR}/supabase/tests/database/22_portfolio_grid_filters.test.sql"
 run_supabase db reset --local --workdir "${F12_PROJECT_DIR}" --yes >/dev/null
 wait_for_supabase_readiness "${ROOT_DIR}"
 run_supabase test db --local --workdir "${F12_PROJECT_DIR}" >/dev/null
@@ -109,7 +130,7 @@ mkdir -p "${UPGRADE_PROJECT_DIR}"
 cp -R "${F12_PROJECT_DIR}/supabase" "${UPGRADE_PROJECT_DIR}/supabase"
 copy_post_f13_migrations "${UPGRADE_PROJECT_DIR}"
 copy_post_f13_tests "${UPGRADE_PROJECT_DIR}"
-run_supabase db push --local --workdir "${UPGRADE_PROJECT_DIR}" --yes >/dev/null
+run_supabase db push --local --workdir "${UPGRADE_PROJECT_DIR}" --yes --include-all >/dev/null
 upgrade_fingerprint="$(fingerprint "${UPGRADE_PROJECT_DIR}")"
 generate_types "${TMP_DIR}/upgrade-types.ts"
 run_supabase test db --local --workdir "${UPGRADE_PROJECT_DIR}" >/dev/null

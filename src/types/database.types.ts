@@ -747,7 +747,9 @@ export type Database = {
           id: string;
           is_public: boolean;
           monitoring_status: string;
+          next_action: string | null;
           office_id: string;
+          responsible_user_id: string | null;
           status: string;
           system: string | null;
           tribunal: string;
@@ -761,7 +763,9 @@ export type Database = {
           id?: string;
           is_public?: boolean;
           monitoring_status?: string;
+          next_action?: string | null;
           office_id: string;
+          responsible_user_id?: string | null;
           status?: string;
           system?: string | null;
           tribunal: string;
@@ -775,7 +779,9 @@ export type Database = {
           id?: string;
           is_public?: boolean;
           monitoring_status?: string;
+          next_action?: string | null;
           office_id?: string;
+          responsible_user_id?: string | null;
           status?: string;
           system?: string | null;
           tribunal?: string;
@@ -802,6 +808,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'office';
             referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'legal_process_responsible_user_fk';
+            columns: ['office_id', 'responsible_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['office_id', 'id'];
           },
         ];
       };
@@ -1270,6 +1283,103 @@ export type Database = {
           },
         ];
       };
+      process_refresh_batch: {
+        Row: {
+          client_id: string;
+          completed_count: number;
+          correlation_id: string;
+          created_at: string;
+          eligible_count: number;
+          failure_count: number;
+          finished_at: string | null;
+          id: string;
+          ignored_count: number;
+          novelty_count: number;
+          office_id: string;
+          pending_count: number;
+          provider_id: string;
+          requested_by: string;
+          review_count: number;
+          running_count: number;
+          skipped_count: number;
+          started_at: string | null;
+          status: string;
+          total_count: number;
+          unchanged_count: number;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          completed_count?: number;
+          correlation_id?: string;
+          created_at?: string;
+          eligible_count?: number;
+          failure_count?: number;
+          finished_at?: string | null;
+          id?: string;
+          ignored_count?: number;
+          novelty_count?: number;
+          office_id: string;
+          pending_count?: number;
+          provider_id: string;
+          requested_by: string;
+          review_count?: number;
+          running_count?: number;
+          skipped_count?: number;
+          started_at?: string | null;
+          status?: string;
+          total_count?: number;
+          unchanged_count?: number;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          completed_count?: number;
+          correlation_id?: string;
+          created_at?: string;
+          eligible_count?: number;
+          failure_count?: number;
+          finished_at?: string | null;
+          id?: string;
+          ignored_count?: number;
+          novelty_count?: number;
+          office_id?: string;
+          pending_count?: number;
+          provider_id?: string;
+          requested_by?: string;
+          review_count?: number;
+          running_count?: number;
+          skipped_count?: number;
+          started_at?: string | null;
+          status?: string;
+          total_count?: number;
+          unchanged_count?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'process_refresh_batch_office_id_client_id_fkey';
+            columns: ['office_id', 'client_id'];
+            isOneToOne: false;
+            referencedRelation: 'client';
+            referencedColumns: ['office_id', 'id'];
+          },
+          {
+            foreignKeyName: 'process_refresh_batch_office_id_fkey';
+            columns: ['office_id'];
+            isOneToOne: false;
+            referencedRelation: 'office';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'process_refresh_batch_requested_by_fkey';
+            columns: ['requested_by'];
+            isOneToOne: false;
+            referencedRelation: 'user_profile';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       process_snapshot: {
         Row: {
           created_at: string;
@@ -1496,6 +1606,7 @@ export type Database = {
         Row: {
           attempt_count: number;
           available_at: string;
+          batch_id: string | null;
           capability: string;
           correlation_id: string;
           created_at: string;
@@ -1521,6 +1632,7 @@ export type Database = {
         Insert: {
           attempt_count?: number;
           available_at?: string;
+          batch_id?: string | null;
           capability: string;
           correlation_id: string;
           created_at?: string;
@@ -1546,6 +1658,7 @@ export type Database = {
         Update: {
           attempt_count?: number;
           available_at?: string;
+          batch_id?: string | null;
           capability?: string;
           correlation_id?: string;
           created_at?: string;
@@ -1569,6 +1682,13 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'query_job_batch_fk';
+            columns: ['office_id', 'batch_id'];
+            isOneToOne: false;
+            referencedRelation: 'process_refresh_batch';
+            referencedColumns: ['office_id', 'id'];
+          },
           {
             foreignKeyName: 'query_job_created_by_fkey';
             columns: ['created_by'];
@@ -2298,9 +2418,26 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      get_client_portfolio_grid: {
+        Args: {
+          p_client_id?: string;
+          p_is_public?: boolean;
+          p_search?: string;
+          p_state?: string;
+        };
+        Returns: Json[];
+      };
+      get_client_portfolio_process_detail: {
+        Args: { p_process_id: string };
+        Returns: Json;
+      };
       get_client_portfolio_read_model: {
         Args: { p_client_id?: string };
         Returns: Json[];
+      };
+      get_client_portfolio_refresh_progress: {
+        Args: { p_client_id: string };
+        Returns: Json;
       };
       get_process_import_preview: {
         Args: { p_preview_id: string };
@@ -3035,6 +3172,28 @@ export type Database = {
         Args: { p_value: Json };
         Returns: boolean;
       };
+      realignment1_claim_client_portfolio_job: {
+        Args: {
+          p_batch_id: string;
+          p_lease_duration_ms?: number;
+          p_worker_id: string;
+        };
+        Returns: {
+          attempt_number: number;
+          capability: string;
+          correlation_id: string;
+          execution_id: string;
+          job_id: string;
+          job_kind: string;
+          lease_expires_at: string;
+          lease_token: string;
+          office_id: string;
+          process_id: string;
+          provider_id: string;
+          request_fingerprint: string;
+          subject_ref: string;
+        }[];
+      };
       realignment1_claim_query_job: {
         Args: {
           p_lease_duration_ms?: number;
@@ -3057,6 +3216,14 @@ export type Database = {
           subject_ref: string;
         }[];
       };
+      realignment1_request_client_portfolio_refresh: {
+        Args: { p_client_id: string };
+        Returns: {
+          eligible_count: number;
+          skipped_count: number;
+          state: string;
+        }[];
+      };
       realignment1_request_process_refresh: {
         Args: { p_process_id: string };
         Returns: {
@@ -3067,6 +3234,10 @@ export type Database = {
           process_id: string;
           status: string;
         }[];
+      };
+      realignment1_write_portfolio_audit: {
+        Args: { p_action: string; p_entity_id: string; p_metadata?: Json };
+        Returns: number;
       };
       record_invite_audit_internal: {
         Args: {

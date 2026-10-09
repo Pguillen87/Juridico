@@ -7,13 +7,12 @@
 
 | Recurso / Capacidade | Status no Realinhamento 1 | Implementação Técnica |
 | :--- | :--- | :--- |
-| **Metadados do Processo** (`numeroProcesso`, `siglaTribunal`, `classe`, `grau`) | **TESTADO COM MOCK** | Implementado no `DataJudPublicAdapter` |
+| **Metadados do Processo** (`numeroProcesso`, `siglaTribunal`, `dataAjuizamento`, `classe`, `assuntos`, `grau`, `nivelSigilo`, `formato`, `sistema`, `orgaoJulgador`) | **TESTADO COM MOCK/ FIXTURE LOCAL** | Implementado no `DataJudPublicAdapter` e no read model da carteira |
 | **Movimentações Processuais** (`codigo`, `nome`, `dataHora`, `orgaoJulgador`, `complementosTabelados`) | **TESTADO COM MOCK** | Implementado com `movementRef = sha256(codigo + dataHora + orgao)` e detecção de ambiguidade |
 | **Data de Última Atualização** (`dataHoraUltimaAtualizacao`) | **TESTADO COM MOCK** | Capturado em `sourceMetadata.sourceUpdatedAt` fora do payload comparável |
-| **Partes do Processo** (polo ativo/passivo) | **DEFERIDO** (Ausente na API Pública) | Comparador configurado com `ComparisonProfile` sem exigência de partes para `datajud_public` |
-| **Sistema de Origem** (`pje`, `eproc`, `esaj`) | **DEFERIDO** (Ausente na API Pública) | Omitido do payload comparável de `datajud_public` |
+| **Partes do Processo** (polo ativo/passivo) | **NÃO GARANTIDO PELO CONTRATO ATUAL** | A carteira usa vínculos manuais existentes; o provider não inventa parties |
 | **CPF/CNPJ → descoberta de processos** | **NÃO IMPLEMENTADO / FONTE NÃO DEFINIDA** | Não há `DiscoveryProvider`, consulta por CPF/CNPJ ou autoimportação |
-| **Integração Live com Chave Real do CNJ** | **NÃO TESTADO LIVE** | Gateway e transporte HTTP preparados; testes locais rodam com fixture determinística |
+| **Integração Live com Chave Real do CNJ** | **NÃO TESTADO LIVE** | Gateway e transporte HTTP preparados; testes locais rodam com fixture determinística em `127.0.0.1:54325` |
 
 ---
 

@@ -19,6 +19,12 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // Supabase local runtime artifacts only; do not ignore source, migrations or tests.
     'supabase/.temp/**',
+    // Separate local checkouts and generated outputs are not application source.
+    'Juridico-git-tmp/**',
+    'Juridico-phase3-ci-2/**',
+    'Juridico-phase8-run/**',
+    'Juridico-phase9-run/**',
+    'outputs/**',
   ]),
 ]);
 

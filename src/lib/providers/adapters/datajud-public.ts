@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   PROVIDER_CONTRACT_VERSION,
   type NormalizedMovement,
+  type NormalizedCodeName,
   type NormalizedProcessObservation,
   type ProviderDescriptor,
   type ProviderFailureV1,
@@ -32,7 +33,7 @@ const providerIdentity: ProviderIdentity = {
 export const DATAJUD_PUBLIC_DESCRIPTOR: ProviderDescriptor = {
   ...providerIdentity,
   displayName: 'DataJud CNJ (API Pública)',
-  capabilities: ['process_observation', 'movements'],
+  capabilities: ['process_observation', 'basic_data', 'movements'],
 };
 
 function sha256Hex(content: string): string {
@@ -76,6 +77,11 @@ function failureResult(
   };
 }
 
+const rawCodeNameSchema = z.object({
+  codigo: z.union([z.number(), z.string()]).optional(),
+  nome: z.string().optional(),
+});
+
 const rawMovementSchema = z.object({
   codigo: z.union([z.number(), z.string()]).optional(),
   nome: z.string().optional(),
@@ -101,16 +107,42 @@ const rawProcessHitSourceSchema = z.object({
   numeroProcesso: z.string().min(1),
   tribunal: z.string().optional(),
   siglaTribunal: z.string().optional(),
+  dataAjuizamento: z.string().optional(),
+  nivelSigilo: z.union([z.number(), z.string()]).optional(),
+  formato: rawCodeNameSchema.optional(),
+  sistema: rawCodeNameSchema.optional(),
   classe: z
     .object({
       codigo: z.union([z.number(), z.string()]).optional(),
       nome: z.string().optional(),
     })
     .optional(),
+  assuntos: z.array(rawCodeNameSchema).optional(),
+  orgaoJulgador: rawCodeNameSchema.optional(),
   grau: z.string().optional(),
   dataHoraUltimaAtualizacao: z.string().optional(),
   movimentos: z.array(rawMovementSchema).optional(),
 });
+
+type RawCodeName = {
+  readonly codigo?: number | string;
+  readonly nome?: string;
+};
+
+function normalizedCodeName(
+  value: RawCodeName | undefined
+): NormalizedCodeName {
+  return {
+    code: value?.codigo === undefined ? null : String(value.codigo),
+    name: value?.nome ?? null,
+  };
+}
+
+function normalizedDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
+}
 
 const elasticsearchResponseSchema = z.object({
   hits: z.object({
@@ -384,8 +416,30 @@ export class DataJudPublicAdapter implements DataJudProviderAdapter {
 
       normalizedMovements.push({
         movementRef,
+        ...(mov.codigo !== undefined ? { code: String(mov.codigo) } : {}),
+        ...(mov.nome ? { type: mov.nome } : {}),
         date: mov.dataHora,
         description: desc || undefined,
+        ...(mov.orgaoJulgador
+          ? {
+              court: normalizedCodeName({
+                codigo: mov.orgaoJulgador.codigoOrgao,
+                nome: mov.orgaoJulgador.nomeOrgao,
+              }),
+            }
+          : {}),
+        ...(mov.complementosTabelados
+          ? {
+              complements: mov.complementosTabelados.map((complement) => ({
+                name: complement.nome ?? null,
+                description: complement.descricao ?? null,
+                value:
+                  complement.valor === undefined
+                    ? null
+                    : String(complement.valor),
+              })),
+            }
+          : {}),
         missingFields: [],
       });
     }
@@ -396,6 +450,19 @@ export class DataJudPublicAdapter implements DataJudProviderAdapter {
     const observationData: NormalizedProcessObservation = {
       processRef: request.subjectRef.value,
       tribunal,
+      basicData: {
+        filingDate: normalizedDate(hitSource.dataAjuizamento),
+        degree: hitSource.grau ?? null,
+        secrecyLevel:
+          hitSource.nivelSigilo === undefined
+            ? null
+            : String(hitSource.nivelSigilo),
+        format: normalizedCodeName(hitSource.formato),
+        system: normalizedCodeName(hitSource.sistema),
+        processClass: normalizedCodeName(hitSource.classe),
+        subjects: (hitSource.assuntos ?? []).map(normalizedCodeName),
+        court: normalizedCodeName(hitSource.orgaoJulgador),
+      },
       movements: normalizedMovements,
     };
 
@@ -415,8 +482,8 @@ export class DataJudPublicAdapter implements DataJudProviderAdapter {
       contractVersion: PROVIDER_CONTRACT_VERSION,
       capability: request.capability,
       data: observationData,
-      returnedFields: ['processRef', 'tribunal', 'movements'],
-      missingFields: ['parties', 'system'],
+      returnedFields: ['processRef', 'tribunal', 'basicData', 'movements'],
+      missingFields: ['parties'],
       sourceMetadata: {
         sourceType: 'datajud',
         providerId: DATAJUD_PUBLIC_PROVIDER_ID,

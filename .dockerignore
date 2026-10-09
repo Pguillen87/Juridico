@@ -9,3 +9,11 @@ README.md
 poc/evidence
 playwright-report
 test-results
+coverage
+supabase/.temp
+outputs
+docs/*.docx
+Juridico-git-tmp
+Juridico-phase3-ci-2
+Juridico-phase8-run
+Juridico-phase9-run

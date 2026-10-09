@@ -260,6 +260,12 @@ function normalizeMovement(movement: NormalizedMovement): NormalizedMovement {
   }
   const normalized: NormalizedMovement = {
     movementRef: normalizedText(movement.movementRef, 'movementRef'),
+    ...(movement.code
+      ? { code: normalizedText(movement.code, 'movement.code') }
+      : {}),
+    ...(movement.type
+      ? { type: normalizedText(movement.type, 'movement.type') }
+      : {}),
     ...(movement.date
       ? { date: normalizedDate(movement.date, 'movement.date') }
       : {}),
@@ -269,6 +275,23 @@ function normalizeMovement(movement: NormalizedMovement): NormalizedMovement {
             movement.description,
             'movement.description'
           ),
+        }
+      : {}),
+    ...(movement.court
+      ? {
+          court: {
+            code: movement.court.code,
+            name: movement.court.name,
+          },
+        }
+      : {}),
+    ...(movement.complements
+      ? {
+          complements: movement.complements.map((complement) => ({
+            name: complement.name,
+            description: complement.description,
+            value: complement.value,
+          })),
         }
       : {}),
     missingFields: [...new Set(movement.missingFields ?? [])]
@@ -302,6 +325,48 @@ function normalizeData(
       ? { tribunal: normalizedText(data.tribunal, 'tribunal') }
       : {}),
     ...(data.system ? { system: normalizedText(data.system, 'system') } : {}),
+    ...(data.basicData
+      ? {
+          basicData: {
+            filingDate: data.basicData.filingDate
+              ? normalizedDate(
+                  data.basicData.filingDate,
+                  'basicData.filingDate'
+                )
+              : null,
+            degree: data.basicData.degree,
+            secrecyLevel: data.basicData.secrecyLevel,
+            format: data.basicData.format
+              ? {
+                  code: data.basicData.format.code,
+                  name: data.basicData.format.name,
+                }
+              : null,
+            system: data.basicData.system
+              ? {
+                  code: data.basicData.system.code,
+                  name: data.basicData.system.name,
+                }
+              : null,
+            processClass: data.basicData.processClass
+              ? {
+                  code: data.basicData.processClass.code,
+                  name: data.basicData.processClass.name,
+                }
+              : null,
+            subjects: data.basicData.subjects.map((subject) => ({
+              code: subject.code,
+              name: subject.name,
+            })),
+            court: data.basicData.court
+              ? {
+                  code: data.basicData.court.code,
+                  name: data.basicData.court.name,
+                }
+              : null,
+          },
+        }
+      : {}),
     ...(data.movements
       ? {
           movements: data.movements
@@ -511,10 +576,15 @@ function compareKeyedCollection<T extends object>(
       for (const field of fields) {
         const beforeValue = (before as Record<string, unknown>)[String(field)];
         const afterValue = (after as Record<string, unknown>)[String(field)];
-        if (
-          canonicalizeComparison(beforeValue) !==
-          canonicalizeComparison(afterValue)
-        ) {
+        const beforeCanonical =
+          beforeValue === undefined
+            ? 'undefined'
+            : canonicalizeComparison(beforeValue);
+        const afterCanonical =
+          afterValue === undefined
+            ? 'undefined'
+            : canonicalizeComparison(afterValue);
+        if (beforeCanonical !== afterCanonical) {
           entries.push({
             path: `${itemPath}/${String(field)}`,
             changeType: updatedType,
@@ -613,6 +683,24 @@ export function compareSnapshots(
   }
   const entries: ComparisonDiffEntry[] = [];
   compareScalar(entries, '/tribunal', before.tribunal, after.tribunal);
+  const beforeBasicData = before.basicData
+    ? canonicalizeComparison(before.basicData)
+    : 'undefined';
+  const afterBasicData = after.basicData
+    ? canonicalizeComparison(after.basicData)
+    : 'undefined';
+  if (beforeBasicData !== afterBasicData) {
+    entries.push({
+      path: '/basicData',
+      changeType: 'field_updated',
+      ...(before.basicData === undefined
+        ? {}
+        : { before: canonicalJson(before.basicData) }),
+      ...(after.basicData === undefined
+        ? {}
+        : { after: canonicalJson(after.basicData) }),
+    });
+  }
   if (profile.compareSystem) {
     compareScalar(entries, '/system', before.system, after.system);
   }
@@ -625,7 +713,7 @@ export function compareSnapshots(
     'movement_added',
     'movement_removed',
     'movement_updated',
-    ['date', 'description']
+    ['code', 'type', 'date', 'description', 'court', 'complements']
   );
   if (profile.compareParties) {
     compareKeyedCollection(
