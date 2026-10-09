@@ -39,8 +39,7 @@ fingerprint() {
   run_supabase_read_with_native_paths db query --local --workdir "${ROOT_DIR}" \
     --file "${FINGERPRINT_SQL}" >"${output}"
   local value
-  value="$(grep -Eo '"fingerprint"[[:space:]]*:[[:space:]]*"[0-9a-f]{32}"' "${output}" \
-    | grep -Eo '[0-9a-f]{32}' | tail -1 || true)"
+  value="$(grep -Eo '[0-9a-f]{32}' "${output}" | tail -1 || true)"
   [[ "${value}" =~ ^[0-9a-f]{32}$ ]] || { cat "${output}" >&2; exit 1; }
   printf '%s' "${value}"
 }

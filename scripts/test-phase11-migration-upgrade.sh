@@ -125,7 +125,7 @@ fingerprint() {
   local output="${TMP_DIR}/fingerprint-$(basename "${workdir}").txt"
   run_supabase_read_with_native_paths db query --local --workdir "${workdir}" --file "${FINGERPRINT_SQL}" >"${output}"
   local value
-  value="$(grep -Eo '"fingerprint"[[:space:]]*:[[:space:]]*"[0-9a-f]{32}"' "${output}" | grep -Eo '[0-9a-f]{32}' | tail -1 || true)"
+  value="$(grep -Eo '[0-9a-f]{32}' "${output}" | tail -1 || true)"
   if [[ ! "${value}" =~ ^[0-9a-f]{32}$ ]]; then
     echo "Não foi possível obter fingerprint de schema em ${workdir}." >&2
     cat "${output}" >&2
